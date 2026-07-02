@@ -1,0 +1,252 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-fondo text-texto;
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Capa de textura sutil */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(230, 213, 192, 0.15) 0%, transparent 30%),
+      radial-gradient(circle at 90% 80%, rgba(212, 226, 212, 0.15) 0%, transparent 35%),
+      repeating-linear-gradient(45deg, rgba(240, 230, 210, 0.03) 0px, rgba(240, 230, 210, 0.03) 2px, transparent 2px, transparent 6px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Ondas decorativas en la parte inferior */
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 150px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23E6D5C0' fill-opacity='0.2' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,170.7C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom;
+    background-size: cover;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 768px) {
+    body::before {
+      opacity: 0.5;
+    }
+    
+    body::after {
+      opacity: 0.3;
+      height: 80px;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    body::after {
+      opacity: 0.4;
+      height: 100px;
+    }
+  }
+}
+
+
+
+@layer components {
+  .btn-primario {
+    @apply bg-[#4B66DE] text-white px-6 py-3 rounded-lg hover:bg-[#3A4FA8] transition-all duration-200 font-medium shadow-md hover:shadow-lg;
+  }
+  
+  .btn-secundario {
+    @apply bg-secundario text-white px-6 py-3 rounded-lg hover:bg-secundario-dark transition-all duration-200 font-medium shadow-md hover:shadow-lg;
+  }
+  
+  .btn-terciario {
+    @apply bg-terciario text-white px-6 py-3 rounded-lg hover:opacity-90 transition-all duration-200 font-medium shadow-md hover:shadow-lg;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4B66DE] focus:border-transparent;
+  }
+  
+  .badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .badge-pendiente {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-aceptado {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+  
+  .badge-iniciado {
+    @apply badge bg-green-100 text-green-800;
+  }
+  
+  .badge-completado {
+    @apply badge bg-gray-100 text-gray-800;
+  }
+  
+  .badge-cancelado {
+    @apply badge bg-red-100 text-red-800;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Animaciones personalizadas */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Clases de utilidad */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Escalas personalizadas */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+/* Transiciones suaves */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Overlay de carga */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Bordes personalizados */
+.border-3 {
+  border-width: 3px;
+}
+
+.fullscreen-video:fullscreen {
+  background-color: #111827;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+
+.fullscreen-video:fullscreen .grid {
+  flex: 1;
+  height: 90%;
+}
+
+.fullscreen-video:fullscreen .grid > div {
+  height: 100%;
+}
+
+.fullscreen-video:fullscreen .aspect-video {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+/* Tarjetas con efecto vidrio esmerilado (opcional) */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}

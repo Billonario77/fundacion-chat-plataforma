@@ -1,0 +1,971 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
+import { useMensajesNoLeidos } from '../contexts/MensajesNoLeidosContext';
+import toast from 'react-hot-toast';
+import { usuarioService, Turno, turnosService } from '../services/turnosService';
+import { reprogramacionService, Reprogramacion } from '../services/reprogramacionService';
+import HistorialTurnos from '../components/HistorialTurnos';
+import Layout from '../components/Layout';
+import ModalCancelarTurno from '../components/ModalCancelarTurno';
+
+const UsuarioDashboard: React.FC = () => {
+  const { user, logout } = useAuth();
+  const { socket, connected } = useSocket();
+  const { noLeidos, recargarNoLeidos } = useMensajesNoLeidos();
+  console.log('👤 Usuario ID en dashboard:', user?.id);
+  const navigate = useNavigate();
+  const [solicitudes, setSolicitudes] = useState<Turno[]>([]);
+  const [reprogramaciones, setReprogramaciones] = useState<Reprogramacion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingRepro, setLoadingRepro] = useState(true);
+  const [error, setError] = useState('');
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados'>('activas');
+  const [ultimoEvento, setUltimoEvento] = useState('');
+  console.log('📦 Importación de HistorialTurnos:', HistorialTurnos);
+
+  // ============================================
+  // Estado para modal de cancelación
+  // ============================================
+  const [modalCancelar, setModalCancelar] = useState<{ 
+    abierto: boolean; 
+    turnoId: string | null 
+  }>({
+    abierto: false,
+    turnoId: null
+  });
+
+  // Estados para reprogramación
+  const [turnoAReprogramar, setTurnoAReprogramar] = useState<Turno | null>(null);
+  const [preferencia, setPreferencia] = useState<'mismo_guia' | 'otro_guia' | 'cambiar_fecha'>('otro_guia');
+  const [fechaPreferida, setFechaPreferida] = useState('');
+  const [comentarios, setComentarios] = useState('');
+  const [reprogramando, setReprogramando] = useState(false);
+
+  const [nuevaSolicitud, setNuevaSolicitud] = useState({
+    tipo: 'apoyo' as 'crisis' | 'apoyo' | 'seguimiento',
+    mensaje: '',
+    fecha_preferida: ''
+  });
+
+  // ============================================
+  // DETERMINAR GUÍA ORIGINAL Y ACTUAL
+  // ============================================
+  const usuarioGuiaOriginal = solicitudes.length > 0 
+    ? solicitudes.reduce((oldest, current) => 
+        new Date(oldest.created_at) < new Date(current.created_at) ? oldest : current
+      ).guia_nombre 
+    : null;
+
+  const solicitudActivaMasReciente = solicitudes
+    .filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+  const usuarioGuiaActual = solicitudActivaMasReciente?.guia_nombre;
+  const usuarioTieneGuiaOriginal = !!usuarioGuiaOriginal;
+  const usuarioTieneGuiaActual = !!usuarioGuiaActual;
+  const usuarioGuiaCambio = usuarioTieneGuiaOriginal && usuarioTieneGuiaActual && usuarioGuiaOriginal !== usuarioGuiaActual;
+
+  // ============================================
+  // FUNCIÓN PARA VOLVER AL GUÍA ORIGINAL
+  // ============================================
+  const handleVolverGuiaOriginal = async () => {
+    try {
+      if (!reprogramacionService.solicitarCambioGuia) {
+        console.error('Error: reprogramacionService.solicitarCambioGuia no está definido');
+        toast.error('Error en la configuración. Contacta al administrador.');
+        return;
+      }
+      
+      await reprogramacionService.solicitarCambioGuia('mismo_guia');
+      toast.success('Solicitud enviada. Volverás a tu guía original en tu próxima solicitud.', {
+        duration: 5000,
+        icon: '🔄'
+      });
+    } catch (error) {
+      console.error('Error al solicitar volver al guía original:', error);
+      toast.error('Error al enviar la solicitud');
+    }
+  };
+
+  // ============================================
+  // FUNCIÓN PARA CANCELAR TURNO
+  // ============================================
+  const handleCancelarTurno = async (turnoId: string, motivo: string) => {
+    try {
+      const response = await turnosService.cancelarTurno(turnoId, motivo);
+      toast.success('Turno cancelado exitosamente');
+      
+      if (response.requierePenalizacion) {
+        toast('El valor del costo de cancelación será adicionado a su siguiente solicitud.', {
+          icon: '⚠️',
+          duration: 6000,
+          style: {
+            background: '#fef3c7',
+            color: '#92400e',
+          }
+        });
+      }
+      
+      // Recargar todas las listas
+      await cargarSolicitudes();
+
+      console.log('📊 Turnos cancelados por guía (para reprogramar):', turnosCanceladosParaReprogramar);
+      
+      await cargarReprogramaciones();
+      
+    } catch (err) {
+      setError('Error al cancelar el turno');
+      console.error(err);
+    }
+  };
+
+  // TEMPORAL - Para debug en consola
+  useEffect(() => {
+    (window as any).debugSocket = socket;
+    (window as any).debugNoLeidos = noLeidos;
+    (window as any).debugConnected = connected;
+  }, [socket, noLeidos, connected]);
+
+  // ============================================
+  // FORZAR RENDERIZADO CUANDO CAMBIA noLeidos
+  const [, forceUpdate] = useState({});
+  useEffect(() => {
+    console.log('🔄 noLeidos cambió en USUARIO:', noLeidos);
+    forceUpdate({});
+  }, [noLeidos]);
+
+  // FUERZA RENDER ADICIONAL MODIFICANDO SOLICITUDES
+  useEffect(() => {
+    console.log('🔄 FORZANDO RENDER - noLeidos:', JSON.stringify(noLeidos));
+    setSolicitudes(prev => [...prev]);
+  }, [noLeidos]);
+
+  // ============================================
+  // ESCUCHAR NOTIFICACIONES EN TIEMPO REAL
+  // ============================================
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    console.log('👂 Escuchando notificaciones...');
+
+    socket.off('nuevo-turno-creado');
+    socket.off('estado-turno-actualizado');
+    socket.off('nuevo-mensaje');
+
+    socket.on('nuevo-turno-creado', (data) => {
+      console.log('📨 Notificación recibida - MENSAJE:', data.mensaje);
+      console.log('📨 Notificación recibida:', data);
+      
+      const eventId = `${data.turnoId}-${data.timestamp || Date.now()}`;
+      if (ultimoEvento === eventId) {
+        console.log('⏭️ Evento duplicado ignorado');
+        return;
+      }
+      setUltimoEvento(eventId);
+      
+      toast.success(`✅ ${data.mensaje}`, {
+        duration: 6000,
+        icon: '🙏',
+        style: {
+          background: '#10b981',
+          color: 'white',
+          padding: '16px',
+          maxWidth: '400px',
+          whiteSpace: 'normal',
+          wordWrap: 'break-word'
+        }
+      });
+
+      cargarSolicitudes();
+    });
+
+    socket.on('nuevo-mensaje', (data) => {
+      console.log('📨 NUEVO MENSAJE RECIBIDO EN USUARIO DASHBOARD:', data);
+      recargarNoLeidos();
+    });
+
+    socket.on('estado-turno-actualizado', (data) => {
+      console.log('🔥 ¡EVENTO RECIBIDO EN USUARIO!', data);
+      cargarSolicitudes();
+      cargarReprogramaciones();
+      
+      const eventId = `${data.turnoId}-${data.estado}-${data.timestamp || Date.now()}`;
+      if (ultimoEvento === eventId) {
+        console.log('⏭️ Evento duplicado ignorado');
+        return;
+      }
+      setUltimoEvento(eventId);
+      
+      toast(`📢 ${data.mensaje}`, {
+        duration: 5000,
+        icon: '✅',
+        style: {
+          background: '#10b981',
+          color: 'white',
+          padding: '16px',
+          fontSize: '16px',
+          fontWeight: '500'
+        }
+      });
+
+      cargarSolicitudes();
+      cargarReprogramaciones();
+    });
+
+    return () => {
+      socket.off('nuevo-turno-creado');
+      socket.off('estado-turno-actualizado');
+      socket.off('nuevo-mensaje');
+    };
+  }, [socket, connected, ultimoEvento]);
+
+  useEffect(() => {
+    if (pestañaActiva === 'activas') {
+      cargarSolicitudes();
+    } else if (pestañaActiva === 'reprogramaciones') {
+      cargarReprogramaciones();
+    } else if (pestañaActiva === 'cancelados') {
+      cargarSolicitudes(); // También cargar para cancelados
+    }
+  }, [pestañaActiva]);
+
+  // ============================================
+  // SOLO turnos cancelados por el GUÍA (los que puede reprogramar)
+  // ============================================
+  const turnosCanceladosParaReprogramar = solicitudes.filter(s => 
+    s.estado === 'cancelado' && 
+    s.cancelado_por === 'guia' &&  // <-- SOLO los que canceló el GUÍA
+    !reprogramaciones.some(r => r.turno_original_id === s.id && r.estado === 'completada')
+  );
+
+  // Auto-refresh CADA 5 SEGUNDOS
+  useEffect(() => {
+    if (pestañaActiva !== 'activas') return;
+    
+    console.log('⏱️ Iniciando refresh cada 5 segundos');
+    const interval = setInterval(() => {
+      console.log('🔄 Refrescando lista de turnos...');
+      cargarSolicitudes(true);
+    }, 5000);
+    
+    return () => {
+      console.log('⏱️ Deteniendo refresh');
+      clearInterval(interval);
+    };
+  }, [pestañaActiva]);
+
+  // Auto-refresh inteligente (respaldo)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (pestañaActiva === 'activas') {
+      const solicitudesActivas = solicitudes.filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado));
+      const hayActivos = solicitudesActivas.length > 0;
+      
+      if (hayActivos) {
+        console.log('🔄 Auto-refresh silencioso activo - hay turnos activos');
+        interval = setInterval(() => {
+          cargarSolicitudes(true);
+        }, 15000);
+      } else {
+        console.log('⏸️ Auto-refresh pausado - no hay turnos activos');
+      }
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pestañaActiva, solicitudes]);
+
+  const cargarSolicitudes = async (silencioso = false) => {
+    try {
+      if (!silencioso) setLoading(true);
+      const data = await usuarioService.getMisSolicitudes();
+      console.log('🔍 DATOS DEL BACKEND - primer turno:', data.turnos[0]);
+      console.log('🔍 DATOS DEL BACKEND - turnos cancelados:', data.turnos.filter(t => t.estado === 'cancelado'));
+      setSolicitudes(data.turnos);
+    } catch (err) {
+      if (!silencioso) setError('Error al cargar tus solicitudes');
+      console.error(err);
+    } finally {
+      if (!silencioso) setLoading(false);
+    }
+  };
+
+  const cargarReprogramaciones = async () => {
+    try {
+      setLoadingRepro(true);
+      const data = await reprogramacionService.getMisReprogramaciones();
+      setReprogramaciones(data);
+    } catch (err) {
+      setError('Error al cargar reprogramaciones');
+      console.error(err);
+    } finally {
+      setLoadingRepro(false);
+    }
+  };
+
+  const handleSolicitarApoyo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      await usuarioService.solicitarApoyo(
+        nuevaSolicitud.tipo,
+        nuevaSolicitud.mensaje,
+        nuevaSolicitud.fecha_preferida || undefined
+      );
+      
+      setNuevaSolicitud({ tipo: 'apoyo', mensaje: '', fecha_preferida: ''});
+      setMostrarFormulario(false);
+      cargarSolicitudes();
+      
+    } catch (err) {
+      setError('Error al solicitar apoyo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReprogramar = async () => {
+    if (!turnoAReprogramar) return;
+    
+    try {
+      setReprogramando(true);
+      await usuarioService.reprogramarTurno(
+        turnoAReprogramar.id,
+        preferencia,
+        fechaPreferida || undefined,
+        comentarios || undefined
+      );
+      
+      setTurnoAReprogramar(null);
+      setPreferencia('otro_guia');
+      setFechaPreferida('');
+      setComentarios('');
+      
+      await cargarSolicitudes(true);
+      await cargarReprogramaciones();
+      
+      toast.success('Solicitud de reprogramación enviada');
+      
+    } catch (err) {
+      setError('Error al reprogramar el turno');
+      console.error(err);
+    } finally {
+      setReprogramando(false);
+    }
+  };
+
+  const handleCancelarReprogramacion = async (reprogramacionId: string) => {
+    try {
+      await reprogramacionService.cancelarReprogramacion(reprogramacionId);
+      cargarReprogramaciones();
+      cargarSolicitudes();
+    } catch (err) {
+      setError('Error al cancelar la solicitud');
+      console.error(err);
+    }
+  };
+
+  const getColorEstado = (estado: string) => {
+    switch (estado) {
+      case 'pendiente': return 'bg-yellow-500 text-white';
+      case 'aceptado': return 'bg-blue-500 text-white';
+      case 'iniciado': return 'bg-green-500 text-white';
+      case 'completado': return 'bg-gray-500 text-white';
+      case 'cancelado': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getEstadoReprogramacion = (estado: string) => {
+    switch (estado) {
+      case 'pendiente': return 'bg-yellow-100 text-yellow-800';
+      case 'completada': return 'bg-green-100 text-green-800';
+      case 'cancelada': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatFecha = (fecha: string) => {
+    return new Date(fecha).toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Bogota'
+    });
+  };
+
+  if (!user || user.tipo !== 'usuario') {
+    return <Navigate to="/" />;
+  }
+
+  const solicitudesActivas = solicitudes.filter(s => 
+    ['pendiente', 'aceptado', 'iniciado'].includes(s.estado)
+  );
+
+  // ============================================
+  // Turnos cancelados por el USUARIO
+  // ============================================
+  const turnosCanceladosPorMi = solicitudes.filter((s: Turno) => 
+    s.estado === 'cancelado' && s.cancelado_por === 'usuario'
+  );
+  
+  console.log('🔍 VALOR ACTUAL DE pestañaActiva:', pestañaActiva);
+  return (
+    <Layout>
+
+      {/* TEMPORAL - Para debug */}
+  <div style={{ display: 'none' }}>
+    {(() => { 
+      (window as any).debugSolicitudes = solicitudes;
+      (window as any).debugTurnosCancelados = turnosCanceladosPorMi;
+      return null;
+    })()}
+  </div>
+  
+  {/* Resto del contenido... */}
+
+
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-primario">Mi Espacio</h1>
+          <p className="text-gray-600 mt-1">Bienvenido, {user.nombre}</p>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-gray-600">
+            {connected ? 'Conectado' : 'Desconectado'}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
+        </div>
+      )}
+
+      {/* TARJETA PARA VOLVER AL GUÍA ORIGINAL */}
+      {usuarioGuiaCambio && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-blue-600 text-xl">🔄</div>
+            <div className="flex-1">
+              <h3 className="font-medium text-blue-800">¿Quieres volver con tu guía original?</h3>
+              <p className="text-sm text-blue-600 mt-1">
+                Actualmente tienes asignado a <strong>{usuarioGuiaActual}</strong>. 
+                Puedes solicitar volver a tu guía original <strong>{usuarioGuiaOriginal}</strong> en cualquier momento.
+              </p>
+              <button
+                onClick={handleVolverGuiaOriginal}
+                className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Solicitar volver a mi guía original
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pestañas */}
+      <div className="mb-8">
+        <div className="flex space-x-2 bg-gray-100/80 p-1.5 rounded-2xl inline-flex">
+          <button
+            //onClick={() => setPestañaActiva('activas')}
+            onClick={() => setPestañaActiva('activas')}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+                pestañaActiva === 'activas'
+                  ? 'bg-white text-primario shadow-md' 
+                  : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+              }`}
+            >
+            <span className="text-xl">📋</span>
+            <span>Solicitudes Activas</span>
+            {solicitudesActivas.length > 0 && (
+              <span className="bg-primario text-white text-xs px-2 py-1 rounded-full ml-2">
+                {solicitudesActivas.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setPestañaActiva('reprogramaciones')}
+            className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+              pestañaActiva === 'reprogramaciones'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-xl">🔄</span>
+            <span>Reprogramaciones</span>
+            {reprogramaciones.filter(r => r.estado === 'pendiente').length > 0 && (
+              <span className="bg-alerta text-white text-xs px-2 py-1 rounded-full ml-2">
+                {reprogramaciones.filter(r => r.estado === 'pendiente').length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setPestañaActiva('cancelados')}
+            className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+              pestañaActiva === 'cancelados'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-xl">✗</span>
+            <span>Cancelados
+
+            </span>
+            {turnosCanceladosPorMi.length > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-2">
+                {turnosCanceladosPorMi.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            //onClick={() => setPestañaActiva('historial')}
+            onClick={() => {
+              console.log('🟢 CLIC EN HISTORIAL - valor actual de pestañaActiva:', pestañaActiva);
+              setPestañaActiva('historial');
+            }}
+            className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+              pestañaActiva === 'historial'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-xl">📚</span>
+            <span>Historial</span>
+          </button>
+        </div>
+      </div>
+
+      {pestañaActiva === 'activas' && (
+        <>
+          <button
+            onClick={() => setMostrarFormulario(!mostrarFormulario)}
+            className={`mb-6 px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 shadow-md hover:shadow-lg ${
+              mostrarFormulario 
+                ? 'bg-alerta text-white hover:bg-red-600' 
+                : 'bg-primario text-white hover:bg-primario-dark'
+            }`}
+          >
+            <span className="text-xl">{mostrarFormulario ? '✖' : '➕'}</span>
+            <span>{mostrarFormulario ? 'Cancelar solicitud' : 'Solicitar apoyo'}</span>
+          </button>
+
+          {mostrarFormulario && (
+            <div className="card mb-8">
+              <h2 className="text-xl font-semibold text-primario mb-4">Nueva solicitud de apoyo</h2>
+              <form onSubmit={handleSolicitarApoyo}>
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2 font-medium">Tipo de apoyo</label>
+                  <select
+                    className="input"
+                    value={nuevaSolicitud.tipo}
+                    onChange={(e) => setNuevaSolicitud({
+                      ...nuevaSolicitud,
+                      tipo: e.target.value as 'crisis' | 'apoyo' | 'seguimiento'
+                    })}
+                  >
+                    <option value="apoyo">Apoyo general</option>
+                    <option value="crisis">Crisis (prioridad alta)</option>
+                    <option value="seguimiento">Seguimiento</option>
+                  </select>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2 font-medium">Mensaje inicial</label>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={nuevaSolicitud.mensaje}
+                    onChange={(e) => setNuevaSolicitud({ ...nuevaSolicitud, mensaje: e.target.value })}
+                    placeholder="Cuéntanos cómo te sientes o qué necesitas..."
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 mb-2 font-medium">Fecha y hora preferida (opcional)</label>
+                  <input
+                    type="datetime-local"
+                    className="input"
+                    value={nuevaSolicitud.fecha_preferida}
+                    onChange={(e) => setNuevaSolicitud({ ...nuevaSolicitud, fecha_preferida: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si no seleccionas fecha, se asignará una automáticamente
+                  </p>
+                </div>
+
+                <button type="submit" className="btn-primario w-full md:w-auto" disabled={loading}>
+                  {loading ? 'Enviando...' : 'Enviar solicitud'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          <div className="card">
+            <h2 className="text-xl font-semibold text-primario mb-4">Mis solicitudes activas</h2>
+
+            {loading ? (
+              <div className="text-center py-8"><p className="text-gray-500">Cargando solicitudes...</p></div>
+            ) : solicitudesActivas.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">No tienes solicitudes activas</p>
+                <button 
+                  onClick={() => setMostrarFormulario(true)} className="text-primario hover:underline">
+                  Solicitar apoyo ahora
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {solicitudesActivas.map((solicitud) => (
+                  <div
+                    key={solicitud.id}
+                    className="bg-white rounded-xl p-5 hover:shadow-lg transition-all duration-300 border-l-4 border-primario border-t border-r border-b border-gray-100 cursor-pointer"
+                    onClick={() => navigate(`/turnos/${solicitud.id}`)}
+                  >
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3 flex-wrap">
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-medium shadow-sm ${getColorEstado(solicitud.estado)}`}>
+                            {solicitud.estado === 'pendiente' && '⏳ Pendiente'}
+                            {solicitud.estado === 'aceptado' && '✅ Aceptado'}
+                            {solicitud.estado === 'iniciado' && '🔄 En curso'}
+                          </span>
+                          <span className="text-sm text-texto-claro flex items-center gap-1">
+                            <span>📅</span> {formatFecha(solicitud.fecha_programada)}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-primario">👤</span>
+                          <p className="font-medium">Guía:</p>
+                          <div className="flex items-center gap-2">
+                            <p>{solicitud.guia_nombre || 'Esperando asignación'}</p>
+                            {noLeidos[solicitud.id] > 0 && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                {noLeidos[solicitud.id]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {solicitud.modalidad && (
+                          <p className="text-sm text-texto-claro mt-2 flex items-center gap-2">
+                            <span className="text-secundario">📹</span>
+                            <span className="font-medium">Modalidad:</span>{' '}
+                            <span className="capitalize">{solicitud.modalidad}</span>
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); navigate(`/turnos/${solicitud.id}`); }}
+                          className="bg-blue-500 text-white px-3 py-1 text-xs rounded"
+                        >
+                          Chatear
+                        </button>
+                        
+                        {solicitud.estado !== 'cancelado' && solicitud.estado !== 'completado' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setModalCancelar({ abierto: true, turnoId: solicitud.id });
+                            }}
+                            className="bg-red-500 text-white px-3 py-1 text-xs rounded hover:bg-red-600"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {(() => { console.log('🔍 RENDERIZANDO HISTORIAL? pestañaActiva:', pestañaActiva, 'es historial?', pestañaActiva === 'historial'); return null; })()}
+      {pestañaActiva === 'historial' && <HistorialTurnos rol="usuario" />}
+
+      {pestañaActiva === 'reprogramaciones' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-primario mb-4">
+            Turnos Cancelados - Pendientes de Reprogramación
+          </h2>
+
+          {loading ? (
+            <p className="text-gray-500">Cargando...</p>
+          ) : turnosCanceladosParaReprogramar.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No tienes turnos cancelados pendientes de reprogramación</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Si un guía cancela tu turno, aparecerá aquí para que puedas reprogramarlo
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {turnosCanceladosParaReprogramar.map((turno) => (
+                <div key={turno.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">Cancelado</span>
+                        <span className="text-sm text-gray-500">{formatFecha(turno.fecha_programada)}</span>
+                      </div>
+                      <p className="font-medium">Guía: {turno.guia_nombre || 'No asignado'}</p>
+                      {turno.modalidad && (
+                        <p className="text-sm text-gray-600 mt-1">Modalidad: {turno.modalidad}</p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => setTurnoAReprogramar(turno)}
+                      className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark text-sm font-medium"
+                    >
+                      Reprogramar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Solicitudes de reprogramación enviadas */}
+          {reprogramaciones.filter(r => r.estado === 'pendiente').length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Solicitudes de Reprogramación Enviadas</h3>
+              <div className="space-y-4">
+                {reprogramaciones.filter(r => r.estado === 'pendiente').map((rep) => (
+                  <div key={rep.id} className="border border-gray-200 rounded-lg p-4 bg-yellow-50">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                            Pendiente
+                          </span>
+                          <span className="text-sm text-gray-500">Solicitado: {formatFecha(rep.created_at)}</span>
+                        </div>
+
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Preferencia:</span>{' '}
+                            {rep.preferencia === 'mismo_guia' && 'Mismo guía'}
+                            {rep.preferencia === 'otro_guia' && 'Guía diferente'}
+                            {rep.preferencia === 'cambiar_fecha' && 'Cambiar fecha'}
+                          </p>
+                          {rep.fecha_preferida && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              <span className="font-medium">Fecha preferida:</span> {formatFecha(rep.fecha_preferida)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleCancelarReprogramacion(rep.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      >
+                        Cancelar solicitud
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {pestañaActiva === 'cancelados' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-primario mb-4">
+            Mis cancelaciones
+          </h2>
+
+          {turnosCanceladosPorMi.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No has cancelado ningún turno</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {turnosCanceladosPorMi.map((turno) => (
+                <div
+                  key={turno.id}
+                  className="border border-red-200 rounded-lg p-4 bg-red-50"
+                >
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                          Cancelado
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatFecha(turno.fecha_programada)}
+                        </span>
+                      </div>
+                      <p className="font-medium">Guía: {turno.guia_nombre || 'No asignado'}</p>
+                      {turno.motivo_cancelacion && (
+                        <p className="text-sm text-gray-600 mt-2">
+                          <span className="font-medium">Motivo:</span> {turno.motivo_cancelacion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal de reprogramación */}
+      {turnoAReprogramar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Reprogramar mi turno</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Lamentamos que tu turno haya sido cancelado. Queremos asegurarnos de que recibas el apoyo que necesitas.
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">¿Cómo deseas continuar?</label>
+              
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="preferencia"
+                    value="mismo_guia"
+                    checked={preferencia === 'mismo_guia'}
+                    onChange={(e) => setPreferencia(e.target.value as any)}
+                    className="text-primario"
+                  />
+                  <span className="text-sm">Quiero el mismo guía cuando esté disponible</span>
+                </label>
+                
+                <label className="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="preferencia"
+                    value="otro_guia"
+                    checked={preferencia === 'otro_guia'}
+                    onChange={(e) => setPreferencia(e.target.value as any)}
+                    className="text-primario"
+                  />
+                  <span className="text-sm">Quiero un guía diferente</span>
+                </label>
+                
+                <label className="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="preferencia"
+                    value="cambiar_fecha"
+                    checked={preferencia === 'cambiar_fecha'}
+                    onChange={(e) => setPreferencia(e.target.value as any)}
+                    className="text-primario"
+                  />
+                  <span className="text-sm">Quiero reprogramar para otra fecha/horario</span>
+                </label>
+              </div>
+            </div>
+
+            {(preferencia === 'cambiar_fecha' || preferencia === 'mismo_guia' || preferencia === 'otro_guia') && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha y hora preferida {preferencia !== 'cambiar_fecha' && '(opcional)'}
+                </label>
+                <input
+                  type="datetime-local"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+                  value={fechaPreferida}
+                  onChange={(e) => setFechaPreferida(e.target.value)}
+                />
+                {preferencia !== 'cambiar_fecha' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si no seleccionas fecha, se usará la fecha original del turno
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Comentarios adicionales (opcional)</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+                rows={3}
+                value={comentarios}
+                onChange={(e) => setComentarios(e.target.value)}
+                placeholder="Cuéntanos cualquier detalle que quieras que consideremos..."
+              />
+            </div>
+
+            {/* OPCIÓN PARA VOLVER AL GUÍA ORIGINAL EN MODAL */}
+            {usuarioGuiaCambio && (
+              <div className="mb-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleVolverGuiaOriginal}
+                  className="text-sm text-primario hover:text-primario-dark flex items-center gap-2 w-full justify-center"
+                >
+                  <span>🔄</span>
+                  ¿Prefieres volver a tu guía original?
+                </button>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setTurnoAReprogramar(null);
+                  setPreferencia('otro_guia');
+                  setFechaPreferida('');
+                  setComentarios('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={reprogramando}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReprogramar}
+                disabled={reprogramando}
+                className="px-4 py-2 text-sm font-medium text-white bg-primario hover:bg-primario-dark rounded-lg transition-colors disabled:opacity-50"
+              >
+                {reprogramando ? 'Procesando...' : 'Confirmar reprogramación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cancelación */}
+      <ModalCancelarTurno
+        isOpen={modalCancelar.abierto}
+        onClose={() => setModalCancelar({ abierto: false, turnoId: null })}
+        onConfirm={(motivo) => {
+          if (modalCancelar.turnoId) {
+            handleCancelarTurno(modalCancelar.turnoId, motivo);
+          }
+        }}
+        fechaProgramada={solicitudes.find(s => s.id === modalCancelar.turnoId)?.fecha_programada}
+      />
+    </Layout>
+  );
+};
+
+export default UsuarioDashboard;

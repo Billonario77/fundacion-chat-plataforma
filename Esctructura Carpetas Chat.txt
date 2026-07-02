@@ -1,0 +1,125 @@
+fundacion-chat-plataforma/
+├── backend/
+│   ├── node_modules/               # Código del servidor (API, Socket.io, Lógica)
+│   ├── src/
+│   │   ├── controllers/   # Lógica de las rutas
+│   │   │   ├── authController.ts
+│   │   │   ├── emergenciaController.ts
+│   │   │   ├── estadisticasController.ts
+│   │   │   ├── grabacionController.ts
+│   │   │   ├── mensajesController.ts
+│   │   │   ├── reprogramacionController.ts
+│   │   │   ├── turnosController.ts
+│   │   │   ├── adminController.ts
+│   │   │   ├── adminUsuariosController.ts
+│   │   │   ├── agoraController.ts
+│   │   ├── database/
+│   │   │   ├── conection.ts
+│   │   │   ├── init.sql
+│   │   ├── middleware/    # Autenticación, validación, etc.
+│   │   │   ├── auth.ts
+│   │   ├── models/        # Modelos de la base de datos
+│   │   │   ├── mensajes.model.ts
+│   │   │   ├── turno.model.sql
+│   │   ├── queues/
+│   │   │   ├── apoyo.Queue.ts
+│   │   ├── routes/        # Definición de las rutas de la API
+│   │   │   ├── emergenciaRoutes.ts
+│   │   │   ├── estadisticasRoutes.ts
+│   │   │   ├── grabacionRoutes.ts
+│   │   │   ├── HistorialTurnos.tsx
+│   │   │   ├── mensajesRoutes.ts
+│   │   │   ├── reprogramacionRoutes.ts
+│   │   │   ├── turnosRoutes.ts
+│   │   │   ├── adminRoutes.ts
+│   │   │   ├── adminUsuariosRoutes.ts
+│   │   │   ├── agoraRoutes.ts
+│   │   │   ├── authRoutes.ts
+│   │   ├── services/      # Lógica de negocio compleja (turnos, notificaciones)
+│   │   │   ├── socket.Service.ts
+│   │   ├── workers/
+│   │   │   ├── apoyoWorker.ts
+│   │   │   ├── postcss.config.js
+│   │   │   ├── tailwind.config.js
+│   │   ├── app.ts         # Configuración principal de Express
+│   │   ├── test-db-simple.ts
+│   │   └── test-env-only.ts
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── .env
+│   ├── backend.env
+│   ├── setup.ts
+│   ├── datos.json
+│   └── temp.ts
+├── frontend/              # Código del cliente (React)
+│   ├── node_modules/
+│   ├── public/            # Archivos estáticos (imágenes, index.html)
+│   │   ├── index.html
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── manifest.json
+│   │   ├── robots.txt
+│   │   ├── favicon.ico
+│   ├── src/
+│   │   ├── components/    # Componentes reutilizables (Botones, Cards, etc.)
+│   │   │   ├── AsignacionesGuia.tsx
+│   │   │   ├── Chat.tsx
+│   │   │   ├── EstadisticasAdmin.tsx
+│   │   │   ├── GestionUsuarios.tsx
+│   │   │   ├── HistorialTurnos.tsx
+│   │   │   ├── Layout.tsx
+│   │   │   ├── ModalCancelarTurno.tsx
+│   │   │   ├── SkeletonCard.tsx
+│   │   │   ├── SolicitudesReprogramacion.tsx
+│   │   │   ├── TurnosPendientesAsignacion.tsx
+│   │   │   ├── Videollamada.tsx
+│   │   ├── contexts/      # Contextos de React (Auth, Notificaciones)
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── MensajesNoLeidosContext.tsx
+│   │   │   ├── SocketContext.tsx
+│   │   ├── hooks/
+│   │   │   ├── useIntelligentRefresh.ts
+│   │   ├── pages/         # Páginas completas (Login, Chat, Dashboard)
+│   │   │   ├── AdminDashboard.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── DetalleTurno.tsx
+│   │   │   ├── GuiaDashboard.tsx
+│   │   │   ├── Inicio.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Registro.tsx
+│   │   │   ├── UsuarioDashboard.tsx
+│   │   ├── services/      # Llamadas a la API y Sockets
+│   │   │   ├── adminService.ts
+│   │   │   ├── adminUsuariosService.ts
+│   │   │   ├── agoraService.ts
+│   │   │   ├── emergenciaService.ts
+│   │   │   ├── estadisticasService.ts
+│   │   │   ├── grabacionService.ts
+│   │   │   ├── mensajesService.ts
+│   │   │   ├── reprogramacionService.ts
+│   │   │   ├── turnosService.ts
+│   │   ├── utils/
+│   │   ├── App.tsx
+│   │   ├── App.css
+│   │   ├── App.test.tsx
+│   │   ├── App.tsx
+│   │   ├── AuthContext.tsx
+│   │   ├── index.css
+│   │   ├── index.tsx
+│   │   ├── logo.svg
+│   │   ├── react-app-env.d.ts
+│   │   ├── reportWebVitals.ts
+│   │   ├── setupTests.ts
+│   ├── .env
+│   ├── gitignore
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── postcss.config.js
+│   ├── README.md
+│   ├── tailwind.config.js # Para los estilos minimalistas
+│   └── tsconfig.json
+├── mobile/                # (Opcional, para futuro) App React Native
+├── docs/                  # Documentación y manuales
+└── docker-compose.yml     # Para levantar PostgreSQL y Redis fácilmente
+
+

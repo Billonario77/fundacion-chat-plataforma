@@ -1,0 +1,10 @@
+fundacion-chat-plataforma/
+├── backups/
+│   ├── funcionalidades/
+│   │   ├── 01-badges-tiempo-real/
+│   │   ├── 02-videollamada-fullscreen/
+│   │   ├── 03-cancelaciones-usuario/
+│   │   ├── 04-reprogramaciones/
+│   │   ├── 05-historial-cancelaciones/
+│   │   └── 06-guia-historial/
+│   └── base-inicial/
