@@ -31,18 +31,26 @@ const app = express();
 app.set('etag', false);
 const server = http.createServer(app);
 
+// ============================================
+// CONFIGURACIÓN DE ORÍGENES PERMITIDOS
+// ============================================
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://192.168.3.44:3000'
+];
+
+// Solo agregar FRONTEND_URL si existe
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 // ============================================
 // ÚNICA DECLARACIÓN DE io
 // ============================================
 const io = new SocketServer(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://192.168.3.44:3000',
-      process.env.FRONTEND_URL  // ← Agregar esta línea
-    ].filter(Boolean),  // ← Filtrar valores undefined
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -51,7 +59,6 @@ const io = new SocketServer(server, {
   pingInterval: 25000 
 });
 
-
 // ============================================
 // INICIALIZAR SERVICIO DE SOCKETS (inmediatamente después de crear io)
 // ============================================
@@ -59,14 +66,8 @@ initSocketService(io);
 
 // Middlewares de seguridad y utilidad
 app.use(helmet());
-// Configuración de CORS
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://192.168.3.44:3000',
-  process.env.FRONTEND_URL
-].filter(Boolean);
 
+// Configuración de CORS
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -77,8 +78,8 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
 
+app.use(express.json());
 
 // Limitar peticiones (DESPUÉS de express.json)
 const limiter = rateLimit({
@@ -86,7 +87,6 @@ const limiter = rateLimit({
   max: 300  // 300 peticiones por minuto
 });
 app.use('/api', limiter);
-
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -99,8 +99,6 @@ app.use('/api/mensajes', mensajesRoutes);
 app.use('/api/agora', agoraRoutes);
 app.use('/api/emergencia', emergenciaRoutes);
 app.use('/api/grabacion', grabacionRoutes);
-
-
 
 // Ruta de prueba
 app.get('/', (req, res) => {
