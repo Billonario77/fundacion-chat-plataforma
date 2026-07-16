@@ -1,3 +1,4 @@
+// Netlify deploy v2 - forced refresh
 // backend/src/app.ts
 import express from 'express';
 import http from 'http';
@@ -39,7 +40,6 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://192.168.3.44:3000'
 ];
-
 // Solo agregar FRONTEND_URL si existe
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
