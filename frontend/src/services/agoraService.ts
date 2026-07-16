@@ -27,7 +27,7 @@ export const createAgoraClient = () => {
 export const getAgoraToken = async (channelName: string, uid?: number): Promise<string | null> => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3001/api/agora/token', {
+    const response = await fetch('https://fundacion-chat-backend-api.onrender.com/api/agora/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

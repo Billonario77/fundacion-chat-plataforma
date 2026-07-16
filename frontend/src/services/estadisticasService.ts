@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = 'https://fundacion-chat-backend-api.onrender.com/api';
 
 // Actualizamos la interfaz para que coincida con la nueva respuesta del backend
 export interface Estadisticas {

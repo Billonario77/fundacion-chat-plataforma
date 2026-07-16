@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api/admin/usuarios';
+const API_URL = 'https://fundacion-chat-backend-api.onrender.com/api/admin/usuarios';
 
 export interface Usuario {
   id: string;
