@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = 'https://fundacion-chat-backend-api.onrender.com/api';
 
 interface MensajesNoLeidosContextType {
   noLeidos: Record<string, number>;

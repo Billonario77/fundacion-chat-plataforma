@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         
-        const response = await axios.get('http://localhost:3001/api/auth/perfil');
+        const response = await axios.get('https://fundacion-chat-backend-api.onrender.com/api/auth/perfil');
         
         console.log('Respuesta del perfil:', response.data);
         
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<User> => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', {
+      const response = await axios.post('https://fundacion-chat-backend-api.onrender.com/api/auth/login', {
         email,
         password
       });
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (email: string, password: string, nombre: string): Promise<User> => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/registro', {
+      const response = await axios.post('https://fundacion-chat-backend-api.onrender.com/api/auth/registro', {
         email,
         password,
         nombre

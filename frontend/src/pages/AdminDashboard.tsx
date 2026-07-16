@@ -146,7 +146,7 @@ const AdminDashboard: React.FC = () => {
   const cargarConteoReprogramaciones = async () => {
   try {
     const token = localStorage.getItem('token');
-    const response = await axios.get(`http://localhost:3001/api/admin/reprogramaciones/pendientes/count`, {
+    const response = await axios.get(`https://fundacion-chat-backend-api.onrender.com/api/admin/reprogramaciones/pendientes/count`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setReprogramacionesPendientes(response.data.count);
