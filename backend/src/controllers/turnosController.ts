@@ -1846,7 +1846,7 @@ export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Pro
 // Completar datos del usuario por primera vez
 // backend/src/controllers/turnosController.ts
 
-export const completarMisDatos = async (req: Request, res: Response) => {
+export const completarMisDatos = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     
