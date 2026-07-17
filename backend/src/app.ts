@@ -42,20 +42,25 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://192.168.3.44:3000',
-  'https://fundacion-chat-frontend-api.netlify.app' // Netlify URL explícita
+  'http://192.168.3.44:3000'
 ];
 
-// Agregar FRONTEND_URL desde variables de entorno (si existe)
+// Agregar FRONTEND_URL desde variables de entorno
 if (process.env.FRONTEND_URL) {
-  // Evitar duplicados
-  if (!allowedOrigins.includes(process.env.FRONTEND_URL)) {
-    allowedOrigins.push(process.env.FRONTEND_URL);
-  }
+  console.log('✅ Agregando FRONTEND_URL a allowedOrigins:', process.env.FRONTEND_URL);
+  allowedOrigins.push(process.env.FRONTEND_URL);
+} else {
+  console.warn('⚠️ FRONTEND_URL no está definida en el entorno');
 }
 
-// Log de orígenes permitidos al iniciar
-console.log('✅ Orígenes CORS permitidos:', allowedOrigins);
+// También agregar la URL de Netlify directamente como fallback
+const netlifyUrl = 'https://fundacion-chat-frontend-api.netlify.app';
+if (!allowedOrigins.includes(netlifyUrl)) {
+  console.log('✅ Agregando URL de Netlify como fallback:', netlifyUrl);
+  allowedOrigins.push(netlifyUrl);
+}
+
+console.log('📋 Orígenes permitidos finales:', allowedOrigins);
 
 // ============================================
 // CONFIGURACIÓN CORS PARA EXPRESS (MEJORADA)
