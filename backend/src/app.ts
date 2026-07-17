@@ -199,13 +199,18 @@ app.use('/api/grabacion', grabacionRoutes);
 // ============================================
 // Health check
 app.get('/health', (req, res) => {
+  // Asegurarnos de que allowedOrigins esté en el scope
+  const currentAllowedOrigins = allowedOrigins;
+  
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
-    corsAllowedOrigins: allowedOrigins,
-    frontendUrl: process.env.FRONTEND_URL
+    corsAllowedOrigins: currentAllowedOrigins,
+    frontendUrl: process.env.FRONTEND_URL || 'No configurada',
+    // Agregar esto para debug
+    allEnvVars: Object.keys(process.env).filter(key => key.includes('URL') || key.includes('FRONTEND'))
   });
 });
 
