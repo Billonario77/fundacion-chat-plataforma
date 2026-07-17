@@ -27,6 +27,10 @@ console.log('🕐 Hora actual:', new Date().toString());
 
 dotenv.config();
 
+// Después de dotenv.config();
+console.log('🔍 FRONTEND_URL desde env:', process.env.FRONTEND_URL);
+console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+
 const app = express();
 app.set('trust proxy', 1);
 app.set('etag', false);
