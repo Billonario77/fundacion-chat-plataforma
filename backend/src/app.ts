@@ -39,8 +39,10 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://192.168.3.44:3000'
-];
+  'http://192.168.3.44:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 // Solo agregar FRONTEND_URL si existe
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
