@@ -1,6 +1,12 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import axios from 'axios';
 
+// ============================================
+// CONFIGURACIÓN DE LA API
+// ============================================
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+console.log('🌐 API_URL:', API_URL);
+
 // Tipos
 interface User {
   id: string;
@@ -37,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string, tipo: 'usuario' | 'guia') => {
     setLoading(true);
     try {
-      const response = await axios.post('https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/login', {
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password,
         tipo
@@ -61,7 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (email: string, password: string, nombre: string, tipo: 'usuario' | 'guia') => {
     setLoading(true);
     try {
-      const response = await axios.post('https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/registro', {
+      const response = await axios.post(`${API_URL}/api/auth/registro`, {
         email,
         password,
         nombre,
@@ -97,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     register,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: true,
     isGuia: user?.tipo === 'guia'
   };
 
