@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string, tipo: 'usuario' | 'guia') => {
     setLoading(true);
     try {
-      const response = await axios.post('https://fundacion-chat-backend-api.onrender.com/api/auth/login', {
+      const response = await axios.post('https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/login', {
         email,
         password,
         tipo
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (email: string, password: string, nombre: string, tipo: 'usuario' | 'guia') => {
     setLoading(true);
     try {
-      const response = await axios.post('https://fundacion-chat-backend-api.onrender.com/api/auth/registro', {
+      const response = await axios.post('https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/registro', {
         email,
         password,
         nombre,
