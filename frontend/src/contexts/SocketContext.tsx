@@ -30,7 +30,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     console.log('🔌 Conectando a WebSocket...');
 
     // Crear conexión con el token en el handshake
-    const newSocket = io('https://fundacion-chat-backend-api.onrender.com', {
+    const newSocket = io('https://fundacion-chat-plataforma-backend-api.onrender.com', {
       auth: {
         token: token
       },

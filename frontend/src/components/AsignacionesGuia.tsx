@@ -3,7 +3,7 @@ import { adminService } from '../services/adminService';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_URL = 'https://fundacion-chat-backend-api.onrender.com/api';
+const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
 
 interface GuiaConUsuarios {
   guiaId: string;
