@@ -2,9 +2,9 @@ import React, { createContext, useState, useContext, ReactNode } from 'react';
 import axios from 'axios';
 
 // ============================================
-// CONFIGURACIÓN DE LA API
+// CONFIGURACIÓN DE LA API (CRA)
 // ============================================
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 console.log('🌐 API_URL:', API_URL);
 
 // Tipos
@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     register,
     logout,
-    isAuthenticated: true,
+    isAuthenticated: !!user,
     isGuia: user?.tipo === 'guia'
   };
 
