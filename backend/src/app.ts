@@ -50,12 +50,6 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// Agregar también el dominio de Netlify sin www si es diferente
-const netlifyUrl = 'https://fundacion-chat-frontend-api.netlify.app';
-if (!allowedOrigins.includes(netlifyUrl)) {
-  allowedOrigins.push(netlifyUrl);
-}
-
 // Log de orígenes permitidos al iniciar
 console.log('✅ Orígenes CORS permitidos:', allowedOrigins);
 
@@ -132,9 +126,9 @@ const io = new SocketServer(server, {
       return callback(new Error(`Origen ${origin} no permitido por CORS`));
     },
     methods: ['GET', 'POST'],
-    credentials: true,
-    transports: ['websocket']
+    credentials: true
   },
+  transports: ['websocket'],
   pingTimeout: 60000,
   pingInterval: 25000
 });
@@ -149,7 +143,7 @@ initSocketService(io);
 // ============================================
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "unsafe-none" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }
 }));
 
 // Middleware para logs de todas las solicitudes (útil para debug)
