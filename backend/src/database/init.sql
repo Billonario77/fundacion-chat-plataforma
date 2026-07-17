@@ -15,17 +15,37 @@ CREATE TABLE roles (
 );
 
 -- 2. TABLA DE USUARIOS (personas en rehabilitación)
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     nombre VARCHAR(100),
+    primer_nombre VARCHAR(100),
+    segundo_nombre VARCHAR(100),
+    primer_apellido VARCHAR(100),
+    segundo_apellido VARCHAR(100),
+    cedula VARCHAR(20),
+    edad INTEGER,
+    rh VARCHAR(5),
+    sexo VARCHAR(10),
     telefono VARCHAR(20),
-    fecha_nacimiento DATE,
-    nivel_urgencia INTEGER DEFAULT 0, -- 0=normal, 1=apoyo, 2=crisis
-    historia_completa JSONB, -- datos adicionales (flexible)
+    celular VARCHAR(20),
+    altura DECIMAL(5,2),
+    peso DECIMAL(5,2),
+    direccion TEXT,
+    ciudad VARCHAR(100),
+    tipo_adiccion VARCHAR(100),
+    observaciones TEXT,
+    cto_emerg_nombre VARCHAR(100),
+    cto_emerg_celular VARCHAR(20),
+    foto_perfil TEXT,
+    datos_completados BOOLEAN DEFAULT false,
+    nivel_urgencia INTEGER DEFAULT 0,
+    historia_completa JSONB,
     activo BOOLEAN DEFAULT true,
     ultimo_acceso TIMESTAMP,
+    rol VARCHAR(20) DEFAULT 'usuario',
+    disponible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

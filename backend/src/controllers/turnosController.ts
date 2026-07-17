@@ -1844,83 +1844,115 @@ export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Pro
 };
 
 // Completar datos del usuario por primera vez
-export const completarMisDatos = async (req: AuthRequest, res: Response): Promise<void> => {
+// backend/src/controllers/turnosController.ts
+
+export const completarMisDatos = async (req: Request, res: Response) => {
   try {
-    const usuarioId = req.user?.id;
-
-    if (!usuarioId) {
-      res.status(401).json({ error: 'No autenticado' });
-      return;
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Usuario no autenticado' 
+      });
     }
 
-    // Verificar si ya completó datos
-    const verificar = await pool.query(
-      'SELECT datos_completados FROM usuarios WHERE id = $1',
-      [usuarioId]
-    );
-
-    if (verificar.rows[0]?.datos_completados === true) {
-      res.status(400).json({ error: 'Ya has completado tus datos. No puedes modificarlos nuevamente.' });
-      return;
-    }
-
+    // ============================================
+    // MAPEO DE CAMPOS: Frontend → Base de datos
+    // ============================================
     const {
-      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-      telefono, celular, cedula, edad, rh, sexo, estatura, peso,
-      direccion, ciudad, tipo_adiccion, observaciones,
-      cto_emerg_nombre, cto_emerg_celular, cto_emerg_email
+      primerNombre,
+      segundoNombre,
+      primerApellido,
+      segundoApellido,
+      cedula,
+      edad,
+      rh,
+      sexo,
+      telefonoFijo,
+      celular,
+      estatura,        // Frontend usa "estatura"
+      peso,
+      direccion,
+      ciudad,
+      tipoAdiccion,
+      observaciones,
+      contactoEmergencia
     } = req.body;
 
-    // Construir nombre completo
-    const nombreCompleto = [primer_nombre, segundo_nombre, primer_apellido, segundo_apellido]
-      .filter(Boolean)
-      .join(' ');
+    // Log para debug
+    console.log('📝 Datos recibidos del frontend:', req.body);
+
+    // Construir el objeto con los nombres de columnas de la BD
+    const datosActualizados = {
+      primer_nombre: primerNombre,
+      segundo_nombre: segundoNombre || null,
+      primer_apellido: primerApellido,
+      segundo_apellido: segundoApellido || null,
+      cedula: cedula || null,
+      edad: edad || null,
+      rh: rh || null,
+      sexo: sexo || null,
+      telefono: telefonoFijo || null,
+      celular: celular || null,
+      altura: estatura,  // 🔑 Mapeo clave: estatura → altura
+      peso: peso || null,
+      direccion: direccion || null,
+      ciudad: ciudad || null,
+      tipo_adiccion: tipoAdiccion || null,
+      observaciones: observaciones || null,
+      cto_emerg_nombre: contactoEmergencia?.nombre || null,
+      cto_emerg_celular: contactoEmergencia?.celular || null,
+      datos_completados: true,
+      updated_at: new Date()
+    };
+
+    console.log('✅ Datos mapeados para BD:', datosActualizados);
+
+    // ============================================
+    // CONSTRUIR LA CONSULTA SQL DINÁMICA
+    // ============================================
+    const campos = Object.keys(datosActualizados);
+    const valores = Object.values(datosActualizados);
+    
+    // Construir SET clause: "campo1 = $1, campo2 = $2, ..."
+    const setClause = campos
+      .map((campo, index) => `${campo} = $${index + 1}`)
+      .join(', ');
 
     const query = `
       UPDATE usuarios 
-      SET 
-        primer_nombre = COALESCE($1, primer_nombre),
-        segundo_nombre = $2,
-        primer_apellido = COALESCE($3, primer_apellido),
-        segundo_apellido = $4,
-        nombre = COALESCE($5, nombre),
-        telefono = $6,
-        celular = $7,
-        cedula = $8,
-        edad = $9,
-        rh = $10,
-        sexo = $11,
-        altura = $12,
-        peso = $13,
-        direccion = $14,
-        ciudad = $15,
-        tipo_adiccion = $16,
-        observaciones = $17,
-        cto_emerg_nombre = $18,
-        cto_emerg_celular = $19,
-        cto_emerg_email = $20,
-        datos_completados = true,
-        updated_at = NOW()
-      WHERE id = $21
-      RETURNING id, nombre, datos_completados
+      SET ${setClause}
+      WHERE id = $${campos.length + 1}
+      RETURNING *
     `;
 
-    const result = await pool.query(query, [
-      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-      nombreCompleto, telefono, celular, cedula,
-      edad ? parseInt(edad) : null, rh, sexo, estatura ? parseFloat(estatura) : null,
-      peso ? parseInt(peso) : null, direccion, ciudad, tipo_adiccion, observaciones,
-      cto_emerg_nombre, cto_emerg_celular, cto_emerg_email, usuarioId
-    ]);
+    // Ejecutar consulta
+    const result = await pool.query(query, [...valores, userId]);
 
-    res.json({
-      message: 'Datos completados correctamente',
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    // ============================================
+    // RESPUESTA EXITOSA
+    // ============================================
+    return res.status(200).json({
+      success: true,
+      message: 'Datos completados exitosamente',
       usuario: result.rows[0]
     });
 
   } catch (error) {
-    console.error('Error al completar datos:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al completar datos:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
   }
 };
 

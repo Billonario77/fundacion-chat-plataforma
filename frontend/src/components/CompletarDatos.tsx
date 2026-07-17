@@ -11,25 +11,27 @@ interface CompletarDatosProps {
 const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar, rol }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    primer_nombre: '',
-    segundo_nombre: '',
-    primer_apellido: '',
-    segundo_apellido: '',
-    telefono: '',
-    celular: '',
-    cedula: '',
-    edad: '',
-    rh: '',
-    sexo: '',
-    estatura: '',
-    peso: '',
-    direccion: '',
-    ciudad: '',
-    tipo_adiccion: '',
-    observaciones: '',
-    cto_emerg_nombre: '',
-    cto_emerg_celular: '',
-    cto_emerg_email: '',
+    primerNombre: '',        // ✅ camelCase
+    segundoNombre: '',       // ✅ camelCase
+    primerApellido: '',      // ✅ camelCase
+    segundoApellido: '',     // ✅ camelCase
+    telefonoFijo: '',        // ✅ camelCase
+    celular: '',             // ✅ camelCase
+    cedula: '',              // ✅ camelCase
+    edad: '',                // ✅ camelCase
+    rh: '',                  // ✅ camelCase
+    sexo: '',                // ✅ camelCase
+    estatura: '',            // ✅ camelCase
+    peso: '',                // ✅ camelCase
+    direccion: '',           // ✅ camelCase
+    ciudad: '',              // ✅ camelCase
+    tipoAdiccion: '',        // ✅ camelCase
+    observaciones: '',       // ✅ camelCase
+    contactoEmergencia: {    // ✅ camelCase (objeto anidado)
+      nombre: '',
+      celular: '',
+      email: ''
+    }
   });
 
   useEffect(() => {
@@ -40,11 +42,11 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
     try {
       const data = await usuarioService.getMiPerfil();
       setFormData({
-        primer_nombre: data.primer_nombre || '',
-        segundo_nombre: data.segundo_nombre || '',
-        primer_apellido: data.primer_apellido || '',
-        segundo_apellido: data.segundo_apellido || '',
-        telefono: data.telefono || '',
+        primerNombre: data.primer_nombre || '',
+        segundoNombre: data.segundo_nombre || '',
+        primerApellido: data.primer_apellido || '',
+        segundoApellido: data.segundo_apellido || '',
+        telefonoFijo: data.telefono || '',
         celular: data.celular || '',
         cedula: data.cedula || '',
         edad: data.edad || '',
@@ -54,11 +56,13 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
         peso: data.peso || '',
         direccion: data.direccion || '',
         ciudad: data.ciudad || '',
-        tipo_adiccion: data.tipo_adiccion || '',
+        tipoAdiccion: data.tipo_adiccion || '',
         observaciones: data.observaciones || '',
-        cto_emerg_nombre: data.cto_emerg_nombre || '',
-        cto_emerg_celular: data.cto_emerg_celular || '',
-        cto_emerg_email: data.cto_emerg_email || '',
+        contactoEmergencia: {
+          nombre: data.cto_emerg_nombre || '',
+          celular: data.cto_emerg_celular || '',
+          email: data.cto_emerg_email || ''
+        }
       });
     } catch (err) {
       console.error('Error al cargar datos:', err);
@@ -67,14 +71,48 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Manejar campos anidados de contactoEmergencia
+    if (name.startsWith('cto_emerg_')) {
+      const field = name.replace('cto_emerg_', '');
+      setFormData(prev => ({
+        ...prev,
+        contactoEmergencia: {
+          ...prev.contactoEmergencia,
+          [field]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await usuarioService.completarMisDatos(formData);
+      // Enviar los datos con camelCase
+      const datosParaEnviar = {
+        primerNombre: formData.primerNombre,
+        segundoNombre: formData.segundoNombre,
+        primerApellido: formData.primerApellido,
+        segundoApellido: formData.segundoApellido,
+        cedula: formData.cedula,
+        edad: formData.edad,
+        rh: formData.rh,
+        sexo: formData.sexo,
+        telefonoFijo: formData.telefonoFijo,
+        celular: formData.celular,
+        estatura: formData.estatura,
+        peso: formData.peso,
+        direccion: formData.direccion,
+        ciudad: formData.ciudad,
+        tipoAdiccion: formData.tipoAdiccion,
+        observaciones: formData.observaciones,
+        contactoEmergencia: formData.contactoEmergencia
+      };
+      
+      await usuarioService.completarMisDatos(datosParaEnviar);
       toast.success('Datos completados correctamente');
       onCompletado();
     } catch (err) {
@@ -102,22 +140,22 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Primer Nombre *</label>
-              <input type="text" name="primer_nombre" value={formData.primer_nombre} onChange={handleChange} className="input" required />
+              <input type="text" name="primerNombre" value={formData.primerNombre} onChange={handleChange} className="input" required />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Segundo Nombre</label>
-              <input type="text" name="segundo_nombre" value={formData.segundo_nombre} onChange={handleChange} className="input" />
+              <input type="text" name="segundoNombre" value={formData.segundoNombre} onChange={handleChange} className="input" />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Primer Apellido *</label>
-              <input type="text" name="primer_apellido" value={formData.primer_apellido} onChange={handleChange} className="input" required />
+              <input type="text" name="primerApellido" value={formData.primerApellido} onChange={handleChange} className="input" required />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Segundo Apellido</label>
-              <input type="text" name="segundo_apellido" value={formData.segundo_apellido} onChange={handleChange} className="input" />
+              <input type="text" name="segundoApellido" value={formData.segundoApellido} onChange={handleChange} className="input" />
             </div>
 
             <div>
@@ -153,7 +191,7 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono Fijo</label>
-              <input type="text" name="telefono" value={formData.telefono} onChange={handleChange} className="input" />
+              <input type="text" name="telefonoFijo" value={formData.telefonoFijo} onChange={handleChange} className="input" />
             </div>
             
             <div>
@@ -186,7 +224,7 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
               <>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Adicción</label>
-                  <input type="text" name="tipo_adiccion" value={formData.tipo_adiccion} onChange={handleChange} className="input" />
+                  <input type="text" name="tipoAdiccion" value={formData.tipoAdiccion} onChange={handleChange} className="input" />
                 </div>
 
                 <div className="col-span-2">
@@ -200,17 +238,17 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                  <input type="text" name="cto_emerg_nombre" value={formData.cto_emerg_nombre} onChange={handleChange} className="input" />
+                  <input type="text" name="cto_emerg_nombre" value={formData.contactoEmergencia.nombre} onChange={handleChange} className="input" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
-                  <input type="text" name="cto_emerg_celular" value={formData.cto_emerg_celular} onChange={handleChange} className="input" />
+                  <input type="text" name="cto_emerg_celular" value={formData.contactoEmergencia.celular} onChange={handleChange} className="input" />
                 </div>
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" name="cto_emerg_email" value={formData.cto_emerg_email} onChange={handleChange} className="input" />
+                  <input type="email" name="cto_emerg_email" value={formData.contactoEmergencia.email} onChange={handleChange} className="input" />
                 </div>
               </>
             )}
@@ -218,17 +256,17 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
             <button
-                type="button"
-                onClick={onCerrar}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                Más tarde
-                </button>
+              type="button"
+              onClick={onCerrar}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              Más tarde
+            </button>
 
             <button type="submit" disabled={loading} className="btn-primario">
-                {loading ? 'Guardando...' : 'Guardar mis datos'}
+              {loading ? 'Guardando...' : 'Guardar mis datos'}
             </button>
-            </div>
+          </div>
         </form>
       </div>
     </div>
