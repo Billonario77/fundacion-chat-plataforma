@@ -29,6 +29,7 @@ console.log('🕐 Hora actual:', new Date().toString());
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 app.set('etag', false);
 const server = http.createServer(app);
 
