@@ -33,62 +33,153 @@ app.set('etag', false);
 const server = http.createServer(app);
 
 // ============================================
-// CONFIGURACIÓN DE ORÍGENES PERMITIDOS
+// CONFIGURACIÓN DE ORÍGENES PERMITIDOS (MEJORADA)
 // ============================================
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://192.168.3.44:3000'
+  'http://192.168.3.44:3000',
+  'https://fundacion-chat-frontend-api.netlify.app' // Netlify URL explícita
 ];
 
+// Agregar FRONTEND_URL desde variables de entorno (si existe)
 if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
+  // Evitar duplicados
+  if (!allowedOrigins.includes(process.env.FRONTEND_URL)) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
 }
 
+// Agregar también el dominio de Netlify sin www si es diferente
+const netlifyUrl = 'https://fundacion-chat-frontend-api.netlify.app';
+if (!allowedOrigins.includes(netlifyUrl)) {
+  allowedOrigins.push(netlifyUrl);
+}
+
+// Log de orígenes permitidos al iniciar
+console.log('✅ Orígenes CORS permitidos:', allowedOrigins);
+
 // ============================================
-// ÚNICA DECLARACIÓN DE io
+// CONFIGURACIÓN CORS PARA EXPRESS (MEJORADA)
+// ============================================
+const corsOptions: cors.CorsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Permitir solicitudes sin origen (ej: Postman, curl, tests)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Verificar si el origen está en la lista de permitidos
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ CORS permitido para: ${origin}`);
+      return callback(null, true);
+    }
+
+    // En desarrollo, permitir todos los orígenes para facilitar pruebas
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`⚠️ CORS en desarrollo: permitiendo ${origin} aunque no esté en la lista`);
+      return callback(null, true);
+    }
+
+    // En producción, bloquear orígenes no autorizados
+    console.error(`❌ CORS bloqueado para: ${origin}`);
+    console.error(`📋 Orígenes permitidos:`, allowedOrigins);
+    return callback(new Error(`Origen ${origin} no permitido por CORS`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+};
+
+// Aplicar CORS a Express ANTES de cualquier ruta
+app.use(cors(corsOptions));
+
+// ============================================
+// MIDDLEWARE DE LOGS PARA CORS (Debug)
+// ============================================
+app.use((req, res, next) => {
+  const origin = req.headers.origin || 'Sin origen';
+  console.log(`📥 ${req.method} ${req.path} - Origen: ${origin}`);
+  next();
+});
+
+// ============================================
+// SOCKET.IO CON CONFIGURACIÓN CORS MEJORADA
 // ============================================
 const io = new SocketServer(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+        console.log(`✅ Socket.IO CORS permitido para: ${origin}`);
+        return callback(null, true);
+      }
+      
+      console.error(`❌ Socket.IO CORS bloqueado para: ${origin}`);
+      return callback(new Error(`Origen ${origin} no permitido por CORS`));
+    },
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    transports: ['websocket']
   },
-  transports: ['websocket'], 
-  pingTimeout: 60000, 
-  pingInterval: 25000 
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // ============================================
-// INICIALIZAR SERVICIO DE SOCKETS (inmediatamente después de crear io)
+// INICIALIZAR SERVICIO DE SOCKETS
 // ============================================
 initSocketService(io);
 
-// Middlewares de seguridad y utilidad
-app.use(helmet());
-
-// Configuración de CORS
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  credentials: true
+// ============================================
+// MIDDLEWARES DE SEGURIDAD Y UTILIDAD
+// ============================================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
 }));
 
-app.use(express.json());
+// Middleware para logs de todas las solicitudes (útil para debug)
+app.use((req, res, next) => {
+  console.log(`🚀 ${req.method} ${req.url} - IP: ${req.ip}`);
+  next();
+});
 
-// Limitar peticiones (DESPUÉS de express.json)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ============================================
+// RATE LIMITING
+// ============================================
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 300  // 300 peticiones por minuto
+  max: 300, // 300 peticiones por minuto
+  message: 'Demasiadas peticiones, por favor intenta de nuevo más tarde',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Saltar rate limiting para health checks
+    return req.path === '/health' || req.path === '/';
+  }
 });
 app.use('/api', limiter);
 
-// Rutas
+// ============================================
+// RUTAS DE LA API
+// ============================================
 app.use('/api/auth', authRoutes);
 app.use('/api/turnos', turnosRoutes);
 app.use('/api/admin', adminRoutes);
@@ -100,45 +191,83 @@ app.use('/api/agora', agoraRoutes);
 app.use('/api/emergencia', emergenciaRoutes);
 app.use('/api/grabacion', grabacionRoutes);
 
+// ============================================
+// RUTAS PÚBLICAS
+// ============================================
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    corsAllowedOrigins: allowedOrigins,
+    frontendUrl: process.env.FRONTEND_URL
+  });
+});
+
 // Ruta de prueba
 app.get('/', (req, res) => {
   res.send('API de la Fundación - Servidor funcionando');
 });
 
-// Mapa para trackear qué usuarios están conectados y sus sockets
+// ============================================
+// MANEJO DE ERRORES GLOBAL
+// ============================================
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('❌ Error global:', err.message);
+  console.error('📚 Stack:', err.stack);
+  
+  if (err.message.includes('CORS')) {
+    return res.status(403).json({
+      error: 'Error de CORS',
+      message: err.message,
+      origin: req.headers.origin
+    });
+  }
+  
+  res.status(500).json({
+    error: 'Error interno del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Ha ocurrido un error'
+  });
+});
+
+// ============================================
+// MAPAS DE USUARIOS CONECTADOS
+// ============================================
 interface ConnectedUser {
   socketId: string;
   userId: string;
   rol: 'usuario' | 'guia' | 'admin';
 }
 
-const connectedUsers = new Map<string, ConnectedUser>(); // key: socketId, value: user info
-const userSockets = new Map<string, string>(); // key: userId, value: socketId
+const connectedUsers = new Map<string, ConnectedUser>();
+const userSockets = new Map<string, string>();
 
 // ============================================
-// Configuración de Sockets con autenticación
+// CONFIGURACIÓN DE SOCKETS CON AUTENTICACIÓN
 // ============================================
 io.use((socket, next) => {
   try {
-    // Obtener token del handshake
     const token = socket.handshake.auth.token || socket.handshake.headers.token;
     
     if (!token) {
+      console.error('❌ Socket sin token de autenticación');
       return next(new Error('Autenticación requerida'));
     }
 
-    // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
     
-    // Guardar información del usuario en el socket
     socket.data.user = {
       id: decoded.id,
       rol: decoded.rol,
       email: decoded.email
     };
     
+    console.log(`✅ Socket autenticado: ${decoded.email}`);
     next();
   } catch (error) {
+    console.error('❌ Error en autenticación de socket:', error);
     next(new Error('Token inválido'));
   }
 });
@@ -147,7 +276,6 @@ io.on('connection', (socket) => {
   const user = socket.data.user;
   console.log(`🟢 Usuario conectado: ${user.email} (${user.rol}) - Socket: ${socket.id}`);
 
-  // Guardar en nuestros maps
   connectedUsers.set(socket.id, {
     socketId: socket.id,
     userId: user.id,
@@ -155,24 +283,13 @@ io.on('connection', (socket) => {
   });
   userSockets.set(user.id, socket.id);
 
-  // Unir al usuario a su room personal
   socket.join(`user:${user.id}`);
-  
-  // Unir a rooms según su rol
   socket.join(`rol:${user.rol}`);
 
   socket.on('unirse-a-rooms', (data) => {
     console.log(`📌 ${user.email} se unió a rooms:`, data);
   });
 
-  socket.on('disconnect', () => {
-    console.log(`🔴 Usuario desconectado: ${user.email} - Socket: ${socket.id}`);
-    
-    connectedUsers.delete(socket.id);
-    userSockets.delete(user.id);
-  });
-
-  // Mantener el código existente de mensaje-privado
   socket.on('mensaje-privado', (data) => {
     console.log('Mensaje recibido:', data);
     io.to(data.para).emit('mensaje-privado', {
@@ -181,13 +298,24 @@ io.on('connection', (socket) => {
       timestamp: new Date()
     });
   });
+
+  socket.on('disconnect', () => {
+    console.log(`🔴 Usuario desconectado: ${user.email} - Socket: ${socket.id}`);
+    connectedUsers.delete(socket.id);
+    userSockets.delete(user.id);
+  });
 });
 
-// IMPORTAR WORKERS AQUÍ
-//import './workers/apoyoWorker';
-
+// ============================================
+// INICIAR SERVIDOR
+// ============================================
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🌐 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📋 Orígenes CORS configurados:`, allowedOrigins);
+  console.log(`🔗 FRONTEND_URL: ${process.env.FRONTEND_URL || 'No configurada'}`);
 });
+
+export { app, server, io };
