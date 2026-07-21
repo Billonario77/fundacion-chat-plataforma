@@ -1790,7 +1790,7 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const query = `
-      SELECT id, nombre, email, foto_perfil, rol
+      SELECT id, nombre, email, foto_perfil, rol, datos_completados
       FROM usuarios 
       WHERE id = $1
     `;
