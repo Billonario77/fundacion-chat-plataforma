@@ -100,7 +100,11 @@ const corsOptions: cors.CorsOptions = {
     'Origin',
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers',
-    'cache-control'
+    'cache-control',
+    'expires',           // ✅ AGREGAR
+    'pragma',            // ✅ AGREGAR
+    'if-modified-since', // ✅ AGREGAR
+    'if-none-match'      // ✅ AGREGAR
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
