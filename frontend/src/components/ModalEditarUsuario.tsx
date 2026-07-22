@@ -67,7 +67,7 @@ const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
         edad: data.edad ?? null,
         rh: data.rh || '',
         sexo: data.sexo || '',
-        estatura: data.estatura ?? null,
+        estatura: data.altura ?? null,  // ✅ CAMBIO AQUÍ
         peso: data.peso ?? null,
         direccion: data.direccion || '',
         ciudad: data.ciudad || '',
