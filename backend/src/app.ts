@@ -99,7 +99,8 @@ const corsOptions: cors.CorsOptions = {
     'Accept',
     'Origin',
     'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
+    'Access-Control-Request-Headers',
+    'cache-control'
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
