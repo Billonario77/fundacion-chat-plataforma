@@ -57,17 +57,22 @@ router.post('/solicitar', async (req: Request, res: Response) => {
 });
 
 // Paso 2: Verificar código y cambiar contraseña
+// Paso 2: Verificar código y cambiar contraseña
 router.post('/verificar', async (req: Request, res: Response) => {
   try {
     const { email, codigo, nuevaPassword } = req.body;
 
+    console.log('📥 Verificación recibida:', { email, codigo, nuevaPassword: '***' });
+
     if (!email || !codigo || !nuevaPassword) {
+      console.log('❌ Faltan campos:', { email: !!email, codigo: !!codigo, nuevaPassword: !!nuevaPassword });
       return res.status(400).json({ 
         error: 'Email, código y nueva contraseña son requeridos' 
       });
     }
 
     if (nuevaPassword.length < 6) {
+      console.log('❌ Contraseña muy corta:', nuevaPassword.length);
       return res.status(400).json({ 
         error: 'La contraseña debe tener al menos 6 caracteres' 
       });
@@ -80,13 +85,18 @@ router.post('/verificar', async (req: Request, res: Response) => {
       ORDER BY created_at DESC LIMIT 1
     `;
 
+    console.log('🔍 Buscando código en BD:', { email, codigo });
     const result = await pool.query(query, [email, codigo]);
+    console.log('📊 Resultado de búsqueda:', result.rows.length > 0 ? '✅ Encontrado' : '❌ No encontrado');
 
     if (result.rows.length === 0) {
+      console.log('❌ Código inválido o expirado');
       return res.status(400).json({ 
         error: 'Código inválido o expirado' 
       });
     }
+
+    console.log('✅ Código válido, actualizando contraseña...');
 
     // Marcar el código como usado
     await pool.query(
@@ -100,13 +110,18 @@ router.post('/verificar', async (req: Request, res: Response) => {
       [nuevaPassword, 'bf', email]
     );
 
+    console.log('✅ Contraseña actualizada exitosamente para:', email);
+
     return res.status(200).json({
       message: 'Contraseña actualizada exitosamente'
     });
 
   } catch (error) {
-    console.error('Error al verificar código:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al verificar código:', error);
+    return res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error instanceof Error ? error.message : 'Error desconocido'
+    });
   }
 });
 
