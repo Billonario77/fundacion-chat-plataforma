@@ -20,6 +20,7 @@ import emergenciaRoutes from './routes/emergenciaRoutes';
 import grabacionRoutes from './routes/grabacionRoutes';
 import recuperacionRoutes from './routes/recuperacionRoutes';
 
+
 // Configurar zona horaria para toda la aplicación
 process.env.TZ = 'America/Bogota';
 console.log('🕐 Zona horaria configurada:', process.env.TZ);

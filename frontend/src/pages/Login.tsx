@@ -86,6 +86,9 @@ const Login: React.FC = () => {
               Regístrate aquí
             </a>
           </p>
+          <Link to="/recuperar-contrasena" className="text-sm text-blue-600 hover:underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
       </div>
     </Layout>

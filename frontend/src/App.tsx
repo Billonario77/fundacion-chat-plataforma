@@ -12,6 +12,7 @@ import DetalleTurno from './pages/DetalleTurno';
 import UsuarioDashboard from './pages/UsuarioDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { MensajesNoLeidosProvider } from './contexts/MensajesNoLeidosContext';
+import RecuperarContrasena from './pages/RecuperarContrasena';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -35,7 +36,7 @@ const GuiaRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <div className="text-center py-8">Cargando...</div>;
   }
   
-  if (user?.rol !== 'guia') {  // ← CAMBIADO
+  if (user?.rol !== 'guia') {
     return <Navigate to="/" />;
   }
   
@@ -49,7 +50,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <div className="text-center py-8">Cargando...</div>;
   }
   
-  if (user?.rol !== 'admin') {  // ← CAMBIADO
+  if (user?.rol !== 'admin') {
     return <Navigate to="/" />;
   }
   
@@ -62,6 +63,9 @@ function AppContent() {
       <Route path="/" element={<Inicio />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
+      
+      {/* 👇 NUEVA RUTA */}
+      <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
       
       <Route
         path="/dashboard"
