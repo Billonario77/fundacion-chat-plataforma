@@ -18,6 +18,7 @@ import mensajesRoutes from './routes/mensajesRoutes';
 import agoraRoutes from './routes/agoraRoutes';
 import emergenciaRoutes from './routes/emergenciaRoutes';
 import grabacionRoutes from './routes/grabacionRoutes';
+import recuperacionRoutes from './routes/recuperacionRoutes';
 
 // Configurar zona horaria para toda la aplicación
 process.env.TZ = 'America/Bogota';
@@ -198,6 +199,7 @@ app.use('/api/mensajes', mensajesRoutes);
 app.use('/api/agora', agoraRoutes);
 app.use('/api/emergencia', emergenciaRoutes);
 app.use('/api/grabacion', grabacionRoutes);
+app.use('/api/recuperacion', recuperacionRoutes);
 
 // ============================================
 // RUTAS PÚBLICAS
