@@ -86,9 +86,13 @@ const Login: React.FC = () => {
               Regístrate aquí
             </a>
           </p>
-          <Link to="/recuperar-contrasena" className="text-sm text-blue-600 hover:underline">
-            ¿Olvidaste tu contraseña?
-          </Link>
+
+          {/* 👇 ENVOLVER EN UN DIV CON text-center */}
+          <div className="text-center mt-2">
+            <Link to="/recuperar-contrasena" className="text-sm text-blue-600 hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>
