@@ -33,6 +33,7 @@ router.post('/solicitar', async (req: Request, res: Response) => {
     const codigo = generarCodigo();
     const expira = new Date();
     expira.setMinutes(expira.getMinutes() + 15); // Válido por 15 minutos
+    const expiraUTC = new Date(expira.toISOString());
 
     // Guardar el código en la base de datos
     await pool.query(
@@ -80,9 +81,9 @@ router.post('/verificar', async (req: Request, res: Response) => {
 
     // Verificar el código
     const query = `
-      SELECT * FROM recuperacion_codigos 
-      WHERE email = $1 AND codigo = $2 AND usado = false AND expira > NOW()
-      ORDER BY created_at DESC LIMIT 1
+    SELECT * FROM recuperacion_codigos 
+    WHERE email = $1 AND codigo = $2 AND usado = false AND expira > NOW() AT TIME ZONE 'UTC'
+    ORDER BY created_at DESC LIMIT 1
     `;
 
     console.log('🔍 Buscando código en BD:', { email, codigo });
