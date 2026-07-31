@@ -32,7 +32,7 @@ router.post('/solicitar', async (req: Request, res: Response) => {
     // Generar código de 6 dígitos
     const codigo = generarCodigo();
     const expira = new Date();
-    expira.setMinutes(expira.getMinutes() + 30); // Válido por 15 minutos
+    expira.setMinutes(expira.getMinutes() + 15);
     const expiraUTC = new Date(expira.toISOString());
 
     // Guardar el código en la base de datos
@@ -82,7 +82,8 @@ router.post('/verificar', async (req: Request, res: Response) => {
     // Verificar el código
     const query = `
     SELECT * FROM recuperacion_codigos 
-    WHERE email = $1 AND codigo = $2 AND usado = false AND expira > NOW() AT TIME ZONE 'UTC'
+    WHERE email = $1 AND codigo = $2 AND usado = false 
+    AND expira > (NOW() - INTERVAL '5 hours')
     ORDER BY created_at DESC LIMIT 1
     `;
 
