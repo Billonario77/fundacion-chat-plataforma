@@ -32,7 +32,7 @@ router.post('/solicitar', async (req: Request, res: Response) => {
     // Generar código de 6 dígitos
     const codigo = generarCodigo();
     const expira = new Date();
-    expira.setMinutes(expira.getMinutes() + 15); // Válido por 15 minutos
+    expira.setMinutes(expira.getMinutes() + 30); // Válido por 15 minutos
     const expiraUTC = new Date(expira.toISOString());
 
     // Guardar el código en la base de datos
