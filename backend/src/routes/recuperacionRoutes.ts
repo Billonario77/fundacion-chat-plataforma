@@ -1,9 +1,10 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import { pool } from '../database/connection';
-import crypto from 'crypto';
+import { Resend } from 'resend';
 
 const router = express.Router();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Generar código de 6 dígitos
 const generarCodigo = (): string => {
@@ -21,7 +22,7 @@ router.post('/solicitar', async (req: Request, res: Response) => {
 
     // Verificar que el usuario existe
     const usuarioQuery = await pool.query(
-      'SELECT id, email FROM usuarios WHERE email = $1',
+      'SELECT id, email, nombre FROM usuarios WHERE email = $1',
       [email]
     );
 
@@ -29,11 +30,12 @@ router.post('/solicitar', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No existe una cuenta con este email' });
     }
 
+    const usuario = usuarioQuery.rows[0];
+
     // Generar código de 6 dígitos
     const codigo = generarCodigo();
     const expira = new Date();
-    expira.setMinutes(expira.getMinutes() + 15);
-    const expiraUTC = new Date(expira.toISOString());
+    expira.setMinutes(expira.getMinutes() + 30);
 
     // Guardar el código en la base de datos
     await pool.query(
@@ -42,13 +44,34 @@ router.post('/solicitar', async (req: Request, res: Response) => {
       [email, codigo, expira]
     );
 
-    // TODO: Enviar email con el código
-    // Por ahora, lo devolvemos en la respuesta (solo para desarrollo)
-    console.log(`📧 Código para ${email}: ${codigo}`);
+    // 📧 ENVIAR EMAIL
+    try {
+      await resend.emails.send({
+        from: 'Fundación <onboarding@resend.dev>',
+        to: [email],
+        subject: 'Código de recuperación de contraseña',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+            <h2 style="color: #4a6cf7;">Código de recuperación</h2>
+            <p>Hola <strong>${usuario.nombre || 'usuario'}</strong>,</p>
+            <p>Has solicitado recuperar tu contraseña. Usa el siguiente código para restablecerla:</p>
+            <div style="background-color: #f0f4ff; padding: 15px; border-radius: 8px; text-align: center; font-size: 32px; letter-spacing: 5px; font-weight: bold; color: #4a6cf7; margin: 20px 0;">
+              ${codigo}
+            </div>
+            <p>Este código es válido por <strong>30 minutos</strong>.</p>
+            <p>Si no solicitaste este código, ignora este mensaje.</p>
+            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+            <p style="color: #888; font-size: 12px;">Fundación - Plataforma de apoyo</p>
+          </div>
+        `
+      });
+      console.log(`📧 Email enviado a: ${email} con código: ${codigo}`);
+    } catch (emailError) {
+      console.error('❌ Error al enviar email:', emailError);
+    }
 
     return res.status(200).json({
-      message: 'Código enviado a tu correo',
-      codigo: codigo // Solo en desarrollo, eliminar en producción
+      message: 'Código enviado a tu correo'
     });
 
   } catch (error) {
@@ -57,7 +80,6 @@ router.post('/solicitar', async (req: Request, res: Response) => {
   }
 });
 
-// Paso 2: Verificar código y cambiar contraseña
 // Paso 2: Verificar código y cambiar contraseña
 router.post('/verificar', async (req: Request, res: Response) => {
   try {
@@ -81,10 +103,10 @@ router.post('/verificar', async (req: Request, res: Response) => {
 
     // Verificar el código
     const query = `
-    SELECT * FROM recuperacion_codigos 
-    WHERE email = $1 AND codigo = $2 AND usado = false 
-    AND expira > (NOW() - INTERVAL '5 hours')
-    ORDER BY created_at DESC LIMIT 1
+      SELECT * FROM recuperacion_codigos 
+      WHERE email = $1 AND codigo = $2 AND usado = false 
+      AND expira > (NOW() - INTERVAL '5 hours')
+      ORDER BY created_at DESC LIMIT 1
     `;
 
     console.log('🔍 Buscando código en BD:', { email, codigo });
