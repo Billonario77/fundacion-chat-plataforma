@@ -1,8 +1,8 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import { pool } from '../database/connection';
-import nodemailer from 'nodemailer';
 
+const nodemailer = require('nodemailer');
 const router = express.Router();
 
 // Configurar transporte SMTP
