@@ -1,10 +1,20 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import { pool } from '../database/connection';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Configurar transporte SMTP
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: process.env.SMTP_SECURE === 'true', // true para puerto 465
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 // Generar código de 6 dígitos
 const generarCodigo = (): string => {
@@ -44,11 +54,11 @@ router.post('/solicitar', async (req: Request, res: Response) => {
       [email, codigo, expira]
     );
 
-    // 📧 ENVIAR EMAIL
+    // 📧 ENVIAR EMAIL CON NODEMAILER
     try {
-      await resend.emails.send({
-        from: 'Fundación <onboarding@resend.dev>',
-        to: [email],
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: email,
         subject: 'Código de recuperación de contraseña',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
@@ -68,6 +78,7 @@ router.post('/solicitar', async (req: Request, res: Response) => {
       console.log(`📧 Email enviado a: ${email} con código: ${codigo}`);
     } catch (emailError) {
       console.error('❌ Error al enviar email:', emailError);
+      // No detenemos el flujo, solo registramos el error
     }
 
     return res.status(200).json({
@@ -101,7 +112,7 @@ router.post('/verificar', async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar el código
+    // Verificar el código (con zona horaria Colombia)
     const query = `
       SELECT * FROM recuperacion_codigos 
       WHERE email = $1 AND codigo = $2 AND usado = false 
