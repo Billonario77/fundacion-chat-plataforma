@@ -418,9 +418,9 @@ export const getGuiasConUsuarios = async (req: AuthRequest, res: Response): Prom
     for (const guia of guias) {
       const usuariosQuery = `
         SELECT DISTINCT
-          u.id as usuario_id,
-          u.nombre as usuario_nombre,
-          u.email as usuario_email,
+          u.id as "usuarioId",
+          u.nombre as "usuarioNombre",
+          u.email as "usuarioEmail",
           MAX(t.fecha_programada) as ultimo_turno,
           COUNT(t.id) as total_turnos
         FROM usuarios u
