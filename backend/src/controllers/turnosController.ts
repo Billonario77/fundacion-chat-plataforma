@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import apoyoQueue, { SolicitudApoyo } from '../queues/apoyoQueue';
-import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 import { notificarAAdmins } from '../services/socketService';
-import { AsignacionService } from '../services/asignacionService'; // 👈 NUEVA IMPORTACIÓN
-
+import { AsignacionService } from '../services/asignacionService';
 
 export const solicitarApoyo = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -55,7 +54,7 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
 
       if (turnosUsuario.rows.length > 0) {
         res.status(400).json({ 
-          error: `Ya tienes un turno programado en ese horario (${fechaInicio.toLocaleString()} - ${fechaFin.toLocaleString()}). Por favor, elige otra fecha u hora.`
+          error: `Ya tienes un turno programado en ese horario. Por favor, elige otra fecha u hora.`
         });
         return;
       }
@@ -77,12 +76,11 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     console.log(`🎯 Es primera vez: ${esPrimeraVez ? 'SÍ' : 'NO'}`);
 
     // ============================================
-    // 🆕 ASIGNAR GUÍA USANDO EL SERVICIO (NUEVO)
+    // ASIGNAR GUÍA USANDO EL SERVICIO
     // ============================================
     let guiaAsignado = null;
     let estado = 'pendiente';
 
-    // Usar el nuevo servicio de asignación
     const asignacion = await AsignacionService.asignarGuia(
       usuarioId,
       esPrimeraVez,
@@ -104,7 +102,7 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     }
 
     // ============================================
-    // VALIDAR DISPONIBILIDAD DEL GUÍA (si hay fecha preferida y guía asignado)
+    // VALIDAR DISPONIBILIDAD DEL GUÍA
     // ============================================
     if (fechaPreferida && guiaAsignado) {
       console.log('🔍 ENTRANDO A VALIDACIÓN DEL GUÍA');
@@ -127,12 +125,11 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
         [guiaAsignado, fechaFin, fechaInicio]
       );
 
-       console.log('📊 Turnos encontrados:', turnosGuia.rows.length);
+      console.log('📊 Turnos encontrados:', turnosGuia.rows.length);
 
       if (turnosGuia.rows.length > 0) {
-        const conflicto = turnosGuia.rows[0];
         res.status(400).json({ 
-          error: `El guía ya tiene un turno programado en ese horario. Por favor, elige otra fecha u hora.`
+          error: 'El guía ya tiene un turno programado en ese horario. Por favor, elige otra fecha u hora.'
         });
         return;
       }
@@ -222,7 +219,6 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
   }
 };
 
-
 export const misTurnos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const guiaId = req.user?.id;
@@ -267,10 +263,8 @@ export const misTurnos = async (req: AuthRequest, res: Response): Promise<void> 
   }
 };
 
-
 export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-
     console.log('📥 Request body:', req.body);
     console.log('📥 Request params:', req.params);
     console.log('👤 Usuario:', req.user);
@@ -284,14 +278,12 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Validar estado
     const estadosValidos = ['pendiente', 'aceptado', 'iniciado', 'completado', 'cancelado'];
     if (!estadosValidos.includes(estado)) {
       res.status(400).json({ error: 'Estado no válido' });
       return;
     }
 
-    // Si es cancelación, validar que hay motivo
     if (estado === 'cancelado' && !motivo) {
       res.status(400).json({ error: 'Debe proporcionar un motivo de cancelación' });
       return;
@@ -308,14 +300,12 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
     // VALIDACIONES DE PERMISOS
     // ============================================
     
-    // Si es usuario, solo puede completar turnos
     if (req.user?.rol === 'usuario') {
       if (estado !== 'completado') {
         res.status(403).json({ error: 'Los usuarios solo pueden finalizar turnos' });
         return;
       }
       
-      // Verificar que el turno le pertenece
       const verificarUsuario = await pool.query(
         'SELECT id FROM turnos WHERE id = $1 AND usuario_id = $2',
         [turnoId, req.user.id]
@@ -325,10 +315,7 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
         res.status(403).json({ error: 'No puedes finalizar turnos de otros usuarios' });
         return;
       }
-    } 
-    // Si es guía, puede cambiar cualquier estado
-    else if (req.user?.rol === 'guia') {
-      // Verificar que el turno pertenece al guía
+    } else if (req.user?.rol === 'guia') {
       const verificarQuery = 'SELECT id, usuario_id FROM turnos WHERE id = $1 AND guia_id = $2';
       const verificar = await pool.query(verificarQuery, [turnoId, guiaId]);
       
@@ -336,20 +323,17 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
         res.status(404).json({ error: 'Turno no encontrado o no pertenece a este guía' });
         return;
       }
-    } 
-    else {
+    } else {
       res.status(403).json({ error: 'No autorizado' });
       return;
     }
 
-          // Obtener el usuario_id (para notificaciones)
     const turnoData = await pool.query(
       'SELECT usuario_id FROM turnos WHERE id = $1',
       [turnoId]
     );
     const usuarioId = turnoData.rows[0]?.usuario_id;
 
-    // Actualizar el turno y guardar el motivo si es cancelación
     let updateQuery = `
       UPDATE turnos 
       SET estado = $1,
@@ -359,30 +343,20 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
 
     const params: any[] = [estado, estado === 'cancelado' ? motivo : null, estado === 'cancelado' ? req.user?.rol : null];
 
-    // Si el estado es 'iniciado', guardar hora_inicio
     if (estado === 'iniciado') {
       updateQuery += `, hora_inicio = COALESCE(hora_inicio, NOW())`;
     }
 
-    // Si el estado es 'completado', guardar hora_fin y calcular duracion_real
     if (estado === 'completado') {
       updateQuery += `, hora_fin = NOW(), duracion_real = EXTRACT(EPOCH FROM (NOW() - COALESCE(hora_inicio, NOW())))/60`;
     }
 
     updateQuery += ` WHERE id = $${params.length + 1} RETURNING id, estado, fecha_programada`;
-
     params.push(turnoId);
 
     const updateResult = await pool.query(updateQuery, params);
 
-    const result = await pool.query(updateQuery, [
-      estado,
-      estado === 'cancelado' ? motivo : null,
-      estado === 'cancelado' ? req.user?.rol : null,
-      turnoId
-    ]);
-
-    console.log('✅ Update ejecutado, filas afectadas:', result.rowCount);
+    console.log('✅ Update ejecutado, filas afectadas:', updateResult.rowCount);
 
     const mensajesPorEstado: Record<string, string> = {
       'aceptado': 'Tu turno ha sido aceptado por un guía',
@@ -400,7 +374,6 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
       });
     }
 
-    // También notificar al guía si él mismo realizó la acción
     if (req.user?.rol === 'guia') {
       console.log('📢 Notificando al guía que canceló:', req.user.id);
       notificarUsuario(req.user.id, 'estado-turno-actualizado', {
@@ -410,30 +383,26 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
       });
     }
 
-    // También notificar al guía si el estado es 'completado' y quien finalizó fue el usuario
-        if (estado === 'completado' && req.user?.rol === 'usuario') {
-          // Obtener el guía del turno
-          const guiaData = await pool.query(
-            'SELECT guia_id FROM turnos WHERE id = $1',
-            [turnoId]
-          );
-          const guiaId = guiaData.rows[0]?.guia_id;
-          
-          if (guiaId) {
-            console.log('📢 Notificando también al guía:', guiaId);
-            notificarUsuario(guiaId, 'estado-turno-actualizado', {
-              turnoId: turnoId,
-              estado: estado,
-              mensaje: 'El usuario ha finalizado la sesión'
-            });
-          }
-        }
+    if (estado === 'completado' && req.user?.rol === 'usuario') {
+      const guiaData = await pool.query(
+        'SELECT guia_id FROM turnos WHERE id = $1',
+        [turnoId]
+      );
+      const guiaIdFromTurno = guiaData.rows[0]?.guia_id;
       
+      if (guiaIdFromTurno) {
+        console.log('📢 Notificando también al guía:', guiaIdFromTurno);
+        notificarUsuario(guiaIdFromTurno, 'estado-turno-actualizado', {
+          turnoId: turnoId,
+          estado: estado,
+          mensaje: 'El usuario ha finalizado la sesión'
+        });
+      }
+    }
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, guia_afectado_id, accion, detalles, created_at)
-      VALUES ($1, $2, $3, $4, NOW())`,
+       VALUES ($1, $2, $3, $4, NOW())`,
       [
         usuarioId,
         req.user?.id,
@@ -457,11 +426,6 @@ export const actualizarEstadoTurno = async (req: AuthRequest, res: Response): Pr
   }
 };
 
-
-
-// ============================================
-// FUNCIÓN CORREGIDA - SIN VERIFICACIÓN DE PERMISOS
-// ============================================
 export const obtenerTurnoPorId = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -472,7 +436,6 @@ export const obtenerTurnoPorId = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Asegurar que turnoId sea un string
     if (Array.isArray(turnoId)) {
       turnoId = turnoId[0];
     }
@@ -514,7 +477,6 @@ export const obtenerTurnoPorId = async (req: AuthRequest, res: Response): Promis
 
     const turno = result.rows[0];
 
-    // SIN VERIFICACIÓN DE PERMISOS - ACCESO TEMPORAL
     console.log('✅ Acceso permitido temporalmente para usuario:', usuarioId);
 
     res.json({
@@ -592,9 +554,6 @@ export const misSolicitudes = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-
-
-
 export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -624,7 +583,6 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
           t.created_at,
           t.cancelado_por,
           t.es_reprogramacion,
-          t.created_at,
           g.id as guia_id,
           g.nombre as guia_nombre,
           g.email as guia_email
@@ -637,7 +595,6 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
       countQuery = 'SELECT COUNT(*) as total FROM turnos WHERE usuario_id = $1';
       queryParams = [usuarioId, limit, offset];
       countParams = [usuarioId];
-
     } else if (rol === 'guia') {
       query = `
         SELECT 
@@ -661,7 +618,6 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
       countQuery = 'SELECT COUNT(*) as total FROM turnos WHERE guia_id = $1';
       queryParams = [usuarioId, limit, offset];
       countParams = [usuarioId];
-
     } else {
       res.status(403).json({ error: 'Rol no autorizado' });
       return;
@@ -695,12 +651,9 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
   }
 };
 
-
-
-    // ============================================
-    // CANCELAR TURNO
-    // ============================================
-
+// ============================================
+// CANCELAR TURNO
+// ============================================
 
 export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -726,7 +679,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // Obtener información del turno
     const turnoQuery = `
       SELECT 
         t.*,
@@ -748,7 +700,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
     const turno = turnoResult.rows[0];
     const usuarioId = turno.usuario_id;
 
-    // Validar permisos
     if (rol === 'usuario') {
       if (turno.usuario_id !== usuarioLogueadoId) {
         res.status(403).json({ error: 'No puedes cancelar turnos de otros usuarios' });
@@ -774,7 +725,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // Verificar penalización para usuarios
     let requierePenalizacion = false;
     if (rol === 'usuario') {
       const fechaActual = new Date();
@@ -787,9 +737,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    // ============================================
-    // UPDATE - SOLO COLUMNAS EXISTENTES
-    // ============================================
     const updateQuery = `
       UPDATE turnos 
       SET estado = 'cancelado',
@@ -807,7 +754,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
 
     console.log('✅ Turno cancelado:', result.rows[0]);
 
-    // Notificar al otro participante
     const otroParticipanteId = rol === 'usuario' ? turno.guia_id_actual : turno.usuario_id;
     if (otroParticipanteId) {
       notificarUsuario(otroParticipanteId, 'estado-turno-actualizado', {
@@ -817,14 +763,12 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       });
     }
 
-    // También notificar al mismo usuario que canceló
-      notificarUsuario(usuarioLogueadoId, 'estado-turno-actualizado', {
-        turnoId: turnoId,
-        estado: 'cancelado',
-        mensaje: `Has cancelado el turno`
-      });
+    notificarUsuario(usuarioLogueadoId, 'estado-turno-actualizado', {
+      turnoId: turnoId,
+      estado: 'cancelado',
+      mensaje: 'Has cancelado el turno'
+    });
 
-    // Notificar específicamente para el badge de cancelaciones
     console.log('📢 Emitiendo evento nuevo-turno-cancelado para:', { 
       usuarioLogueadoId, 
       rol, 
@@ -836,14 +780,12 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       rol: rol
     });
 
-    // Notificar al admin también
     notificarAAdmins('nuevo-turno-cancelado', {
       turnoId: turnoId,
       canceladoPor: rol,
       usuarioId: usuarioId
     });
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, guia_afectado_id, accion, detalles, created_at)
        VALUES ($1, $2, $3, $4, NOW())`,
@@ -872,341 +814,6 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-
-    // ============================================
-    // REPROGRAMAR TURNO
-    // ============================================
-
-
-export const reprogramarTurno = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    let { turnoId } = req.params;
-    const { preferencia, fecha_preferida, comentarios } = req.body;
-
-    if (!usuarioId) {
-      res.status(401).json({ error: 'No autenticado' });
-      return;
-    }
-
-    if (req.user?.rol !== 'usuario') {
-      res.status(403).json({ error: 'Solo los usuarios pueden reprogramar turnos' });
-      return;
-    }
-
-    if (Array.isArray(turnoId)) {
-      turnoId = turnoId[0];
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(turnoId)) {
-      res.status(400).json({ error: 'ID de turno inválido' });
-      return;
-    }
-
-    const preferenciasValidas = ['mismo_guia', 'otro_guia'];
-    if (preferencia && !preferenciasValidas.includes(preferencia)) {
-      res.status(400).json({ error: 'Preferencia no válida' });
-      return;
-    }
-
-    const turnoQuery = `
-      SELECT 
-        t.*,
-        u.id as usuario_id_verify
-      FROM turnos t
-      JOIN usuarios u ON t.usuario_id = u.id
-      WHERE t.id = $1
-    `;
-    
-    const turnoResult = await pool.query(turnoQuery, [turnoId]);
-    
-    if (turnoResult.rows.length === 0) {
-      res.status(404).json({ error: 'Turno no encontrado' });
-      return;
-    }
-
-    const turnoOriginal = turnoResult.rows[0];
-
-    if (turnoOriginal.usuario_id_verify !== usuarioId) {
-      res.status(403).json({ error: 'No puedes reprogramar turnos de otros usuarios' });
-      return;
-    }
-
-    if (turnoOriginal.estado !== 'cancelado') {
-      res.status(400).json({ 
-        error: 'Solo se pueden reprogramar turnos cancelados',
-        estado_actual: turnoOriginal.estado
-      });
-      return;
-    }
-
-    // ============================================
-    // SI PREFIERE EL MISMO GUÍA, CREAR TURNO AUTOMÁTICAMENTE
-    // ============================================
-    if (preferencia === 'mismo_guia') {
-      const guiaOriginalId = turnoOriginal.guia_id;
-
-      if (!guiaOriginalId) {
-        res.status(400).json({ error: 'No hay guía asignado al turno original' });
-        return;
-      }
-
-      if (!fecha_preferida) {
-        res.status(400).json({ error: 'Debes seleccionar una fecha y hora para reprogramar' });
-        return;
-      }
-
-      const fechaTurno = new Date(fecha_preferida);
-
-      if (fechaTurno <= new Date()) {
-        res.status(400).json({ error: 'La fecha debe ser posterior a la fecha actual' });
-        return;
-      }
-
-      // Verificar que el guía no tenga otro turno en el mismo horario
-      const duracion = turnoOriginal.duracion_minutos || 60;
-      const fechaInicio = new Date(fechaTurno);
-      const fechaFin = new Date(fechaTurno);
-      fechaFin.setMinutes(fechaFin.getMinutes() + duracion);
-
-      console.log('🔍 Verificando disponibilidad para guía:', guiaOriginalId);
-      console.log('📅 Fecha inicio:', fechaInicio);
-      console.log('📅 Fecha fin:', fechaFin);
-
-      const verificarDisponibilidad = await pool.query(
-        `SELECT id, fecha_programada, duracion_minutos 
-        FROM turnos 
-        WHERE guia_id = $1 
-        AND estado IN ('pendiente', 'aceptado', 'iniciado')
-        AND (
-          (fecha_programada < $2 AND (fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute')) > $3)
-          OR
-          (fecha_programada >= $3 AND fecha_programada < $2)
-        )`,
-        [guiaOriginalId, fechaFin, fechaInicio]
-      );
-
-      console.log('📊 Turnos conflictivos encontrados:', verificarDisponibilidad.rows.length);
-
-      if (verificarDisponibilidad.rows.length > 0) {
-        const conflicto = verificarDisponibilidad.rows[0];
-        const fechaConflicto = new Date(conflicto.fecha_programada);
-        const finConflicto = new Date(fechaConflicto);
-        finConflicto.setMinutes(finConflicto.getMinutes() + (conflicto.duracion_minutos || 60));
-        
-        res.status(400).json({ 
-          error: `El guía no está disponible en ese horario. Ya tiene un turno programado de ${fechaConflicto.toLocaleTimeString()} a ${finConflicto.toLocaleTimeString()}. Por favor, elige otro horario o selecciona "Quiero un guía diferente"`,
-          conflicto: {
-            fecha: conflicto.fecha_programada,
-            inicio: fechaConflicto.toLocaleTimeString(),
-            fin: finConflicto.toLocaleTimeString()
-          }
-        });
-        return;
-      }
-
-
-      const insertTurnoQuery = `
-        INSERT INTO turnos (
-          usuario_id,
-          guia_id,
-          fecha_programada,
-          duracion_minutos,
-          modalidad,
-          estado,
-          es_reprogramacion,
-          turno_original_id,
-          created_at
-        ) VALUES ($1, $2, $3, $4, $5, 'pendiente', true, $6, NOW())
-        RETURNING id
-      `;
-
-      const turnoResultInsert = await pool.query(insertTurnoQuery, [
-        usuarioId,
-        guiaOriginalId,
-        fechaTurno,
-        duracion,
-        turnoOriginal.modalidad || 'chat',
-        turnoId
-      ]);
-
-      const nuevoTurnoId = turnoResultInsert.rows[0].id;
-
-      // Registrar la reprogramación como completada
-      await pool.query(
-        `INSERT INTO reprogramaciones (
-          turno_original_id,
-          usuario_id,
-          preferencia,
-          fecha_preferida,
-          comentarios,
-          estado,
-          nuevo_turno_id,
-          created_at
-        ) VALUES ($1, $2, $3, $4, $5, 'completada', $6, NOW())`,
-        [turnoId, usuarioId, 'mismo_guia', fecha_preferida, comentarios || null, nuevoTurnoId]
-      );
-
-      notificarUsuario(guiaOriginalId, 'nuevo-turno-disponible', {
-        turnoId: nuevoTurnoId,
-        usuarioId: usuarioId,
-        mensaje: 'El usuario ha reprogramado un turno contigo'
-      });
-
-      notificarUsuario(usuarioId, 'estado-turno-actualizado', {
-        turnoId: nuevoTurnoId,
-        estado: 'pendiente',
-        mensaje: 'Tu turno ha sido reprogramado exitosamente'
-      });
-
-      await pool.query(
-        `INSERT INTO auditoria_logs (usuario_afectado_id, guia_afectado_id, accion, detalles)
-        VALUES ($1, $2, $3, $4)`,
-        [
-          usuarioId,
-          guiaOriginalId,
-          'reprogramar_turno_mismo_guia',
-          JSON.stringify({ 
-            turno_original: turnoId, 
-            nuevo_turno: nuevoTurnoId,
-            fecha: fechaTurno
-          })
-        ]
-      );
-
-      res.status(201).json({
-        message: 'Turno reprogramado exitosamente con el mismo guía',
-        nuevo_turno_id: nuevoTurnoId,
-        preferencia: 'mismo_guia'
-      });
-      return;
-    }
-
-    // ============================================
-    // SI NO ES MISMO GUÍA (otro_guia), CREAR REPROGRAMACIÓN PARA ADMIN
-    // ============================================
-
-    const reprogramacionQuery = `
-      SELECT id FROM reprogramaciones 
-      WHERE turno_original_id = $1 AND estado = 'pendiente'
-    `;
-    const reprogramacionResult = await pool.query(reprogramacionQuery, [turnoId]);
-    
-    if (reprogramacionResult.rows.length > 0) {
-      res.status(400).json({ 
-        error: 'Ya existe una solicitud de reprogramación pendiente para este turno'
-      });
-      return;
-    }
-
-    const insertQuery = `
-      INSERT INTO reprogramaciones (
-        turno_original_id,
-        usuario_id,
-        preferencia,
-        fecha_preferida,
-        comentarios,
-        estado
-      ) VALUES ($1, $2, $3, $4, $5, 'pendiente')
-      RETURNING id, created_at
-    `;
-
-    const result = await pool.query(insertQuery, [
-      turnoId,
-      usuarioId,
-      preferencia || null,
-      fecha_preferida || null,
-      comentarios || null
-    ]);
-
-    const reprogramacion = result.rows[0];
-
-    notificarAAdmins('nueva-solicitud-reprogramacion', {
-      message: 'Nueva solicitud de reprogramación',
-      reprogramacionId: reprogramacion.id,
-      turnoId: turnoId,
-      timestamp: new Date().toISOString()
-    });
-
-    await pool.query(
-      `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles)
-       VALUES ($1, $2, $3)`,
-      [
-        usuarioId,
-        'solicitar_reprogramacion',
-        JSON.stringify({ 
-          turno_original: turnoId, 
-          reprogramacion_id: reprogramacion.id,
-          preferencia,
-          fecha_preferida
-        })
-      ]
-    );
-
-    res.status(201).json({
-      message: 'Solicitud de reprogramación creada exitosamente',
-      reprogramacion: {
-        id: reprogramacion.id,
-        turno_original: turnoId,
-        preferencia: preferencia || 'sin preferencia',
-        fecha_preferida: fecha_preferida || null,
-        estado: 'pendiente'
-      }
-    });
-
-  } catch (error) {
-    console.error('Error al reprogramar turno:', error);
-    res.status(500).json({ error: 'Error interno al procesar la reprogramación' });
-  }
-};
-
-
-
-
-export const getMisReprogramaciones = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-
-    if (!usuarioId) {
-      res.status(401).json({ error: 'No autenticado' });
-      return;
-    }
-
-    if (req.user?.rol !== 'usuario') {
-      res.status(403).json({ error: 'Acceso solo para usuarios' });
-      return;
-    }
-
-    const query = `
-      SELECT 
-        r.id,
-        r.turno_original_id,
-        r.preferencia,
-        r.fecha_preferida,
-        r.comentarios,
-        r.estado,
-        r.created_at,
-        r.updated_at,
-        t.fecha_programada as turno_original_fecha,
-        t.estado as turno_original_estado
-      FROM reprogramaciones r
-      JOIN turnos t ON r.turno_original_id = t.id
-      WHERE r.usuario_id = $1
-      ORDER BY r.created_at DESC
-    `;
-
-    const result = await pool.query(query, [usuarioId]);
-
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('Error al obtener reprogramaciones:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-
-};
-
 // ============================================
 // MARCAR CANCELACIONES COMO VISTAS
 // ============================================
@@ -1222,7 +829,6 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
     }
 
     if (rol === 'usuario') {
-      // Primero intentar actualizar
       let result = await pool.query(
         `UPDATE ultima_visto_cancelaciones 
          SET ultima_visualizacion = NOW(), updated_at = NOW()
@@ -1230,7 +836,6 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
         [usuarioId]
       );
       
-      // Si no se actualizó ningún registro, insertar
       if (result.rowCount === 0) {
         await pool.query(
           `INSERT INTO ultima_visto_cancelaciones (usuario_id, ultima_visualizacion)
@@ -1239,7 +844,6 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
         );
       }
     } else if (rol === 'guia') {
-      // Primero intentar actualizar
       let result = await pool.query(
         `UPDATE ultima_visto_cancelaciones 
          SET ultima_visualizacion = NOW(), updated_at = NOW()
@@ -1247,7 +851,6 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
         [usuarioId]
       );
       
-      // Si no se actualizó ningún registro, insertar
       if (result.rowCount === 0) {
         await pool.query(
           `INSERT INTO ultima_visto_cancelaciones (guia_id, ultima_visualizacion)
@@ -1272,91 +875,8 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
 };
 
 // ============================================
-// CONSULTAR SI HAY CANCELACIONES NO VISTAS
+// CONTAR CANCELACIONES NO VISTAS
 // ============================================
-
-export const hayCancelacionesNoVistas = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    const rol = req.user?.rol;
-
-    if (!usuarioId) {
-      res.status(401).json({ error: 'No autenticado' });
-      return;
-    }
-
-    let cancelacionQuery = '';
-    let cancelacionParams: any[] = [];
-
-    if (rol === 'usuario') {
-      cancelacionQuery = `
-        SELECT MAX(created_at) as ultima_cancelacion
-        FROM turnos
-        WHERE usuario_id = $1 
-          AND estado = 'cancelado' 
-          AND cancelado_por = 'usuario'
-      `;
-      cancelacionParams = [usuarioId];
-    } else if (rol === 'guia') {
-      cancelacionQuery = `
-        SELECT MAX(created_at) as ultima_cancelacion
-        FROM turnos
-        WHERE guia_id = $1 
-          AND estado = 'cancelado' 
-          AND cancelado_por = 'guia'
-      `;
-      cancelacionParams = [usuarioId];
-    } else {
-      res.status(403).json({ error: 'Rol no autorizado' });
-      return;
-    }
-
-    const cancelacionResult = await pool.query(cancelacionQuery, cancelacionParams);
-    const ultimaCancelacion = cancelacionResult.rows[0]?.ultima_cancelacion;
-
-    if (!ultimaCancelacion) {
-      res.json({ hayNoVistas: false });
-      return;
-    }
-
-    let vistaQuery = '';
-    let vistaParams: any[] = [];
-
-    if (rol === 'usuario') {
-      vistaQuery = `
-        SELECT ultima_visualizacion
-        FROM ultima_visto_cancelaciones
-        WHERE usuario_id = $1
-      `;
-      vistaParams = [usuarioId];
-    } else {
-      vistaQuery = `
-        SELECT ultima_visualizacion
-        FROM ultima_visto_cancelaciones
-        WHERE guia_id = $1
-      `;
-      vistaParams = [usuarioId];
-    }
-
-    const vistaResult = await pool.query(vistaQuery, vistaParams);
-    const ultimaVista = vistaResult.rows[0]?.ultima_visualizacion;
-
-    if (!ultimaVista) {
-      res.json({ hayNoVistas: true });
-      return;
-    }
-
-    const hayNoVistas = new Date(ultimaCancelacion) > new Date(ultimaVista);
-    
-    res.json({ hayNoVistas });
-
-  } catch (error) {
-    console.error('Error al verificar cancelaciones no vistas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-
 
 export const contarCancelacionesNoVistas = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1405,284 +925,10 @@ export const contarCancelacionesNoVistas = async (req: AuthRequest, res: Respons
   }
 };
 
-export const obtenerCancelacionesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    // Verificar que sea admin
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
+// ============================================
+// OBTENER MI GUÍA ACTUAL
+// ============================================
 
-    const { fecha_desde, fecha_hasta, cancelado_por, guia_id, usuario_id, page = 1, limit = 20 } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
-
-    let whereConditions: string[] = [];
-    let params: any[] = [];
-    let paramIndex = 1;
-
-    // Filtro por fecha
-    if (fecha_desde) {
-      whereConditions.push(`t.created_at >= $${paramIndex}`);
-      params.push(fecha_desde);
-      paramIndex++;
-    }
-    if (fecha_hasta) {
-      whereConditions.push(`t.created_at <= $${paramIndex}`);
-      params.push(fecha_hasta);
-      paramIndex++;
-    }
-
-    // Filtro por quien canceló
-    if (cancelado_por && ['usuario', 'guia', 'admin'].includes(cancelado_por as string)) {
-      whereConditions.push(`t.cancelado_por = $${paramIndex}`);
-      params.push(cancelado_por);
-      paramIndex++;
-    }
-
-    // Filtro por guía
-    if (guia_id) {
-      whereConditions.push(`t.guia_id = $${paramIndex}`);
-      params.push(guia_id);
-      paramIndex++;
-    }
-
-    // Filtro por usuario
-    if (usuario_id) {
-      whereConditions.push(`t.usuario_id = $${paramIndex}`);
-      params.push(usuario_id);
-      paramIndex++;
-    }
-
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE t.estado = 'cancelado' AND ${whereConditions.join(' AND ')}`
-      : `WHERE t.estado = 'cancelado'`;
-
-    // Query principal
-    const query = `
-      SELECT 
-        t.id,
-        t.created_at as fecha_cancelacion,
-        t.fecha_programada,
-        t.motivo_cancelacion,
-        t.cancelado_por,
-        u.id as usuario_id,
-        u.nombre as usuario_nombre,
-        u.email as usuario_email,
-        g.id as guia_id,
-        g.nombre as guia_nombre,
-        g.email as guia_email
-      FROM turnos t
-      LEFT JOIN usuarios u ON t.usuario_id = u.id
-      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
-      ${whereClause}
-      ORDER BY t.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-
-    // Query para contar total
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM turnos t
-      ${whereClause}
-    `;
-
-    const paramsConPaginacion = [...params, Number(limit), offset];
-    const [result, countResult] = await Promise.all([
-      pool.query(query, paramsConPaginacion),
-      pool.query(countQuery, params)
-    ]);
-
-    res.json({
-      data: result.rows,
-      pagination: {
-        currentPage: Number(page),
-        totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
-        totalItems: Number(countResult.rows[0].total),
-        itemsPerPage: Number(limit)
-      }
-    });
-
-  } catch (error) {
-    console.error('Error al obtener cancelaciones:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-
-
-
-export const obtenerMetricasCancelaciones = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    // Total de cancelaciones
-    const totalResult = await pool.query(`
-      SELECT COUNT(*) as total FROM turnos WHERE estado = 'cancelado'
-    `);
-
-    // Cancelaciones por rol
-    const porRolResult = await pool.query(`
-      SELECT cancelado_por, COUNT(*) as count 
-      FROM turnos 
-      WHERE estado = 'cancelado' 
-      GROUP BY cancelado_por
-    `);
-
-    // Top guías con más cancelaciones (desde usuarios con rol='guia')
-    const topGuiasResult = await pool.query(`
-      SELECT g.nombre, COUNT(*) as count
-      FROM turnos t
-      JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
-      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'guia'
-      GROUP BY g.id, g.nombre
-      ORDER BY count DESC
-      LIMIT 10
-    `);
-
-    // Top usuarios con más cancelaciones
-    const topUsuariosResult = await pool.query(`
-      SELECT u.nombre, COUNT(*) as count
-      FROM turnos t
-      JOIN usuarios u ON t.usuario_id = u.id
-      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'usuario'
-      GROUP BY u.id, u.nombre
-      ORDER BY count DESC
-      LIMIT 10
-    `);
-
-    res.json({
-      total: parseInt(totalResult.rows[0].total),
-      porRol: porRolResult.rows,
-      topGuias: topGuiasResult.rows,
-      topUsuarios: topUsuariosResult.rows
-    });
-
-  } catch (error) {
-    console.error('Error al obtener métricas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { 
-      fecha_desde, 
-      fecha_hasta, 
-      estado, 
-      usuario_id, 
-      guia_id,
-      page = 1, 
-      limit = 20 
-    } = req.query;
-    
-    const offset = (Number(page) - 1) * Number(limit);
-    let whereConditions: string[] = [];
-    let params: any[] = [];
-    let paramIndex = 1;
-
-    // Filtro por fecha (usando fecha_programada)
-    if (fecha_desde) {
-      whereConditions.push(`t.fecha_programada >= $${paramIndex}`);
-      params.push(fecha_desde);
-      paramIndex++;
-    }
-    if (fecha_hasta) {
-      whereConditions.push(`t.fecha_programada <= $${paramIndex}`);
-      params.push(fecha_hasta);
-      paramIndex++;
-    }
-
-    // Filtro por estado
-    if (estado) {
-      if (estado === 'reprogramado') {
-        whereConditions.push(`t.es_reprogramacion = true`);
-      } else {
-        whereConditions.push(`t.estado = $${paramIndex}`);
-        params.push(estado);
-        paramIndex++;
-      }
-    }
-
-    // Filtro por usuario
-    if (usuario_id) {
-      whereConditions.push(`t.usuario_id = $${paramIndex}`);
-      params.push(usuario_id);
-      paramIndex++;
-    }
-
-    // Filtro por guía
-    if (guia_id) {
-      whereConditions.push(`t.guia_id = $${paramIndex}`);
-      params.push(guia_id);
-      paramIndex++;
-    }
-
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}`
-      : '';
-
-    const query = `
-      SELECT 
-        t.id,
-        t.fecha_programada,
-        t.estado,
-        t.modalidad,
-        t.created_at,
-        t.motivo_cancelacion,
-        t.cancelado_por,
-        t.es_reprogramacion,
-        u.id as usuario_id,
-        u.nombre as usuario_nombre,
-        u.email as usuario_email,
-        g.id as guia_id,
-        g.nombre as guia_nombre,
-        g.email as guia_email
-      FROM turnos t
-      LEFT JOIN usuarios u ON t.usuario_id = u.id
-      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
-      ${whereClause}
-      ORDER BY t.fecha_programada DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM turnos t
-      ${whereClause}
-    `;
-
-    const paramsConPaginacion = [...params, Number(limit), offset];
-    const [result, countResult] = await Promise.all([
-      pool.query(query, paramsConPaginacion),
-      pool.query(countQuery, params)
-    ]);
-
-    res.json({
-      data: result.rows,
-      pagination: {
-        currentPage: Number(page),
-        totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
-        totalItems: Number(countResult.rows[0].total),
-        itemsPerPage: Number(limit)
-      }
-    });
-
-  } catch (error) {
-    console.error('Error al obtener historial para admin:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-
-// Usuario: Obtener su guía actual (del último turno)
 export const getMiGuiaActual = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -1725,7 +971,10 @@ export const getMiGuiaActual = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
-// Obtener perfil del usuario autenticado (para foto y datos básicos)
+// ============================================
+// OBTENER MI PERFIL
+// ============================================
+
 export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -1756,7 +1005,10 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-// Actualizar solo la foto de perfil
+// ============================================
+// ACTUALIZAR FOTO DE PERFIL
+// ============================================
+
 export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -1789,23 +1041,22 @@ export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Pro
   }
 };
 
-// Completar datos del usuario por primera vez
-// backend/src/controllers/turnosController.ts
+// ============================================
+// COMPLETAR MIS DATOS
+// ============================================
 
-export const completarMisDatos = async (req: AuthRequest, res: Response) => {
+export const completarMisDatos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
     
     if (!userId) {
-      return res.status(401).json({ 
+      res.status(401).json({ 
         success: false, 
         message: 'Usuario no autenticado' 
       });
+      return;
     }
 
-    // ============================================
-    // MAPEO DE CAMPOS: Frontend → Base de datos
-    // ============================================
     const {
       primerNombre,
       segundoNombre,
@@ -1817,7 +1068,7 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
       sexo,
       telefonoFijo,
       celular,
-      estatura,        // Frontend usa "estatura"
+      estatura,
       peso,
       direccion,
       ciudad,
@@ -1826,10 +1077,8 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
       contactoEmergencia
     } = req.body;
 
-    // Log para debug
     console.log('📝 Datos recibidos del frontend:', req.body);
 
-    // Construir el objeto con los nombres de columnas de la BD
     const datosActualizados = {
       primer_nombre: primerNombre,
       segundo_nombre: segundoNombre || null,
@@ -1841,7 +1090,7 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
       sexo: sexo || null,
       telefono: telefonoFijo || null,
       celular: celular || null,
-      altura: estatura,  // 🔑 Mapeo clave: estatura → altura
+      altura: estatura,
       peso: peso || null,
       direccion: direccion || null,
       ciudad: ciudad || null,
@@ -1855,13 +1104,9 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
 
     console.log('✅ Datos mapeados para BD:', datosActualizados);
 
-    // ============================================
-    // CONSTRUIR LA CONSULTA SQL DINÁMICA
-    // ============================================
     const campos = Object.keys(datosActualizados);
     const valores = Object.values(datosActualizados);
     
-    // Construir SET clause: "campo1 = $1, campo2 = $2, ..."
     const setClause = campos
       .map((campo, index) => `${campo} = $${index + 1}`)
       .join(', ');
@@ -1873,20 +1118,17 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
       RETURNING *
     `;
 
-    // Ejecutar consulta
     const result = await pool.query(query, [...valores, userId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Usuario no encontrado'
       });
+      return;
     }
 
-    // ============================================
-    // RESPUESTA EXITOSA
-    // ============================================
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: 'Datos completados exitosamente',
       usuario: result.rows[0]
@@ -1894,46 +1136,10 @@ export const completarMisDatos = async (req: AuthRequest, res: Response) => {
 
   } catch (error) {
     console.error('❌ Error al completar datos:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
-  }
-};
-
-// Actualizar solo la foto de perfil (siempre permitido)
-export const actualizarMiFoto = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    const { foto_perfil } = req.body;
-
-    if (!usuarioId) {
-      res.status(401).json({ error: 'No autenticado' });
-      return;
-    }
-
-    const query = `
-      UPDATE usuarios 
-      SET foto_perfil = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING id, foto_perfil
-    `;
-
-    const result = await pool.query(query, [foto_perfil, usuarioId]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Usuario no encontrado' });
-      return;
-    }
-
-    res.json({ 
-      message: 'Foto actualizada correctamente', 
-      foto_perfil: result.rows[0].foto_perfil 
-    });
-
-  } catch (error) {
-    console.error('Error al actualizar foto:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

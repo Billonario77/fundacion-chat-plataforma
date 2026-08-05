@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario, notificarAAdmins } from '../services/socketService';
 
@@ -98,3 +98,4 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+

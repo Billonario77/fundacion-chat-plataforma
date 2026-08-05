@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
 import { RtcTokenBuilder, RtcRole } from 'agora-access-token';
 
 const APP_ID = process.env.AGORA_APP_ID || '';
@@ -47,3 +47,4 @@ export const generarToken = async (req: AuthRequest, res: Response): Promise<voi
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+

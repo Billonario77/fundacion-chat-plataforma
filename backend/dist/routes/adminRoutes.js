@@ -1,23 +1,51 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const adminController_1 = require("../controllers/adminController");
 const auth_1 = require("../middleware/auth");
+const adminController = __importStar(require("../controllers/adminController"));
 const router = (0, express_1.Router)();
-console.log('✅ adminRoutes.ts cargado - rutas disponibles:');
-console.log('   POST /reprogramaciones/:solicitudId/crear-turno');
-router.use(auth_1.authenticateToken);
-router.get('/reprogramaciones/pendientes', adminController_1.getSolicitudesPendientes);
-router.post('/reprogramaciones/:solicitudId/asignar', adminController_1.asignarGuia);
-router.post('/reprogramaciones/:solicitudId/crear-turno', adminController_1.crearTurnoReprogramado);
-router.get('/reprogramaciones/pendientes/count', auth_1.authenticateToken, adminController_1.contarReprogramacionesPendientes);
-router.get('/guias/disponibles', adminController_1.getGuiasDisponibles);
-router.get('/turnos/pendientes-asignacion', adminController_1.getTurnosPendientesAsignacion);
-router.post('/turnos/:turnoId/asignar-guia', adminController_1.asignarGuiaATurno);
-router.get('/asignaciones/guias-con-usuarios', adminController_1.getGuiasConUsuarios);
-router.get('/asignaciones/buscar-usuario', adminController_1.buscarUsuarioConGuia);
-router.get('/guias', adminController_1.getTodosGuias);
-router.get('/usuarios', adminController_1.getTodosUsuarios);
-router.get('/usuarios-con-guia', adminController_1.getTodosUsuariosConGuia);
+router.use(auth_1.authMiddleware);
+router.get('/guias-disponibles', adminController.getGuiasDisponibles);
+router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuarios);
+router.get('/carga-guias', adminController.getCargaGuias);
+router.get('/turnos-pendientes-asignacion', adminController.getTurnosPendientesAsignacion);
+router.post('/turnos/:turnoId/asignar-guia', adminController.asignarGuiaATurno);
+router.post('/reprogramaciones/:solicitudId/completar', adminController.crearTurnoReprogramado);
+router.get('/reprogramaciones/pendientes/count', adminController.countReprogramacionesPendientes);
+router.get('/reprogramaciones/pendientes', adminController.getReprogramacionesPendientes);
+router.get('/usuarios-con-guia', adminController.getUsuariosConGuia);
 exports.default = router;
 //# sourceMappingURL=adminRoutes.js.map

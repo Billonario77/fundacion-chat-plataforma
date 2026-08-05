@@ -5,7 +5,7 @@ import { pool } from '../database/connection';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
 
 
 export const validateRegistro = [
@@ -205,3 +205,4 @@ export const perfil = async (req: AuthRequest, res: Response): Promise<void> => 
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
+

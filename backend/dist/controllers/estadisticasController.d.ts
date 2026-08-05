@@ -1,4 +1,2 @@
-import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-export declare const getEstadisticas: (req: AuthRequest, res: Response) => Promise<void>;
+export {};
 //# sourceMappingURL=estadisticasController.d.ts.map

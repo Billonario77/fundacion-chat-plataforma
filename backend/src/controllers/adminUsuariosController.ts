@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
+import bcrypt from 'bcrypt';
 
-// Obtener todos los usuarios
+// ============================================
+// OBTENER TODOS LOS USUARIOS
+// ============================================
+
 export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -11,20 +14,50 @@ export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    const { page = 1, limit = 20, search = '' } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    let whereClause = "WHERE rol = 'usuario'";
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (search) {
+      whereClause += ` AND (nombre ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
     const query = `
       SELECT 
-        id, 
-        email, 
-        nombre,
-        rol,
-        activo,
-        created_at
+        id, nombre, email, telefono, rol, disponible, 
+        datos_completados, created_at, primer_nombre, primer_apellido
       FROM usuarios
+      ${whereClause}
       ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
-    const result = await pool.query(query);
-    res.json(result.rows);
+    const countQuery = `
+      SELECT COUNT(*) as total FROM usuarios ${whereClause}
+    `;
+
+    const paramsWithPagination = [...params, Number(limit), offset];
+    const paramsForCount = params;
+
+    const [result, countResult] = await Promise.all([
+      pool.query(query, paramsWithPagination),
+      pool.query(countQuery, paramsForCount)
+    ]);
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
+        totalItems: Number(countResult.rows[0].total),
+        itemsPerPage: Number(limit)
+      }
+    });
 
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
@@ -32,169 +65,10 @@ export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-// Obtener todos los guías
-export const getGuias = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
+// ============================================
+// OBTENER USUARIO POR ID
+// ============================================
 
-    const query = `
-      SELECT 
-        id, 
-        email, 
-        nombre,
-        disponible,
-        created_at
-      FROM usuarios
-      WHERE rol = 'guia'
-      ORDER BY created_at DESC
-    `;
-
-    const result = await pool.query(query);
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('Error al obtener guías:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Activar/desactivar usuario
-export const toggleUsuarioEstado = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { id } = req.params;
-
-    const query = `
-      UPDATE usuarios 
-      SET activo = NOT activo, updated_at = NOW()
-      WHERE id = $1 AND rol != 'admin'
-      RETURNING id, email, nombre, activo, rol
-    `;
-
-    const result = await pool.query(query, [id]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Usuario no encontrado' });
-      return;
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    console.error('Error al cambiar estado del usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Cambiar disponibilidad del guía
-export const toggleGuiaDisponibilidad = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { id } = req.params;
-
-    const query = `
-      UPDATE usuarios 
-      SET disponible = NOT disponible, updated_at = NOW()
-      WHERE id = $1 AND rol = 'guia'
-      RETURNING id, email, nombre, disponible
-    `;
-
-    const result = await pool.query(query, [id]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Guía no encontrado' });
-      return;
-    }
-
-    res.json(result.rows[0]);
-
-  } catch (error) {
-    console.error('Error al cambiar disponibilidad del guía:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Actualizar rol de usuario
-export const actualizarRol = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { usuarioId, rol } = req.body;
-
-    if (!usuarioId || !rol) {
-      res.status(400).json({ error: 'usuarioId y rol son requeridos' });
-      return;
-    }
-
-    // Validar que el rol sea válido
-    const rolesValidos = ['usuario', 'guia', 'admin'];
-    if (!rolesValidos.includes(rol)) {
-      res.status(400).json({ error: 'Rol no válido' });
-      return;
-    }
-
-    // Verificar que no se esté modificando el último admin
-    if (rol !== 'admin') {
-      const adminCount = await pool.query(
-        'SELECT COUNT(*) FROM usuarios WHERE rol = $1',
-        ['admin']
-      );
-      
-      const usuarioActual = await pool.query(
-        'SELECT rol FROM usuarios WHERE id = $1',
-        [usuarioId]
-      );
-
-      if (usuarioActual.rows[0]?.rol === 'admin' && parseInt(adminCount.rows[0].count) <= 1) {
-        res.status(400).json({ error: 'No se puede cambiar el rol del último administrador' });
-        return;
-      }
-    }
-
-    // Actualizar el rol del usuario
-    const query = `
-      UPDATE usuarios 
-      SET rol = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING id, email, nombre, rol, activo
-    `;
-
-    const result = await pool.query(query, [rol, usuarioId]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Usuario no encontrado' });
-      return;
-    }
-
-    console.log(`✅ Usuario ${usuarioId} actualizado a rol: ${rol}`);
-
-    res.json({
-      message: 'Rol actualizado correctamente',
-      usuario: result.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Error al actualizar rol:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-
-// Obtener un usuario por ID (con todos sus datos)
 export const getUsuarioById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -204,18 +78,10 @@ export const getUsuarioById = async (req: AuthRequest, res: Response): Promise<v
 
     const { id } = req.params;
 
-    const query = `
-      SELECT 
-        id, email, nombre, telefono, celular, cedula, edad, rh, sexo,
-        primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-        altura, peso, direccion, ciudad, tipo_adiccion, observaciones,
-        cto_emerg_nombre, cto_emerg_celular, cto_emerg_email, foto_perfil, cto_foto_perfil,
-        rol, activo, disponible, datos_completados, created_at
-      FROM usuarios 
-      WHERE id = $1
-    `;
-
-    const result = await pool.query(query, [id]);
+    const result = await pool.query(
+      `SELECT * FROM usuarios WHERE id = $1`,
+      [id]
+    );
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Usuario no encontrado' });
@@ -230,8 +96,107 @@ export const getUsuarioById = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// Actualizar perfil de usuario
-export const actualizarPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
+// ============================================
+// CREAR USUARIO (Admin)
+// ============================================
+
+export const crearUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { 
+      email, 
+      password, 
+      nombre, 
+      telefono, 
+      rol = 'usuario',
+      primer_nombre,
+      segundo_nombre,
+      primer_apellido,
+      segundo_apellido
+    } = req.body;
+
+    // Validaciones
+    if (!email || !password || !nombre) {
+      res.status(400).json({ error: 'Email, password y nombre son requeridos' });
+      return;
+    }
+
+    if (!['usuario', 'guia', 'admin'].includes(rol)) {
+      res.status(400).json({ error: 'Rol inválido' });
+      return;
+    }
+
+    // Verificar si el email ya existe
+    const emailCheck = await pool.query(
+      'SELECT id FROM usuarios WHERE email = $1',
+      [email]
+    );
+
+    if (emailCheck.rows.length > 0) {
+      res.status(400).json({ error: 'El email ya está registrado' });
+      return;
+    }
+
+    // Hash de la contraseña
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Insertar usuario
+    const result = await pool.query(
+      `INSERT INTO usuarios (
+        email, password_hash, nombre, telefono, rol,
+        primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+      RETURNING id, email, nombre, telefono, rol`,
+      [
+        email, 
+        passwordHash, 
+        nombre, 
+        telefono || null, 
+        rol,
+        primer_nombre || null,
+        segundo_nombre || null,
+        primer_apellido || null,
+        segundo_apellido || null
+      ]
+    );
+
+    // Registrar en auditoría
+    await pool.query(
+      `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [
+        result.rows[0].id,
+        'crear_usuario_admin',
+        JSON.stringify({ 
+          email, 
+          rol, 
+          creado_por: req.user?.id 
+        })
+      ]
+    );
+
+    res.status(201).json({
+      message: 'Usuario creado exitosamente',
+      usuario: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// ACTUALIZAR ROL DE USUARIO
+// ============================================
+
+export const actualizarRol = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
       res.status(403).json({ error: 'Acceso solo para administradores' });
@@ -239,57 +204,237 @@ export const actualizarPerfil = async (req: AuthRequest, res: Response): Promise
     }
 
     const { id } = req.params;
-    const {
-      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-      email, telefono, celular, cedula, edad, rh, sexo,
-      estatura, peso, direccion, ciudad, tipo_adiccion, observaciones,
-      cto_emerg_nombre, cto_emerg_celular, cto_emerg_email,
-      foto_perfil, cto_foto_perfil, rol, activo, disponible
-    } = req.body;
+    const { rol } = req.body;
 
-    // Construir nombre completo a partir de los campos separados
-    const nombreCompleto = [primer_nombre, segundo_nombre, primer_apellido, segundo_apellido]
-      .filter(Boolean)
-      .join(' ');
+    if (!rol || !['usuario', 'guia', 'admin'].includes(rol)) {
+      res.status(400).json({ error: 'Rol inválido' });
+      return;
+    }
 
-    const query = `
-      UPDATE usuarios 
-      SET 
-        primer_nombre = $1, segundo_nombre = $2, primer_apellido = $3, segundo_apellido = $4,
-        nombre = $5, email = $6, telefono = $7, celular = $8, cedula = $9,
-        edad = $10, rh = $11, sexo = $12, altura = $13, peso = $14,
-        direccion = $15, ciudad = $16, tipo_adiccion = $17, observaciones = $18,
-        cto_emerg_nombre = $19, cto_emerg_celular = $20, cto_emerg_email = $21,
-        foto_perfil = $22, cto_foto_perfil = $23, rol = $24, activo = $25,
-        disponible = $26, datos_completados = true, updated_at = NOW()
-      WHERE id = $27
-      RETURNING id, email, nombre, rol, activo
-    `;
+    // No permitir cambiar el propio rol
+    if (id === req.user.id) {
+      res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
+      return;
+    }
 
-    const result = await pool.query(query, [
-      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-      nombreCompleto, email, telefono, celular, cedula,
-      edad, rh, sexo, estatura, peso,
-      direccion, ciudad, tipo_adiccion, observaciones,
-      cto_emerg_nombre, cto_emerg_celular, cto_emerg_email,
-      foto_perfil, cto_foto_perfil, rol, activo, disponible, id
-    ]);
+    const result = await pool.query(
+      `UPDATE usuarios 
+       SET rol = $1, updated_at = NOW() 
+       WHERE id = $2 
+       RETURNING id, nombre, email, rol`,
+      [rol, id]
+    );
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
     }
 
-    console.log(`✅ Usuario ${id} actualizado por admin ${req.user.id}`);
+    // Registrar en auditoría
+    await pool.query(
+      `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [
+        id,
+        'cambiar_rol',
+        JSON.stringify({ 
+          nuevo_rol: rol, 
+          admin_id: req.user?.id 
+        })
+      ]
+    );
 
     res.json({
-      message: 'Perfil actualizado correctamente',
+      message: 'Rol actualizado correctamente',
       usuario: result.rows[0]
     });
 
   } catch (error) {
-    console.error('Error al actualizar perfil:', error);
+    console.error('Error al actualizar rol:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
+// ============================================
+// ACTUALIZAR USUARIO (Admin)
+// ============================================
+
+export const actualizarUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { id } = req.params;
+    const { 
+      nombre, 
+      telefono, 
+      email,
+      primer_nombre,
+      segundo_nombre,
+      primer_apellido,
+      segundo_apellido,
+      disponible
+    } = req.body;
+
+    // Verificar que el usuario existe
+    const usuarioExistente = await pool.query(
+      'SELECT * FROM usuarios WHERE id = $1',
+      [id]
+    );
+
+    if (usuarioExistente.rows.length === 0) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    // Construir query dinámica
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (nombre !== undefined) {
+      updates.push(`nombre = $${paramIndex++}`);
+      values.push(nombre);
+    }
+    if (telefono !== undefined) {
+      updates.push(`telefono = $${paramIndex++}`);
+      values.push(telefono);
+    }
+    if (email !== undefined) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(email);
+    }
+    if (primer_nombre !== undefined) {
+      updates.push(`primer_nombre = $${paramIndex++}`);
+      values.push(primer_nombre);
+    }
+    if (segundo_nombre !== undefined) {
+      updates.push(`segundo_nombre = $${paramIndex++}`);
+      values.push(segundo_nombre);
+    }
+    if (primer_apellido !== undefined) {
+      updates.push(`primer_apellido = $${paramIndex++}`);
+      values.push(primer_apellido);
+    }
+    if (segundo_apellido !== undefined) {
+      updates.push(`segundo_apellido = $${paramIndex++}`);
+      values.push(segundo_apellido);
+    }
+    if (disponible !== undefined) {
+      updates.push(`disponible = $${paramIndex++}`);
+      values.push(disponible);
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: 'No hay campos para actualizar' });
+      return;
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const query = `
+      UPDATE usuarios 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, nombre, email, telefono, rol, disponible
+    `;
+
+    const result = await pool.query(query, values);
+
+    // Registrar en auditoría
+    await pool.query(
+      `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [
+        id,
+        'actualizar_usuario_admin',
+        JSON.stringify({ 
+          campos_actualizados: updates,
+          admin_id: req.user?.id 
+        })
+      ]
+    );
+
+    res.json({
+      message: 'Usuario actualizado correctamente',
+      usuario: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// CAMBIAR ROL DE USUARIO (alias de actualizarRol)
+// ============================================
+
+export const cambiarRolUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Redirigir a la función actualizarRol
+  return actualizarRol(req, res);
+};
+
+// ============================================
+// ELIMINAR USUARIO
+// ============================================
+
+export const eliminarUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    // No permitir eliminar al propio admin
+    if (id === req.user.id) {
+      res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+      return;
+    }
+
+    // Verificar que el usuario existe
+    const usuarioExistente = await pool.query(
+      'SELECT id, nombre, email FROM usuarios WHERE id = $1',
+      [id]
+    );
+
+    if (usuarioExistente.rows.length === 0) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    // Eliminar usuario (las foreign keys con ON DELETE CASCADE se encargan)
+    await pool.query(
+      'DELETE FROM usuarios WHERE id = $1',
+      [id]
+    );
+
+    // Registrar en auditoría
+    await pool.query(
+      `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+       VALUES ($1, $2, $3, NOW())`,
+      [
+        id,
+        'eliminar_usuario_admin',
+        JSON.stringify({ 
+          usuario: usuarioExistente.rows[0],
+          admin_id: req.user?.id 
+        })
+      ]
+    );
+
+    res.json({
+      message: 'Usuario eliminado correctamente',
+      usuario: usuarioExistente.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
