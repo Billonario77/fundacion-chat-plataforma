@@ -5,7 +5,7 @@ import { pool } from '../database/connection';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
 
 
 export const validateRegistro = [

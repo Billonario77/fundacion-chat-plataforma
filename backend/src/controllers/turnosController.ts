@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import apoyoQueue, { SolicitudApoyo } from '../queues/apoyoQueue';
-import { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 import { notificarAAdmins } from '../services/socketService';

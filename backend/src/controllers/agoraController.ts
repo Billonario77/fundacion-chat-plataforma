@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
 import { RtcTokenBuilder, RtcRole } from 'agora-access-token';
 
 const APP_ID = process.env.AGORA_APP_ID || '';

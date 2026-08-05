@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
+import { Request, Response } from 'express';`r`nimport type { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 
 export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<void> => {
