@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario, notificarAAdmins } from '../services/socketService';
@@ -551,3 +552,4 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
