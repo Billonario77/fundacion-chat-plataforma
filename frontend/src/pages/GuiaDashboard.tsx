@@ -9,6 +9,9 @@ import HistorialTurnos from '../components/HistorialTurnos';
 import Layout from '../components/Layout';
 import ModalCancelarTurno from '../components/ModalCancelarTurno';
 import Avatar from '../components/Avatar';
+import axios from 'axios';
+
+const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
 
 const GuiaDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -33,6 +36,21 @@ const GuiaDashboard: React.FC = () => {
   const [nuevasCancelacionesCount, setNuevasCancelacionesCount] = useState(0);
   const [miFoto, setMiFoto] = useState<string | null>(null);
 
+  // 👈 NUEVO: Estado para la carga del guía
+  const [miCarga, setMiCarga] = useState<{ 
+    activos: number; 
+    pendientes: number; 
+    enCurso: number;
+    totales: number;
+    proximas24h: number;
+  }>({
+    activos: 0,
+    pendientes: 0,
+    enCurso: 0,
+    totales: 0,
+    proximas24h: 0
+  });
+
   // Turnos cancelados por el GUÍA
   const turnosCanceladosPorMi = turnos.filter(t => 
     t.estado === 'cancelado' && t.cancelado_por === 'guia'
@@ -43,6 +61,50 @@ const GuiaDashboard: React.FC = () => {
       cargarTurnos();
     }
   }, [pestañaActiva]);
+
+  // ============================================
+  // 👈 NUEVA FUNCIÓN: Cargar carga del guía
+  // ============================================
+  const cargarMiCarga = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/admin/mi-carga`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMiCarga({
+        activos: response.data.turnos_activos || 0,
+        pendientes: response.data.turnos_pendientes || 0,
+        enCurso: response.data.turnos_en_curso || 0,
+        totales: response.data.turnos_totales || 0,
+        proximas24h: response.data.turnos_proximas_24h || 0
+      });
+    } catch (error) {
+      console.error('Error al cargar mi carga:', error);
+      // Si falla, intentar con el endpoint alternativo (filtrado)
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/admin/carga-guias`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const guias = response.data.guias;
+        const miGuia = guias.find((g: any) => g.id === user?.id);
+        
+        if (miGuia) {
+          setMiCarga({
+            activos: miGuia.turnos_activos || 0,
+            pendientes: miGuia.turnos_pendientes || 0,
+            enCurso: miGuia.turnos_en_curso || 0,
+            totales: miGuia.turnos_totales || 0,
+            proximas24h: miGuia.turnos_proximas_24h || 0
+          });
+        }
+      } catch (err2) {
+        console.error('Error al cargar carga desde endpoint alternativo:', err2);
+      }
+    }
+  };
 
   // ESCUCHAR NOTIFICACIONES EN TIEMPO REAL
   useEffect(() => {
@@ -56,6 +118,7 @@ const GuiaDashboard: React.FC = () => {
     socket.on('nuevo-turno-disponible', (data) => {
       console.log('📨 Nueva solicitud recibida:', data);
       cargarTurnos();
+      cargarMiCarga(); // 👈 Actualizar carga cuando llega nuevo turno
       
       const eventId = `${data.turnoId}-${data.timestamp || Date.now()}`;
       if (ultimoEvento === eventId) {
@@ -78,6 +141,7 @@ const GuiaDashboard: React.FC = () => {
       });
 
       cargarTurnos();
+      cargarMiCarga(); // 👈 Actualizar carga nuevamente
     });
 
     socket.on('nuevo-mensaje', (data) => {
@@ -88,6 +152,7 @@ const GuiaDashboard: React.FC = () => {
     socket.on('estado-turno-actualizado', async (data) => {
       console.log('🔥 Cambio de estado en guía:', data);
       await cargarTurnos();
+      await cargarMiCarga(); // 👈 Actualizar carga cuando cambia estado
       
       if (data.estado === 'cancelado') {
         try {
@@ -114,6 +179,7 @@ const GuiaDashboard: React.FC = () => {
       });
       
       cargarTurnos();
+      cargarMiCarga(); // 👈 Actualizar carga
     });
 
     return () => {
@@ -167,6 +233,18 @@ const GuiaDashboard: React.FC = () => {
     cargarMiFoto();
   }, []);
 
+  // 👈 NUEVO: Cargar carga al iniciar y cada 30 segundos
+  useEffect(() => {
+    cargarMiCarga();
+
+    // Auto-refresh cada 30 segundos
+    const interval = setInterval(() => {
+      cargarMiCarga();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const cargarTurnos = async () => {
     try {
       setLoading(true);
@@ -185,6 +263,7 @@ const GuiaDashboard: React.FC = () => {
     try {
       await turnosService.actualizarEstado(turnoId, nuevoEstado, motivo);
       cargarTurnos();
+      cargarMiCarga(); // 👈 Actualizar carga después de cambiar estado
       
       toast.success(`Turno ${nuevoEstado}`, {
         duration: 3000,
@@ -242,6 +321,57 @@ const GuiaDashboard: React.FC = () => {
             <span className="text-sm text-gray-600">
               {connected ? 'Conectado' : 'Desconectado'}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 👈 NUEVO: Indicador de carga del guía */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Turnos Activos</p>
+              <p className="text-2xl font-bold text-primario">{miCarga.activos}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">📋</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Pendientes</p>
+              <p className="text-2xl font-bold text-yellow-600">{miCarga.pendientes}</p>
+            </div>
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">⏳</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">En Curso</p>
+              <p className="text-2xl font-bold text-green-600">{miCarga.enCurso}</p>
+            </div>
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">🔄</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Próximas 24h</p>
+              <p className="text-2xl font-bold text-purple-600">{miCarga.proximas24h}</p>
+            </div>
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <span className="text-xl">📅</span>
+            </div>
           </div>
         </div>
       </div>

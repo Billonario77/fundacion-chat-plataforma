@@ -504,3 +504,50 @@ export const getCargaGuias = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// ============================================
+// OBTENER CARGA DE UN GUÍA ESPECÍFICO
+// ============================================
+
+export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Verificar que sea guía
+    if (req.user?.rol !== 'guia') {
+      res.status(403).json({ error: 'Acceso solo para guías' });
+      return;
+    }
+
+    const guiaId = req.user.id;
+
+    const query = `
+      SELECT 
+        COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) as turnos_activos,
+        COUNT(t.id) FILTER (WHERE t.estado = 'pendiente') as turnos_pendientes,
+        COUNT(t.id) FILTER (WHERE t.estado = 'aceptado') as turnos_aceptados,
+        COUNT(t.id) FILTER (WHERE t.estado = 'iniciado') as turnos_en_curso,
+        COUNT(t.id) as turnos_totales,
+        (SELECT COUNT(*) FROM turnos t2 
+         WHERE t2.guia_id = $1 
+         AND t2.estado IN ('pendiente', 'aceptado', 'iniciado')
+         AND t2.fecha_programada > NOW()
+         AND t2.fecha_programada < NOW() + INTERVAL '24 hours') as turnos_proximas_24h
+      FROM turnos t
+      WHERE t.guia_id = $1
+    `;
+
+    const result = await pool.query(query, [guiaId]);
+
+    res.json({
+      turnos_activos: parseInt(result.rows[0].turnos_activos) || 0,
+      turnos_pendientes: parseInt(result.rows[0].turnos_pendientes) || 0,
+      turnos_aceptados: parseInt(result.rows[0].turnos_aceptados) || 0,
+      turnos_en_curso: parseInt(result.rows[0].turnos_en_curso) || 0,
+      turnos_totales: parseInt(result.rows[0].turnos_totales) || 0,
+      turnos_proximas_24h: parseInt(result.rows[0].turnos_proximas_24h) || 0
+    });
+
+  } catch (error) {
+    console.error('Error al obtener carga del guía:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

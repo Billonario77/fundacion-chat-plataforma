@@ -129,3 +129,20 @@ export const adminService = {
   },
 
 };
+
+// ============================================
+// OBTENER CARGA DE GUÍAS
+// ============================================
+
+export const getCargaGuias = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/admin/carga-guias`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error al obtener carga de guías:', error);
+    throw error;
+  }
+};
