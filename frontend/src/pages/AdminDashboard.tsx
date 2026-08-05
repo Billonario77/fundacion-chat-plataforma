@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import AsignacionesGuia from '../components/AsignacionesGuia';
 import CancelacionesAdmin from '../components/CancelacionesAdmin';
 import HistorialAdmin from '../components/HistorialAdmin';
+import CargaGuias from '../components/CargaGuias'; // 👈 NUEVA IMPORTACIÓN
 import axios from 'axios';
 import Avatar from '../components/Avatar';
 import { perfilService } from '../services/turnosService';
@@ -76,7 +77,7 @@ const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { socket, connected } = useSocket();
   const navigate = useNavigate();
-  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial'>('usuarios');
+  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias'>('usuarios'); // 👈 NUEVO TIPO
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [pestañaAnterior, setPestañaAnterior] = useState(pestañaActiva);
   const [cambiandoPestaña, setCambiandoPestaña] = useState(false);
@@ -363,6 +364,7 @@ const AdminDashboard: React.FC = () => {
         {pestañaActiva === 'cancelaciones' && '✗ Cancelaciones'}
         {pestañaActiva === 'historial' && '📋 Historial'}
         {pestañaActiva === 'estadisticas' && '📊 Estadísticas'}
+        {pestañaActiva === 'carga-guias' && '📊 Carga Guías'} {/* 👈 NUEVO */}
       </span>
       <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
     </button>
@@ -446,6 +448,17 @@ const AdminDashboard: React.FC = () => {
         >
           <span>📊</span>
           <span>Estadísticas</span>
+        </button>
+
+        {/* 👈 NUEVO BOTÓN PARA CARGA DE GUÍAS */}
+        <button
+          onClick={() => { cambiarPestaña('carga-guias'); setMenuAbierto(false); }}
+          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+            pestañaActiva === 'carga-guias' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+          }`}
+        >
+          <span>📊</span>
+          <span>Carga Guías</span>
         </button>
       </div>
     )}
@@ -545,6 +558,19 @@ const AdminDashboard: React.FC = () => {
     >
       <span className="text-lg">📊</span>
       <span>Estadísticas</span>
+    </button>
+
+    {/* 👈 NUEVO BOTÓN PARA CARGA DE GUÍAS */}
+    <button
+      onClick={() => cambiarPestaña('carga-guias')}
+      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+        pestañaActiva === 'carga-guias'
+          ? 'bg-white text-primario shadow-md' 
+          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+      }`}
+    >
+      <span className="text-lg">📊</span>
+      <span>Carga Guías</span>
     </button>
   </div>
 </div>
@@ -646,6 +672,13 @@ const AdminDashboard: React.FC = () => {
          {pestañaActiva === 'historial' && (
           <div className="animate-fadeIn">
             <HistorialAdmin />
+          </div>
+        )}
+
+        {/* 👈 NUEVO CONTENIDO PARA CARGA DE GUÍAS */}
+        {pestañaActiva === 'carga-guias' && (
+          <div className="animate-fadeIn">
+            <CargaGuias />
           </div>
         )}
 

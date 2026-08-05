@@ -1,289 +1,36 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
-import { notificarUsuario } from '../services/socketService';
-import { notificarAAdmins } from '../services/socketService';
+import { notificarUsuario, notificarAAdmins } from '../services/socketService';
 
-// Obtener solicitudes de reprogramación pendientes
-export const getSolicitudesPendientes = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
+// ============================================
+// OBTENER GUÍAS DISPONIBLES
+// ============================================
 
-    const query = `
-      SELECT 
-        r.id,
-        r.turno_original_id,
-        r.usuario_id,
-        u.nombre as usuario_nombre,
-        u.email as usuario_email,
-        r.preferencia,
-        r.fecha_preferida,
-        r.comentarios,
-        r.estado,
-        r.created_at,
-        r.updated_at
-      FROM reprogramaciones r
-      JOIN usuarios u ON r.usuario_id = u.id
-      WHERE r.estado = 'pendiente'
-      ORDER BY r.created_at DESC
-    `;
-
-    const result = await pool.query(query);
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('Error al obtener solicitudes:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Obtener guías disponibles (desde tabla usuarios con rol='guia')
 export const getGuiasDisponibles = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    console.log('👤 Usuario que solicita guías:', req.user?.email);
-    
     if (req.user?.rol !== 'admin') {
-      console.log('⛔ Acceso denegado - no es admin');
       res.status(403).json({ error: 'Acceso solo para administradores' });
       return;
     }
 
-    const query = `
-      SELECT 
-        id,
-        nombre,
-        email
-      FROM usuarios
-      WHERE rol = 'guia' AND disponible = true
-      ORDER BY nombre
-    `;
+    const result = await pool.query(
+      `SELECT id, nombre, email FROM usuarios 
+       WHERE rol = 'guia' AND disponible = true
+       ORDER BY nombre ASC`
+    );
 
-    const result = await pool.query(query);
-    console.log('📋 Guías disponibles:', result.rows);
     res.json(result.rows);
-
   } catch (error) {
-    console.error('❌ Error al obtener guías:', error);
+    console.error('Error al obtener guías:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Crear turno reprogramado
-export const crearTurnoReprogramado = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    console.log('🚀 INICIANDO crearTurnoReprogramado');
-    console.log('👤 Admin:', req.user?.email);
-    
-    if (req.user?.rol !== 'admin') {
-      console.log('⛔ Acceso denegado - no es admin');
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
+// ============================================
+// OBTENER TURNOS PENDIENTES DE ASIGNACIÓN
+// ============================================
 
-    const { solicitudId } = req.params;
-    const { guiaId, fechaProgramada } = req.body;
-
-    console.log('📦 Parámetros recibidos:', { solicitudId, guiaId, fechaProgramada });
-
-    if (!solicitudId || !guiaId) {
-      res.status(400).json({ error: 'solicitudId y guiaId son requeridos' });
-      return;
-    }
-
-    // Obtener la solicitud de reprogramación
-    const solicitudQuery = `
-      SELECT r.*, t.*, t.id as turno_original_id
-      FROM reprogramaciones r
-      JOIN turnos t ON r.turno_original_id = t.id
-      WHERE r.id = $1 AND r.estado = 'pendiente'
-    `;
-    
-    const solicitudResult = await pool.query(solicitudQuery, [solicitudId]);
-    
-    if (solicitudResult.rows.length === 0) {
-      res.status(404).json({ error: 'Solicitud no encontrada o ya procesada' });
-      return;
-    }
-
-    const solicitud = solicitudResult.rows[0];
-
-    // Verificar que el guía existe y está disponible (desde usuarios)
-    const guiaQuery = await pool.query(
-      'SELECT id, nombre, disponible FROM usuarios WHERE id = $1 AND rol = $2',
-      [guiaId, 'guia']
-    );
-    
-    if (guiaQuery.rows.length === 0) {
-      res.status(404).json({ error: 'Guía no encontrado' });
-      return;
-    }
-
-    if (!guiaQuery.rows[0].disponible) {
-      res.status(400).json({ error: 'El guía no está disponible actualmente' });
-      return;
-    }
-
-    // Determinar fecha para el nuevo turno
-    let fechaTurno: Date;
-    if (fechaProgramada) {
-      fechaTurno = new Date(fechaProgramada);
-    } else if (solicitud.fecha_preferida) {
-      fechaTurno = new Date(solicitud.fecha_preferida);
-    } else {
-      fechaTurno = new Date();
-      fechaTurno.setHours(fechaTurno.getHours() + 1);
-    }
-
-    // Verificar disponibilidad del guía
-    const duracion = solicitud.duracion_minutos || 60;
-    
-    const verificarDisponibilidad = await pool.query(
-      `SELECT id FROM turnos 
-       WHERE guia_id = $1 
-       AND estado IN ('pendiente', 'aceptado', 'iniciado')
-       AND fecha_programada < $2::timestamp + ($3::int * interval '1 minute')
-       AND fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute') > $2::timestamp`,
-      [guiaId, fechaTurno, duracion]
-    );
-    
-    if (verificarDisponibilidad.rows.length > 0) {
-      res.status(400).json({ error: 'El guía ya tiene un turno programado en ese horario' });
-      return;
-    }
-
-    // Crear el nuevo turno
-    const insertTurnoQuery = `
-      INSERT INTO turnos (
-        usuario_id,
-        guia_id,
-        fecha_programada,
-        duracion_minutos,
-        modalidad,
-        estado,
-        es_reprogramacion,
-        turno_original_id,
-        created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-      RETURNING id
-    `;
-
-    const turnoValues = [
-      solicitud.usuario_id,
-      guiaId,
-      fechaTurno,
-      duracion,
-      solicitud.modalidad || 'chat',
-      'pendiente',
-      true,
-      solicitud.turno_original_id
-    ];
-    
-    const turnoResult = await pool.query(insertTurnoQuery, turnoValues);
-    const nuevoTurnoId = turnoResult.rows[0].id;
-
-    // Guardar preferencia del usuario
-    if (solicitud.preferencia) {
-      const preferenciaQuery = await pool.query(
-        `SELECT id FROM preferencias_usuario 
-         WHERE usuario_id = $1 AND estado = 'pendiente'`,
-        [solicitud.usuario_id]
-      );
-
-      if (preferenciaQuery.rows.length > 0) {
-        await pool.query(
-          `UPDATE preferencias_usuario 
-           SET preferencia = $1, updated_at = NOW()
-           WHERE usuario_id = $2 AND estado = 'pendiente'`,
-          [solicitud.preferencia, solicitud.usuario_id]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO preferencias_usuario (usuario_id, preferencia, estado)
-           VALUES ($1, $2, 'pendiente')`,
-          [solicitud.usuario_id, solicitud.preferencia]
-        );
-      }
-    }
-
-    // Notificaciones
-    notificarUsuario(solicitud.usuario_id, 'estado-turno-actualizado', {
-      turnoId: nuevoTurnoId,
-      estado: 'pendiente',
-      mensaje: 'Tu solicitud de reprogramación fue aceptada. Ya tienes un nuevo turno asignado.'
-    });
-
-    notificarUsuario(guiaId, 'nuevo-turno-disponible', {
-      turnoId: nuevoTurnoId,
-      usuarioId: solicitud.usuario_id,
-      mensaje: 'Se te ha asignado un nuevo turno (reprogramación)'
-    });
-
-    // Actualizar la solicitud de reprogramación
-    await pool.query(
-      `UPDATE reprogramaciones 
-       SET estado = 'completada', nuevo_turno_id = $1, updated_at = NOW()
-       WHERE id = $2`,
-      [nuevoTurnoId, solicitudId]
-    );
-
-    // Registrar en auditoría
-    await pool.query(
-      `INSERT INTO auditoria_logs (usuario_afectado_id, guia_afectado_id, accion, detalles, created_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [solicitud.usuario_id, guiaId, 'reprogramar_turno', JSON.stringify({ 
-        solicitud_id: solicitudId,
-        turno_original: solicitud.turno_original_id,
-        nuevo_turno: nuevoTurnoId,
-        admin: req.user?.email
-      })]
-    );
-
-    res.json({
-      message: 'Turno reprogramado exitosamente',
-      nuevo_turno_id: nuevoTurnoId
-    });
-
-  } catch (error) {
-    console.error('❌ Error en crearTurnoReprogramado:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Asignar guía a solicitud
-export const asignarGuia = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { solicitudId } = req.params;
-    const { guiaId } = req.body;
-
-    const solicitudQuery = 'SELECT id FROM reprogramaciones WHERE id = $1 AND estado = $2';
-    const solicitudResult = await pool.query(solicitudQuery, [solicitudId, 'pendiente']);
-    
-    if (solicitudResult.rows.length === 0) {
-      res.status(404).json({ error: 'Solicitud no encontrada' });
-      return;
-    }
-
-    res.json({ 
-      message: 'Guía asignado correctamente',
-      solicitud_id: solicitudId,
-      guia_id: guiaId
-    });
-
-  } catch (error) {
-    console.error('Error al asignar guía:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Obtener turnos pendientes de asignación
 export const getTurnosPendientesAsignacion = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -295,30 +42,56 @@ export const getTurnosPendientesAsignacion = async (req: AuthRequest, res: Respo
       SELECT 
         t.id,
         t.usuario_id,
+        t.created_at,
+        t.estado,
+        t.requiere_asignacion_admin,
         u.nombre as usuario_nombre,
         u.email as usuario_email,
-        t.modalidad as tipo,
-        t.created_at,
-        '' as mensaje_inicial,
-        t.estado
+        u.primer_nombre,
+        u.primer_apellido
       FROM turnos t
       JOIN usuarios u ON t.usuario_id = u.id
-      WHERE t.requiere_asignacion_admin = true 
-        AND t.estado = 'pendiente_admin'
+      WHERE t.estado = 'pendiente_admin'
+        AND t.requiere_asignacion_admin = true
         AND t.guia_id IS NULL
-      ORDER BY t.created_at DESC
+      ORDER BY t.created_at ASC
     `;
 
     const result = await pool.query(query);
-    res.json(result.rows);
 
+    // Enriquecer con información adicional
+    const turnos = await Promise.all(result.rows.map(async (turno) => {
+      // Obtener mensaje inicial de la conversación
+      const mensajeQuery = await pool.query(
+        `SELECT contenido FROM mensajes 
+         WHERE turno_id = $1 
+         ORDER BY created_at ASC 
+         LIMIT 1`,
+        [turno.id]
+      );
+
+      return {
+        id: turno.id,
+        usuario_id: turno.usuario_id,
+        usuario_nombre: turno.usuario_nombre || `${turno.primer_nombre || ''} ${turno.primer_apellido || ''}`.trim() || 'Usuario',
+        usuario_email: turno.usuario_email,
+        created_at: turno.created_at,
+        mensaje_inicial: mensajeQuery.rows[0]?.contenido || null,
+        tipo: 'apoyo' // Por defecto, se podría mejorar
+      };
+    }));
+
+    res.json(turnos);
   } catch (error) {
     console.error('Error al obtener turnos pendientes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-// Asignar guía a un turno pendiente
+// ============================================
+// ASIGNAR GUÍA A TURNO
+// ============================================
+
 export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -330,61 +103,63 @@ export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promis
     const { guiaId } = req.body;
 
     if (!turnoId || !guiaId) {
-      res.status(400).json({ error: 'turnoId y guiaId son requeridos' });
+      res.status(400).json({ error: 'Faltan datos: turnoId y guiaId son requeridos' });
       return;
     }
 
-    const turnoQuery = await pool.query(
-      'SELECT id, usuario_id FROM turnos WHERE id = $1 AND requiere_asignacion_admin = true AND estado = $2',
-      [turnoId, 'pendiente_admin']
-    );
-
-    if (turnoQuery.rows.length === 0) {
-      res.status(404).json({ error: 'Turno no encontrado o ya no requiere asignación' });
-      return;
-    }
-
+    // Verificar que el guía existe y está disponible
     const guiaQuery = await pool.query(
-      'SELECT id, nombre FROM usuarios WHERE id = $1 AND rol = $2',
-      [guiaId, 'guia']
+      `SELECT id, nombre FROM usuarios 
+       WHERE id = $1 AND rol = 'guia' AND disponible = true`,
+      [guiaId]
     );
 
     if (guiaQuery.rows.length === 0) {
-      res.status(404).json({ error: 'Guía no encontrado' });
+      res.status(404).json({ error: 'Guía no encontrado o no disponible' });
       return;
     }
 
+    // Verificar que el turno existe y está pendiente
+    const turnoQuery = await pool.query(
+      `SELECT id, usuario_id, estado FROM turnos 
+       WHERE id = $1 AND estado = 'pendiente_admin'`,
+      [turnoId]
+    );
+
+    if (turnoQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Turno no encontrado o no está pendiente de asignación' });
+      return;
+    }
+
+    const turno = turnoQuery.rows[0];
+
+    // Asignar guía
     await pool.query(
       `UPDATE turnos 
-       SET guia_id = $1, 
-           estado = 'pendiente', 
-           requiere_asignacion_admin = false
+       SET guia_id = $1, estado = 'pendiente', requiere_asignacion_admin = false
        WHERE id = $2`,
       [guiaId, turnoId]
     );
 
-    notificarUsuario(turnoQuery.rows[0].usuario_id, 'estado-turno-actualizado', {
+    // Notificar al usuario
+    notificarUsuario(turno.usuario_id, 'estado-turno-actualizado', {
       turnoId: turnoId,
       estado: 'pendiente',
-      mensaje: 'Ya tienes un guía asignado. Pronto podrás comenzar tu sesión.'
+      mensaje: `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}`
     });
 
+    // Notificar al guía
     notificarUsuario(guiaId, 'nuevo-turno-disponible', {
       turnoId: turnoId,
-      usuarioId: turnoQuery.rows[0].usuario_id,
-      mensaje: 'Se te ha asignado un nuevo turno'
+      usuarioId: turno.usuario_id,
+      mensaje: 'Tienes un nuevo turno asignado'
     });
 
-    await pool.query(
-      `INSERT INTO auditoria_logs (usuario_afectado_id, guia_afectado_id, accion, detalles, created_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [turnoQuery.rows[0].usuario_id, guiaId, 'asignacion_manual_admin', JSON.stringify({ 
-        turno_id: turnoId,
-        admin: req.user?.email
-      })]
-    );
-
-    res.json({ message: 'Guía asignado correctamente', turnoId, guiaId });
+    res.json({
+      message: 'Guía asignado exitosamente',
+      turnoId: turnoId,
+      guia: guiaQuery.rows[0]
+    });
 
   } catch (error) {
     console.error('Error al asignar guía:', error);
@@ -392,8 +167,135 @@ export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promis
   }
 };
 
+// ============================================
+// CREAR TURNO REPROGRAMADO (desde reprogramación)
+// ============================================
 
-// Obtener todos los guías con sus usuarios asignados
+export const crearTurnoReprogramado = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { solicitudId } = req.params;
+    const { guiaId, fecha, comentarios } = req.body;
+
+    if (!solicitudId || !guiaId || !fecha) {
+      res.status(400).json({ error: 'Faltan datos: solicitudId, guiaId y fecha son requeridos' });
+      return;
+    }
+
+    // Obtener la solicitud de reprogramación
+    const solicitudQuery = await pool.query(
+      `SELECT * FROM reprogramaciones WHERE id = $1 AND estado = 'pendiente'`,
+      [solicitudId]
+    );
+
+    if (solicitudQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Solicitud de reprogramación no encontrada o ya procesada' });
+      return;
+    }
+
+    const solicitud = solicitudQuery.rows[0];
+
+    // Obtener el turno original
+    const turnoOriginalQuery = await pool.query(
+      `SELECT * FROM turnos WHERE id = $1`,
+      [solicitud.turno_original_id]
+    );
+
+    if (turnoOriginalQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Turno original no encontrado' });
+      return;
+    }
+
+    const turnoOriginal = turnoOriginalQuery.rows[0];
+
+    // Verificar que el guía existe
+    const guiaQuery = await pool.query(
+      `SELECT id, nombre FROM usuarios WHERE id = $1 AND rol = 'guia'`,
+      [guiaId]
+    );
+
+    if (guiaQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Guía no encontrado' });
+      return;
+    }
+
+    // Crear nuevo turno
+    const nuevoTurnoQuery = `
+      INSERT INTO turnos (
+        usuario_id,
+        guia_id,
+        fecha_programada,
+        duracion_minutos,
+        modalidad,
+        estado,
+        es_reprogramacion,
+        turno_original_id,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, 'pendiente', true, $6, NOW())
+      RETURNING id
+    `;
+
+    const nuevoTurnoResult = await pool.query(nuevoTurnoQuery, [
+      turnoOriginal.usuario_id,
+      guiaId,
+      new Date(fecha),
+      turnoOriginal.duracion_minutos || 60,
+      turnoOriginal.modalidad || 'chat',
+      turnoOriginal.id
+    ]);
+
+    const nuevoTurnoId = nuevoTurnoResult.rows[0].id;
+
+    // Actualizar la solicitud de reprogramación
+    await pool.query(
+      `UPDATE reprogramaciones 
+       SET estado = 'completada', 
+           nuevo_turno_id = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [nuevoTurnoId, solicitudId]
+    );
+
+    // Notificar al usuario
+    notificarUsuario(turnoOriginal.usuario_id, 'estado-turno-actualizado', {
+      turnoId: nuevoTurnoId,
+      estado: 'pendiente',
+      mensaje: `Tu turno ha sido reprogramado con el guía ${guiaQuery.rows[0].nombre} para el ${new Date(fecha).toLocaleString()}`
+    });
+
+    // Notificar al guía
+    notificarUsuario(guiaId, 'nuevo-turno-disponible', {
+      turnoId: nuevoTurnoId,
+      usuarioId: turnoOriginal.usuario_id,
+      mensaje: 'Tienes un nuevo turno reprogramado'
+    });
+
+    // Notificar a admins que se completó
+    notificarAAdmins('reprogramacion-completada', {
+      solicitudId: solicitudId,
+      nuevoTurnoId: nuevoTurnoId,
+      mensaje: 'Reprogramación completada'
+    });
+
+    res.json({
+      message: 'Turno reprogramado exitosamente',
+      nuevoTurnoId: nuevoTurnoId
+    });
+
+  } catch (error) {
+    console.error('Error al crear turno reprogramado:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// OBTENER GUÍAS CON SUS USUARIOS ASIGNADOS
+// ============================================
+
 export const getGuiasConUsuarios = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -401,178 +303,79 @@ export const getGuiasConUsuarios = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Primero obtener todos los guías
-    const guiasQuery = `
-      SELECT id, nombre, email 
-      FROM usuarios 
-      WHERE rol = 'guia' 
-      ORDER BY nombre ASC
+    const query = `
+      SELECT 
+        g.id as guiaId,
+        g.nombre as guiaNombre,
+        g.email as guiaEmail,
+        json_agg(
+          json_build_object(
+            'usuarioId', u.id,
+            'usuarioNombre', u.nombre,
+            'usuarioEmail', u.email,
+            'ultimoTurno', t.fecha_programada,
+            'totalTurnos', t.total
+          )
+        ) as usuarios
+      FROM usuarios g
+      LEFT JOIN (
+        SELECT 
+          guia_id,
+          usuario_id,
+          MAX(fecha_programada) as fecha_programada,
+          COUNT(*) as total
+        FROM turnos
+        GROUP BY guia_id, usuario_id
+      ) t ON t.guia_id = g.id
+      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      WHERE g.rol = 'guia'
+      GROUP BY g.id, g.nombre, g.email
+      ORDER BY g.nombre ASC
     `;
+
+    const result = await pool.query(query);
     
-    const guiasResult = await pool.query(guiasQuery);
-    const guias = guiasResult.rows;
+    // Filtrar usuarios nulos y dar formato
+    const guias = result.rows.map((row: any) => ({
+      ...row,
+      usuarios: row.usuarios.filter((u: any) => u.usuarioId !== null)
+    }));
 
-    // Para cada guía, obtener sus usuarios
-    const resultado = [];
-    
-    for (const guia of guias) {
-      const usuariosQuery = `
-        SELECT DISTINCT
-          u.id as "usuarioId",
-          u.nombre as "usuarioNombre",
-          u.email as "usuarioEmail",
-          MAX(t.fecha_programada) as ultimo_turno,
-          COUNT(t.id) as total_turnos
-        FROM usuarios u
-        INNER JOIN turnos t ON u.id = t.usuario_id
-        WHERE t.guia_id = $1
-        GROUP BY u.id, u.nombre, u.email
-        ORDER BY u.nombre ASC
-      `;
-      
-      const usuariosResult = await pool.query(usuariosQuery, [guia.id]);
-      
-      resultado.push({
-        guiaId: guia.id,
-        guiaNombre: guia.nombre,
-        guiaEmail: guia.email,
-        usuarios: usuariosResult.rows
-      });
-    }
-
-    res.json(resultado);
-
+    res.json(guias);
   } catch (error) {
-    console.error('❌ Error al obtener guías con usuarios:', error);
-    res.status(500).json({ error: 'Error interno del servidor', detalle: error instanceof Error ? error.message : 'Error desconocido' });
+    console.error('Error al obtener guías con usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
+// ============================================
+// OBTENER TODOS LOS USUARIOS CON SU GUÍA
+// ============================================
 
-// Buscar usuario por nombre o email y obtener su guía
-export const buscarUsuarioConGuia = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getUsuariosConGuia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
       res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const { termino } = req.query;
-
-    if (!termino) {
-      res.status(400).json({ error: 'Término de búsqueda requerido' });
       return;
     }
 
     const query = `
-      SELECT DISTINCT
+      SELECT DISTINCT ON (u.id)
         u.id as usuario_id,
         u.nombre as usuario_nombre,
         u.email as usuario_email,
         g.id as guia_id,
         g.nombre as guia_nombre,
         g.email as guia_email,
-        (
-          SELECT fecha_programada 
-          FROM turnos 
-          WHERE usuario_id = u.id 
-          ORDER BY created_at DESC 
-          LIMIT 1
-        ) as ultimo_turno
+        t.fecha_programada as ultimo_turno
       FROM usuarios u
-      LEFT JOIN turnos t ON u.id = t.usuario_id
+      LEFT JOIN turnos t ON t.usuario_id = u.id
       LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
-      WHERE u.nombre ILIKE $1 OR u.email ILIKE $1
-      ORDER BY u.nombre
+      WHERE u.rol = 'usuario'
+      ORDER BY u.id, t.fecha_programada DESC NULLS LAST
     `;
 
-    const result = await pool.query(query, [`%${termino}%`]);
-    res.json(result.rows);
-
-  } catch (error) {
-    console.error('Error al buscar usuario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Obtener lista de todos los guías (para filtros)
-export const getTodosGuias = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const result = await pool.query(`
-      SELECT id, nombre, email 
-      FROM usuarios 
-      WHERE rol = 'guia'
-      ORDER BY nombre ASC
-    `);
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error al obtener guías:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Obtener lista de todos los usuarios (para filtros)
-export const getTodosUsuarios = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const result = await pool.query(`
-      SELECT id, nombre, email 
-      FROM usuarios 
-      WHERE rol = 'usuario'
-      ORDER BY nombre ASC
-    `);
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
-
-// Obtener todos los usuarios con su guía asignado
-export const getTodosUsuariosConGuia = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    if (req.user?.rol !== 'admin') {
-      res.status(403).json({ error: 'Acceso solo para administradores' });
-      return;
-    }
-
-    const result = await pool.query(`
-      SELECT 
-        u.id as usuario_id,
-        u.nombre as usuario_nombre,
-        u.email as usuario_email,
-        g.id as guia_id,
-        g.nombre as guia_nombre,
-        g.email as guia_email,
-        (
-          SELECT MAX(fecha_programada) 
-          FROM turnos 
-          WHERE usuario_id = u.id 
-            AND estado = 'completado'
-        ) as ultimo_turno
-      FROM usuarios u
-      LEFT JOIN (
-        SELECT DISTINCT ON (usuario_id) usuario_id, guia_id
-        FROM turnos
-        WHERE estado IN ('completado', 'iniciado', 'aceptado')
-        ORDER BY usuario_id, fecha_programada DESC
-      ) ultimo ON u.id = ultimo.usuario_id
-      LEFT JOIN usuarios g ON ultimo.guia_id = g.id AND g.rol = 'guia'
-      WHERE u.rol = 'usuario'
-      ORDER BY u.nombre ASC
-    `);
-
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (error) {
     console.error('Error al obtener usuarios con guía:', error);
@@ -580,23 +383,124 @@ export const getTodosUsuariosConGuia = async (req: AuthRequest, res: Response): 
   }
 };
 
-// Contar reprogramaciones pendientes
-export const contarReprogramacionesPendientes = async (req: AuthRequest, res: Response): Promise<void> => {
+// ============================================
+// CONTAR REPROGRAMACIONES PENDIENTES
+// ============================================
+
+export const countReprogramacionesPendientes = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
       res.status(403).json({ error: 'Acceso solo para administradores' });
       return;
     }
 
-    const result = await pool.query(`
-      SELECT COUNT(*) as count
-      FROM reprogramaciones
-      WHERE estado = 'pendiente'
-    `);
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM reprogramaciones WHERE estado = 'pendiente'`
+    );
 
     res.json({ count: parseInt(result.rows[0].count) });
   } catch (error) {
-    console.error('Error al contar reprogramaciones pendientes:', error);
+    console.error('Error al contar reprogramaciones:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// OBTENER REPROGRAMACIONES PENDIENTES
+// ============================================
+
+export const getReprogramacionesPendientes = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.turno_original_id,
+        r.usuario_id,
+        r.preferencia,
+        r.fecha_preferida,
+        r.comentarios,
+        r.created_at,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        t.fecha_programada as turno_original_fecha,
+        t.estado as turno_original_estado,
+        g.nombre as guia_original_nombre
+      FROM reprogramaciones r
+      JOIN usuarios u ON r.usuario_id = u.id
+      JOIN turnos t ON r.turno_original_id = t.id
+      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      WHERE r.estado = 'pendiente'
+      ORDER BY r.created_at ASC
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener reprogramaciones:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// OBTENER CARGA DE TRABAJO DE GUÍAS (NUEVO)
+// ============================================
+
+export const getCargaGuias = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Verificar que sea admin
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const query = `
+      SELECT 
+        g.id,
+        g.nombre,
+        g.email,
+        g.disponible,
+        COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) as turnos_activos,
+        COUNT(t.id) FILTER (WHERE t.estado = 'pendiente') as turnos_pendientes,
+        COUNT(t.id) FILTER (WHERE t.estado = 'aceptado') as turnos_aceptados,
+        COUNT(t.id) FILTER (WHERE t.estado = 'iniciado') as turnos_en_curso,
+        COUNT(t.id) as turnos_totales,
+        (SELECT COUNT(*) FROM turnos t2 
+         WHERE t2.guia_id = g.id 
+         AND t2.estado IN ('pendiente', 'aceptado', 'iniciado')
+         AND t2.fecha_programada > NOW()
+         AND t2.fecha_programada < NOW() + INTERVAL '24 hours') as turnos_proximas_24h
+      FROM usuarios g
+      LEFT JOIN turnos t ON t.guia_id = g.id
+      WHERE g.rol = 'guia'
+      GROUP BY g.id, g.nombre, g.email, g.disponible
+      ORDER BY turnos_activos DESC, g.nombre ASC
+    `;
+
+    const result = await pool.query(query);
+
+    res.json({
+      total_guias: result.rows.length,
+      guias: result.rows.map((row: any) => ({
+        id: row.id,
+        nombre: row.nombre || 'Sin nombre',
+        email: row.email,
+        disponible: row.disponible,
+        turnos_activos: parseInt(row.turnos_activos) || 0,
+        turnos_pendientes: parseInt(row.turnos_pendientes) || 0,
+        turnos_aceptados: parseInt(row.turnos_aceptados) || 0,
+        turnos_en_curso: parseInt(row.turnos_en_curso) || 0,
+        turnos_totales: parseInt(row.turnos_totales) || 0,
+        turnos_proximas_24h: parseInt(row.turnos_proximas_24h) || 0
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error al obtener carga de guías:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

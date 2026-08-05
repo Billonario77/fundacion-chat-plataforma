@@ -1,59 +1,53 @@
-// backend/src/middleware/auth.ts
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Router } from 'express';
+import { authenticateToken, requireAdmin } from '../middleware/auth'; // 👈 CAMBIO AQUÍ
+import * as adminController from '../controllers/adminController';
 
-export interface AuthRequest extends Request {
-    user?: {
-        id: string;
-        rol: 'usuario' | 'guia' | 'admin';
-        email: string;
-    };
-}
+const router = Router();
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['authorization'];
-    console.log('Auth header recibido:', authHeader);
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+// Todas las rutas requieren autenticación y rol admin
+router.use(authenticateToken); // 👈 CAMBIO AQUÍ
+router.use(requireAdmin); // 👈 CAMBIO AQUÍ
 
-    if (!token) {
-        return res.status(401).json({ error: 'Token no proporcionado' });
-    }
+// ============================================
+// GUÍAS
+// ============================================
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
-        req.user = {
-            id: decoded.id,
-            rol: decoded.rol,
-            email: decoded.email
-        };
-        next();
-    } catch (error) {
-        return res.status(403).json({ error: 'Token inválido' });
-    }
-};
+// Obtener guías disponibles
+router.get('/guias-disponibles', adminController.getGuiasDisponibles);
 
-// Middleware específico para guías (solo ellos pueden acceder)
-export const requireGuia = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'No autenticado' });
-    }
-    
-    if (req.user.rol !== 'guia' && req.user.rol !== 'admin') {
-        return res.status(403).json({ error: 'Acceso solo para guías' });
-    }
-    
-    next();
-};
+// Obtener guías con usuarios asignados
+router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuarios);
 
-// Middleware específico para administradores
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'No autenticado' });
-    }
-    
-    if (req.user.rol !== 'admin') {
-        return res.status(403).json({ error: 'Acceso solo para administradores' });
-    }
-    
-    next();
-};
+// Obtener carga de guías (NUEVO)
+router.get('/carga-guias', adminController.getCargaGuias);
+
+// ============================================
+// TURNOS
+// ============================================
+
+// Obtener turnos pendientes de asignación
+router.get('/turnos-pendientes-asignacion', adminController.getTurnosPendientesAsignacion);
+
+// Asignar guía a turno
+router.post('/turnos/:turnoId/asignar-guia', adminController.asignarGuiaATurno);
+
+// Crear turno reprogramado
+router.post('/reprogramaciones/:solicitudId/completar', adminController.crearTurnoReprogramado);
+
+// ============================================
+// REPROGRAMACIONES
+// ============================================
+
+// Contar reprogramaciones pendientes
+router.get('/reprogramaciones/pendientes/count', adminController.countReprogramacionesPendientes);
+
+// Obtener reprogramaciones pendientes
+router.get('/reprogramaciones/pendientes', adminController.getReprogramacionesPendientes);
+
+// ============================================
+// USUARIOS CON GUÍA (para búsqueda)
+// ============================================
+
+router.get('/usuarios-con-guia', adminController.getUsuariosConGuia);
+
+export default router;

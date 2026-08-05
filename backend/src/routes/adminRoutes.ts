@@ -1,48 +1,54 @@
 import { Router } from 'express';
-import { 
-  getSolicitudesPendientes,
-  getGuiasDisponibles,
-  crearTurnoReprogramado,
-  asignarGuia,
-  getTurnosPendientesAsignacion,
-  asignarGuiaATurno,
-  getGuiasConUsuarios,
-  buscarUsuarioConGuia,
-  getTodosGuias,
-  getTodosUsuarios,
-  getTodosUsuariosConGuia,
-  contarReprogramacionesPendientes
-} from '../controllers/adminController';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
+import * as adminController from '../controllers/adminController';
+// Importamos solo lo que existe
+// Si no existen estas funciones, las comentamos o las quitamos
 
 const router = Router();
-console.log('✅ adminRoutes.ts cargado - rutas disponibles:');
-console.log('   POST /reprogramaciones/:solicitudId/crear-turno');
 
-// Todas las rutas requieren autenticación
-router.use(authenticateToken);
+// Todas las rutas requieren autenticación y rol admin
+router.use(authMiddleware);
 
-// Rutas de reprogramaciones
-router.get('/reprogramaciones/pendientes', getSolicitudesPendientes);
-router.post('/reprogramaciones/:solicitudId/asignar', asignarGuia);
-router.post('/reprogramaciones/:solicitudId/crear-turno', crearTurnoReprogramado);
-router.get('/reprogramaciones/pendientes/count', authenticateToken, contarReprogramacionesPendientes);
+// ============================================
+// GUÍAS
+// ============================================
 
-// Rutas de guías
-router.get('/guias/disponibles', getGuiasDisponibles);
+// Obtener guías disponibles
+router.get('/guias-disponibles', adminController.getGuiasDisponibles);
 
-// Rutas de turnos pendientes
-router.get('/turnos/pendientes-asignacion', getTurnosPendientesAsignacion);
-router.post('/turnos/:turnoId/asignar-guia', asignarGuiaATurno);
+// Obtener guías con usuarios asignados
+router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuarios);
 
-// Nuevas rutas para asignaciones
-router.get('/asignaciones/guias-con-usuarios', getGuiasConUsuarios);
-router.get('/asignaciones/buscar-usuario', buscarUsuarioConGuia);
+// Obtener carga de guías (NUEVO)
+router.get('/carga-guias', adminController.getCargaGuias);
 
-// Rutas para listas (filtros)
-router.get('/guias', getTodosGuias);
-router.get('/usuarios', getTodosUsuarios);
+// ============================================
+// TURNOS
+// ============================================
 
-router.get('/usuarios-con-guia', getTodosUsuariosConGuia);
+// Obtener turnos pendientes de asignación
+router.get('/turnos-pendientes-asignacion', adminController.getTurnosPendientesAsignacion);
+
+// Asignar guía a turno
+router.post('/turnos/:turnoId/asignar-guia', adminController.asignarGuiaATurno);
+
+// Crear turno reprogramado
+router.post('/reprogramaciones/:solicitudId/completar', adminController.crearTurnoReprogramado);
+
+// ============================================
+// REPROGRAMACIONES
+// ============================================
+
+// Contar reprogramaciones pendientes
+router.get('/reprogramaciones/pendientes/count', adminController.countReprogramacionesPendientes);
+
+// Obtener reprogramaciones pendientes
+router.get('/reprogramaciones/pendientes', adminController.getReprogramacionesPendientes);
+
+// ============================================
+// USUARIOS CON GUÍA (para búsqueda)
+// ============================================
+
+router.get('/usuarios-con-guia', adminController.getUsuariosConGuia);
 
 export default router;

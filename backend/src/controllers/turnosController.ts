@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 import { notificarAAdmins } from '../services/socketService';
+import { AsignacionService } from '../services/asignacionService'; // 👈 NUEVA IMPORTACIÓN
 
 
 export const solicitarApoyo = async (req: Request, res: Response): Promise<void> => {
@@ -76,85 +77,30 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     console.log(`🎯 Es primera vez: ${esPrimeraVez ? 'SÍ' : 'NO'}`);
 
     // ============================================
-    // DETERMINAR GUÍA ASIGNADO
+    // 🆕 ASIGNAR GUÍA USANDO EL SERVICIO (NUEVO)
     // ============================================
     let guiaAsignado = null;
     let estado = 'pendiente';
 
-    if (esPrimeraVez) {
+    // Usar el nuevo servicio de asignación
+    const asignacion = await AsignacionService.asignarGuia(
+      usuarioId,
+      esPrimeraVez,
+      fechaPreferida ? new Date(fechaPreferida) : undefined
+    );
+
+    console.log(`📋 Resultado asignación:`, {
+      guiaId: asignacion.guiaId,
+      requiereAdmin: asignacion.requiereAdmin,
+      razon: asignacion.razon
+    });
+
+    if (asignacion.requiereAdmin) {
       estado = 'pendiente_admin';
-      console.log('📋 Primera vez - Pendiente de asignación por admin');
+      guiaAsignado = null;
     } else {
-      // Verificar preferencia del usuario
-      const preferenciaQuery = await pool.query(
-        `SELECT preferencia FROM preferencias_usuario 
-         WHERE usuario_id = $1 AND estado = 'pendiente'
-         ORDER BY created_at DESC 
-         LIMIT 1`,
-        [usuarioId]
-      );
-      const ultimaPreferencia = preferenciaQuery.rows[0]?.preferencia;
-      console.log(`📋 Última preferencia: ${ultimaPreferencia || 'ninguna'}`);
-
-      if (ultimaPreferencia === 'otro_guia') {
-        // Usar último guía asignado
-        const ultimoGuiaQuery = await pool.query(
-          `SELECT guia_id FROM turnos 
-           WHERE usuario_id = $1 AND guia_id IS NOT NULL
-           ORDER BY created_at DESC 
-           LIMIT 1`,
-          [usuarioId]
-        );
-        if (ultimoGuiaQuery.rows.length > 0) {
-          guiaAsignado = ultimoGuiaQuery.rows[0].guia_id;
-          console.log(`✅ Usando último guía (nuevo): ${guiaAsignado}`);
-        }
-      } else {
-        // Usar primer guía (original)
-        const primerGuiaQuery = await pool.query(
-          `SELECT guia_id FROM turnos 
-           WHERE usuario_id = $1 AND guia_id IS NOT NULL
-           ORDER BY created_at ASC 
-           LIMIT 1`,
-          [usuarioId]
-        );
-        if (primerGuiaQuery.rows.length > 0) {
-          guiaAsignado = primerGuiaQuery.rows[0].guia_id;
-          console.log(`✅ Usando primer guía (original): ${guiaAsignado}`);
-        }
-      }
-
-      // Buscar turno activo
-      if (!guiaAsignado) {
-        const turnoActivoQuery = await pool.query(
-          `SELECT guia_id FROM turnos 
-           WHERE usuario_id = $1 
-           AND estado IN ('pendiente', 'aceptado', 'iniciado')
-           AND guia_id IS NOT NULL
-           ORDER BY created_at DESC 
-           LIMIT 1`,
-          [usuarioId]
-        );
-        if (turnoActivoQuery.rows.length > 0) {
-          guiaAsignado = turnoActivoQuery.rows[0].guia_id;
-          console.log(`✅ Usando guía de turno activo: ${guiaAsignado}`);
-        }
-      }
-
-      // Asignar guía aleatorio (desde tabla usuarios con rol='guia')
-      if (!guiaAsignado) {
-        const guiasDisponibles = await pool.query(
-          'SELECT id FROM usuarios WHERE rol = $1 AND disponible = true ORDER BY random() LIMIT 1',
-          ['guia']
-        );
-        if (guiasDisponibles.rows.length > 0) {
-          guiaAsignado = guiasDisponibles.rows[0].id;
-          console.log(`✅ Asignando guía aleatorio: ${guiaAsignado}`);
-        } else {
-          estado = 'pendiente_admin';
-          console.log('⚠️ No hay guías disponibles - pendiente de admin');
-        }
-      }
+      guiaAsignado = asignacion.guiaId;
+      estado = 'pendiente';
     }
 
     // ============================================
