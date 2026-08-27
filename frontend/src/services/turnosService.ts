@@ -298,6 +298,9 @@ export const perfilService = {
   getMiPerfil: async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
       const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -311,6 +314,9 @@ export const perfilService = {
   actualizarFoto: async (foto_perfil: string) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No token found');
+      }
       const response = await axios.put(
         `${API_URL}/turnos/mi-foto`,
         { foto_perfil },
@@ -322,4 +328,4 @@ export const perfilService = {
       throw error;
     }
   },
-};;
+};
