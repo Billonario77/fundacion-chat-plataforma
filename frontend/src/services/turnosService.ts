@@ -291,12 +291,23 @@ export const usuarioService = {
 
 
 // Servicio común para cualquier rol (usuario, guía, admin)
+
 export const perfilService = {
   getMiPerfil: async () => {
     const token = localStorage.getItem('token');
     const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    return response.data;
+  },
+
+  actualizarFoto: async (foto_perfil: string) => {
+    const token = localStorage.getItem('token');
+    const response = await axios.put(
+      `${API_URL}/turnos/mi-foto`,
+      { foto_perfil },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     return response.data;
   },
 };

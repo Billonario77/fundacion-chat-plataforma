@@ -1,22 +1,19 @@
 import { Router } from 'express';
-import { 
-  enviarMensaje,
-  getMensajesPorTurno,
-  marcarComoLeidos,
-  getMensajesNoLeidos
-} from '../controllers/mensajesController';
-
 import { authenticateToken } from '../middleware/auth';
+import * as mensajesController from '../controllers/mensajesController';
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
-router.use(authenticateToken);
+// Enviar mensaje
+router.post('/', authenticateToken, mensajesController.enviarMensaje);
 
-// Rutas de mensajes
-router.post('/enviar', enviarMensaje);
-router.get('/no-leidos', getMensajesNoLeidos);
-router.get('/turno/:turnoId', getMensajesPorTurno);
-router.patch('/turno/:turnoId/leer', marcarComoLeidos);
+// Obtener mensajes de un turno
+router.get('/turno/:turnoId', authenticateToken, mensajesController.getMensajesPorTurno);
+
+// Marcar mensajes como leídos
+router.put('/turno/:turnoId/leer', authenticateToken, mensajesController.marcarComoLeidos);
+
+// Obtener mensajes no leídos
+router.get('/no-leidos', authenticateToken, mensajesController.getMensajesNoLeidos);
 
 export default router;

@@ -9,6 +9,7 @@ import bcrypt from 'bcrypt';
 
 export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Verificar que sea admin
     if (req.user?.rol !== 'admin') {
       res.status(403).json({ error: 'Acceso solo para administradores' });
       return;
@@ -30,7 +31,8 @@ export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void
     const query = `
       SELECT 
         id, nombre, email, telefono, rol, disponible, 
-        datos_completados, created_at, primer_nombre, primer_apellido
+        datos_completados, created_at, primer_nombre, primer_apellido,
+        foto_perfil, cedula, edad, celular, ciudad
       FROM usuarios
       ${whereClause}
       ORDER BY created_at DESC
@@ -60,8 +62,11 @@ export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void
     });
 
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener usuarios:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error instanceof Error ? error.message : 'Error desconocido'
+    });
   }
 };
 
@@ -119,7 +124,6 @@ export const crearUsuario = async (req: AuthRequest, res: Response): Promise<voi
       segundo_apellido
     } = req.body;
 
-    // Validaciones
     if (!email || !password || !nombre) {
       res.status(400).json({ error: 'Email, password y nombre son requeridos' });
       return;
@@ -130,7 +134,6 @@ export const crearUsuario = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // Verificar si el email ya existe
     const emailCheck = await pool.query(
       'SELECT id FROM usuarios WHERE email = $1',
       [email]
@@ -141,11 +144,9 @@ export const crearUsuario = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
-    // Hash de la contraseña
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Insertar usuario
     const result = await pool.query(
       `INSERT INTO usuarios (
         email, password_hash, nombre, telefono, rol,
@@ -166,7 +167,6 @@ export const crearUsuario = async (req: AuthRequest, res: Response): Promise<voi
       ]
     );
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
        VALUES ($1, $2, $3, NOW())`,
@@ -211,7 +211,6 @@ export const actualizarRol = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // No permitir cambiar el propio rol
     if (id === req.user.id) {
       res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
       return;
@@ -230,7 +229,6 @@ export const actualizarRol = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
        VALUES ($1, $2, $3, NOW())`,
@@ -278,7 +276,6 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
       disponible
     } = req.body;
 
-    // Verificar que el usuario existe
     const usuarioExistente = await pool.query(
       'SELECT * FROM usuarios WHERE id = $1',
       [id]
@@ -289,7 +286,6 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Construir query dinámica
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -344,7 +340,6 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
 
     const result = await pool.query(query, values);
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
        VALUES ($1, $2, $3, NOW())`,
@@ -374,7 +369,6 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
 // ============================================
 
 export const cambiarRolUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
-  // Redirigir a la función actualizarRol
   return actualizarRol(req, res);
 };
 
@@ -391,13 +385,11 @@ export const eliminarUsuario = async (req: AuthRequest, res: Response): Promise<
 
     const { id } = req.params;
 
-    // No permitir eliminar al propio admin
     if (id === req.user.id) {
       res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
       return;
     }
 
-    // Verificar que el usuario existe
     const usuarioExistente = await pool.query(
       'SELECT id, nombre, email FROM usuarios WHERE id = $1',
       [id]
@@ -408,13 +400,11 @@ export const eliminarUsuario = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // Eliminar usuario (las foreign keys con ON DELETE CASCADE se encargan)
     await pool.query(
       'DELETE FROM usuarios WHERE id = $1',
       [id]
     );
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
        VALUES ($1, $2, $3, NOW())`,

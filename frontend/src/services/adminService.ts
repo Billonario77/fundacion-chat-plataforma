@@ -47,7 +47,7 @@ export const adminService = {
   // Obtener guías disponibles para asignar
   getGuiasDisponibles: async (fecha?: string, solicitudId?: string): Promise<GuiaDisponible[]> => {
     const token = localStorage.getItem('token');
-    let url = `${API_URL}/admin/guias/disponibles`;
+    let url = `${API_URL}/admin/guias-disponibles`;
     const params = new URLSearchParams();
     
     if (fecha) {
@@ -72,8 +72,8 @@ export const adminService = {
   asignarGuia: async (solicitudId: string, guiaId: string): Promise<any> => {
     const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_URL}/admin/reprogramaciones/${solicitudId}/asignar`,
-      { guiaId },
+      `${API_URL}/admin/reprogramaciones/${solicitudId}/completar`,
+      { guiaId, fecha: new Date().toISOString() },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;
@@ -83,8 +83,8 @@ export const adminService = {
   crearTurnoReprogramado: async (solicitudId: string, guiaId: string, fechaProgramada?: string): Promise<any> => {
     const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_URL}/admin/reprogramaciones/${solicitudId}/crear-turno`,
-      { guiaId, fechaProgramada },
+      `${API_URL}/admin/reprogramaciones/${solicitudId}/completar`,
+      { guiaId, fecha: fechaProgramada || new Date().toISOString() },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return response.data;
@@ -93,7 +93,7 @@ export const adminService = {
   // Obtener turnos pendientes de asignación (primeros usuarios)
   getTurnosPendientesAsignacion: async (): Promise<TurnoPendiente[]> => {
     const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/admin/turnos/pendientes-asignacion`, {
+    const response = await axios.get(`${API_URL}/admin/turnos-pendientes-asignacion`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
@@ -113,7 +113,7 @@ export const adminService = {
   // Obtener lista de guías para filtros
   obtenerGuiasLista: async (): Promise<{ id: string; nombre: string; email: string }[]> => {
     const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/admin/guias`, {
+    const response = await axios.get(`${API_URL}/admin/guias-disponibles`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
@@ -122,12 +122,11 @@ export const adminService = {
   // Obtener lista de usuarios para filtros
   obtenerUsuariosLista: async (): Promise<{ id: string; nombre: string; email: string }[]> => {
     const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/admin/usuarios`, {
+    const response = await axios.get(`${API_URL}/admin/usuarios/`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
   },
-
 };
 
 // ============================================
