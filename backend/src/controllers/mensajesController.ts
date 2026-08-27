@@ -210,9 +210,11 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
+    // Permitir admin también (como guía o usuario según su rol)
     let query = '';
     
-    if (rol === 'guia') {
+    if (rol === 'guia' || rol === 'admin') {
+      // Para guías y admins: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,
@@ -226,6 +228,7 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
         GROUP BY m.turno_id
       `;
     } else if (rol === 'usuario') {
+      // Para usuarios: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,

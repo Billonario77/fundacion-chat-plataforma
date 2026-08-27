@@ -123,7 +123,7 @@ export const adminService = {
   obtenerUsuariosLista: async (): Promise<{ id: string; nombre: string; email: string }[]> => {
     const token = localStorage.getItem('token');
     const response = await axios.get(`${API_URL}/admin/usuarios/`, {
-      headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
   },
