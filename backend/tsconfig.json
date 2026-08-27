@@ -10,16 +10,13 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "types": ["node"],
     "noImplicitAny": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "removeComments": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
+    "sourceMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["src/test-*.ts", "node_modules", "dist"]
