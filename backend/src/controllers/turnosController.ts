@@ -1143,3 +1143,194 @@ export const completarMisDatos = async (req: AuthRequest, res: Response): Promis
     });
   }
 };
+
+// ============================================
+// REPROGRAMAR TURNO
+// ============================================
+
+export const reprogramarTurno = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    const { turnoId } = req.params;
+    const { preferencia, fecha_preferida, comentarios } = req.body;
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    if (req.user?.rol !== 'usuario') {
+      res.status(403).json({ error: 'Solo los usuarios pueden reprogramar turnos' });
+      return;
+    }
+
+    // Verificar que el turno existe y pertenece al usuario
+    const turnoQuery = await pool.query(
+      `SELECT t.*, u.id as usuario_id_verify
+       FROM turnos t
+       JOIN usuarios u ON t.usuario_id = u.id
+       WHERE t.id = $1`,
+      [turnoId]
+    );
+
+    if (turnoQuery.rows.length === 0) {
+      res.status(404).json({ error: 'Turno no encontrado' });
+      return;
+    }
+
+    const turnoOriginal = turnoQuery.rows[0];
+
+    if (turnoOriginal.usuario_id_verify !== usuarioId) {
+      res.status(403).json({ error: 'No puedes reprogramar turnos de otros usuarios' });
+      return;
+    }
+
+    if (turnoOriginal.estado !== 'cancelado') {
+      res.status(400).json({ 
+        error: 'Solo se pueden reprogramar turnos cancelados',
+        estado_actual: turnoOriginal.estado
+      });
+      return;
+    }
+
+    // Crear solicitud de reprogramación
+    const insertQuery = `
+      INSERT INTO reprogramaciones (
+        turno_original_id,
+        usuario_id,
+        preferencia,
+        fecha_preferida,
+        comentarios,
+        estado
+      ) VALUES ($1, $2, $3, $4, $5, 'pendiente')
+      RETURNING id, created_at
+    `;
+
+    const result = await pool.query(insertQuery, [
+      turnoId,
+      usuarioId,
+      preferencia || null,
+      fecha_preferida || null,
+      comentarios || null
+    ]);
+
+    const reprogramacion = result.rows[0];
+
+    // Notificar a admins
+    notificarAAdmins('nueva-solicitud-reprogramacion', {
+      message: 'Nueva solicitud de reprogramación',
+      reprogramacionId: reprogramacion.id,
+      turnoId: turnoId,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(201).json({
+      message: 'Solicitud de reprogramación creada exitosamente',
+      reprogramacion: {
+        id: reprogramacion.id,
+        turno_original: turnoId,
+        preferencia: preferencia || 'sin preferencia',
+        fecha_preferida: fecha_preferida || null,
+        estado: 'pendiente'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al reprogramar turno:', error);
+    res.status(500).json({ error: 'Error interno al procesar la reprogramación' });
+  }
+};
+
+// ============================================
+// OBTENER REPROGRAMACIONES DEL USUARIO
+// ============================================
+
+export const getMisReprogramaciones = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    if (req.user?.rol !== 'usuario') {
+      res.status(403).json({ error: 'Acceso solo para usuarios' });
+      return;
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.turno_original_id,
+        r.preferencia,
+        r.fecha_preferida,
+        r.comentarios,
+        r.estado,
+        r.created_at,
+        r.updated_at,
+        t.fecha_programada as turno_original_fecha,
+        t.estado as turno_original_estado
+      FROM reprogramaciones r
+      JOIN turnos t ON r.turno_original_id = t.id
+      WHERE r.usuario_id = $1
+      ORDER BY r.created_at DESC
+    `;
+
+    const result = await pool.query(query, [usuarioId]);
+
+    res.json(result.rows);
+
+  } catch (error) {
+    console.error('Error al obtener reprogramaciones:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// CANCELAR REPROGRAMACIÓN (usuario)
+// ============================================
+
+export const cancelarReprogramacion = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    const { reprogramacionId } = req.params;
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    if (req.user?.rol !== 'usuario') {
+      res.status(403).json({ error: 'Acceso solo para usuarios' });
+      return;
+    }
+
+    // Verificar que la reprogramación pertenece al usuario y está pendiente
+    const checkQuery = `
+      SELECT id FROM reprogramaciones 
+      WHERE id = $1 AND usuario_id = $2 AND estado = 'pendiente'
+    `;
+    const checkResult = await pool.query(checkQuery, [reprogramacionId, usuarioId]);
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({ error: 'Solicitud de reprogramación no encontrada o ya procesada' });
+      return;
+    }
+
+    // Actualizar estado a cancelada
+    const updateQuery = `
+      UPDATE reprogramaciones 
+      SET estado = 'cancelada', updated_at = NOW()
+      WHERE id = $1
+      RETURNING id
+    `;
+    await pool.query(updateQuery, [reprogramacionId]);
+
+    res.json({ message: 'Solicitud de reprogramación cancelada' });
+
+  } catch (error) {
+    console.error('Error al cancelar reprogramación:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

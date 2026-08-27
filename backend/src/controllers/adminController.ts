@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario, notificarAAdmins } from '../services/socketService';
@@ -27,6 +26,8 @@ export const getGuiasDisponibles = async (req: AuthRequest, res: Response): Prom
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// ... resto del código igual, solo elimina la línea duplicada
 
 // ============================================
 // OBTENER TURNOS PENDIENTES DE ASIGNACIÓN

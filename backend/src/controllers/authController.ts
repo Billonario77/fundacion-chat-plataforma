@@ -1,12 +1,11 @@
 // backend/src/controllers/authController.ts
 
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
-
 
 export const validateRegistro = [
     body('email').isEmail().normalizeEmail(),
@@ -15,7 +14,6 @@ export const validateRegistro = [
     body('telefono').optional().isString()
 ];
 
-// Registro de usuarios (todos se registran como 'usuario' por defecto)
 export const registro = async (req: Request, res: Response): Promise<void> => {
     try {
         const errors = validationResult(req);
@@ -26,7 +24,6 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
 
         const { email, password, nombre, telefono } = req.body;
 
-        // Verificar si el email ya existe
         const existingUser = await pool.query(
             'SELECT id FROM usuarios WHERE email = $1',
             [email]
@@ -37,12 +34,9 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Hash de la contraseña
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Insertar en usuarios con rol='usuario' por defecto
-        // Separar el nombre completo
         const partes = nombre.trim().split(' ');
         const primer_nombre = partes[0] || '';
         const segundo_nombre = partes[1] || null;
@@ -58,7 +52,6 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
 
         const newUser = result.rows[0];
 
-        // Generar token JWT
         const token = jwt.sign(
             { 
                 id: newUser.id, 
@@ -69,7 +62,6 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
             { expiresIn: '30d' }
         );
 
-        // Registrar en auditoría
         await pool.query(
             `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles)
              VALUES ($1, $2, $3)`,
@@ -93,13 +85,11 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// Validaciones para login
 export const validateLogin = [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
 ];
 
-// Login (el backend determina el rol automáticamente)
 export const login = async (req: Request, res: Response): Promise<void> => {
     try {
         const errors = validationResult(req);
@@ -110,7 +100,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         const { email, password } = req.body;
 
-        // Buscar en usuarios (única tabla)
         const userResult = await pool.query(
             `SELECT id, email, password_hash, nombre, rol, es_admin 
              FROM usuarios 
@@ -125,27 +114,22 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         const user = userResult.rows[0];
 
-        // Verificar contraseña
         const passwordValida = await bcrypt.compare(password, user.password_hash);
         if (!passwordValida) {
             res.status(401).json({ error: 'Credenciales inválidas' });
             return;
         }
 
-        // Determinar rol final (si es_admin true, prevalece sobre rol)
         const rolFinal = user.es_admin ? 'admin' : user.rol;
 
-        // Actualizar último acceso
         await pool.query('UPDATE usuarios SET updated_at = NOW(), ultimo_acceso = NOW() WHERE id = $1', [user.id]);
 
-        // Generar token
         const token = jwt.sign(
             { id: user.id, email: user.email, rol: rolFinal },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '7d' }
         );
 
-        // Registrar en auditoría
         await pool.query(
             `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles)
              VALUES ($1, $2, $3)`,
@@ -169,7 +153,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// Obtener perfil del usuario autenticado
 export const perfil = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.user) {
@@ -205,4 +188,3 @@ export const perfil = async (req: AuthRequest, res: Response): Promise<void> => 
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
-

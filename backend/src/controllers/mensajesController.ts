@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 
-// Enviar un mensaje
 export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const emisorId = req.user?.id;
@@ -20,7 +19,6 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // Verificar que el turno existe y el usuario/guía tiene acceso
     let turnoQuery = '';
     let turnoParams: any[] = [];
 
@@ -50,7 +48,6 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // Guardar mensaje en BD
     const insertQuery = `
       INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido)
       VALUES ($1, $2, $3, $4)
@@ -61,7 +58,6 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
     
     const mensajeId = result.rows[0].id;
 
-    // Obtener el mensaje completo para devolver
     const mensajeQuery = `
       SELECT 
         id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
@@ -72,7 +68,6 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
     const mensajeResult = await pool.query(mensajeQuery, [mensajeId]);
     const mensaje = mensajeResult.rows[0];
 
-    // Notificar al receptor en tiempo real
     notificarUsuario(receptorId, 'nuevo-mensaje', {
       mensaje: mensaje,
       turnoId: turnoId
@@ -86,7 +81,6 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-// Obtener mensajes de un turno
 export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -98,7 +92,6 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Verificar acceso al turno
     let accesoQuery = '';
     let accesoParams: any[] = [];
 
@@ -120,7 +113,6 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Obtener mensajes
     const mensajesQuery = `
       SELECT 
         id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
@@ -131,7 +123,6 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
 
     const mensajesResult = await pool.query(mensajesQuery, [turnoId]);
 
-    // Marcar mensajes como leídos (los del otro participante)
     const updateQuery = `
       UPDATE mensajes
       SET leido = true
@@ -148,9 +139,6 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
   }
 };
 
-
-// Marcar mensajes como leídos
-// Marcar mensajes como leídos
 export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -163,7 +151,6 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
 
     console.log('🔍 marcandoComoLeidos - Usuario:', usuarioId, 'Turno:', turnoId);
 
-    // Obtener el otro participante para notificarle
     const turnoQuery = await pool.query(
       'SELECT usuario_id, guia_id FROM turnos WHERE id = $1',
       [turnoId]
@@ -175,11 +162,6 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
     }
 
     const turno = turnoQuery.rows[0];
-    
-    console.log('🔍 VERIFICACIÓN:');
-    console.log('   - usuarioId (quien marcó):', usuarioId);
-    console.log('   - turno.usuario_id:', turno.usuario_id);
-    console.log('   - turno.guia_id:', turno.guia_id);
 
     const query = `
       UPDATE mensajes
@@ -192,11 +174,7 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
     
     console.log('📊 Mensajes marcados como leídos:', result.rows.length);
 
-    // ============================================
-    // CORRECCIÓN: Solo notificar si quien lee es el USUARIO
-    // ============================================
     if (usuarioId === turno.usuario_id) {
-      // El usuario está leyendo, notificar al guía
       if (turno.guia_id) {
         console.log(`📢 Usuario leyó - notificando a guía ${turno.guia_id} para turno ${turnoId}`);
         notificarUsuario(turno.guia_id, 'mensajes-leidos', {
@@ -208,7 +186,6 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
         console.log('❌ El turno no tiene guía asignado');
       }
     } else {
-      // El guía está leyendo, NO notificar al usuario
       console.log('👤 Guía leyó - NO se notifica al usuario');
     }
 
@@ -223,9 +200,6 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-
-
-// Obtener conteo de mensajes no leídos por turno
 export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -239,7 +213,6 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
     let query = '';
     
     if (rol === 'guia') {
-      // Para guías: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,
@@ -253,7 +226,6 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
         GROUP BY m.turno_id
       `;
     } else if (rol === 'usuario') {
-      // Para usuarios: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,
@@ -273,7 +245,6 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
 
     const result = await pool.query(query, [usuarioId]);
     
-    // Convertir a objeto { [turnoId]: cantidad }
     const noLeidos = result.rows.reduce((acc, row) => {
       acc[row.turno_id] = parseInt(row.cantidad);
       return acc;
@@ -285,4 +256,3 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 
 export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Verificar que sea admin
     if (req.user?.rol !== 'admin') {
       res.status(403).json({ error: 'Acceso solo para administradores' });
       return;
@@ -12,7 +11,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
 
     console.log('📊 Admin solicitando estadísticas');
 
-    // 1. Obtener fechas de la query string
     const { fechaInicio, fechaFin } = req.query;
     console.log('📅 Fechas recibidas:', { fechaInicio, fechaFin });
 
@@ -33,21 +31,15 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
 
     console.log(`📅 Rango de fechas: ${fechaInicioStr} a ${fechaFinStr}`);
 
-    // 2. Ejecutar consultas (adaptadas a tu estructura real)
-    
-    // Total de usuarios (de la tabla usuarios)
     const usuariosResult = await pool.query('SELECT COUNT(*) as total FROM usuarios');
     const totalUsuarios = parseInt(usuariosResult.rows[0]?.total || '0');
 
-    // Total de guías (de la tabla guias)
     const guiasResult = await pool.query('SELECT COUNT(*) as total FROM usuarios WHERE rol = $1', ['guia']);
     const totalGuias = parseInt(guiasResult.rows[0]?.total || '0');
 
-    // Total de turnos
     const turnosResult = await pool.query('SELECT COUNT(*) as total FROM turnos');
     const totalTurnos = parseInt(turnosResult.rows[0]?.total || '0');
 
-    // Turnos por estado (usando fecha_programada)
     const turnosPorEstadoResult = await pool.query(
       `SELECT estado, COUNT(*) as cantidad
        FROM turnos
@@ -56,7 +48,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
       [fechaInicioStr, fechaFinStr]
     );
 
-    // Turnos reprogramados (es_reprogramacion = true)
     const turnosReprogramadosResult = await pool.query(
       `SELECT COUNT(*) as cantidad
       FROM turnos
@@ -65,7 +56,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
       [fechaInicioStr, fechaFinStr]
     );
 
-    // Turnos reprogramados por estado
     const turnosReprogramadosPorEstadoResult = await pool.query(
       `SELECT estado, COUNT(*) as cantidad
       FROM turnos
@@ -75,7 +65,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
       [fechaInicioStr, fechaFinStr]
     );
 
-    // Turnos por día (usando fecha_programada)
     const turnosPorDiaResult = await pool.query(
       `SELECT DATE(fecha_programada) as fecha, COUNT(*) as cantidad
        FROM turnos
@@ -85,7 +74,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
       [fechaInicioStr, fechaFinStr]
     );
 
-    // Guías más activos (JOIN entre turnos y guias)
     const guiasMasActivosResult = await pool.query(
       `SELECT g.id, g.nombre, g.email, COUNT(t.id) as total_turnos
       FROM usuarios g
@@ -98,7 +86,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
       [fechaInicioStr, fechaFinStr]
     );
 
-    // 3. Enviar respuesta
     const respuesta = {
       fechas: {
         inicio: fechaInicioStr,
@@ -123,7 +110,6 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
         email: row.email,
         totalTurnos: parseInt(row.total_turnos)
       })),
-      // NUEVAS MÉTRICAS
       turnosReprogramados: {
         total: parseInt(turnosReprogramadosResult.rows[0]?.cantidad || '0'),
         porEstado: turnosReprogramadosPorEstadoResult.rows.map(row => ({
@@ -144,4 +130,3 @@ export const getEstadisticas = async (req: AuthRequest, res: Response): Promise<
     });
   }
 };
-

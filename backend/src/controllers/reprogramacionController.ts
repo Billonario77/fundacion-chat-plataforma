@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 
-// Obtener reprogramaciones del usuario autenticado
 export const getMisReprogramaciones = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -47,7 +46,6 @@ export const getMisReprogramaciones = async (req: AuthRequest, res: Response): P
   }
 };
 
-// Obtener una reprogramación específica
 export const getReprogramacionById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -85,7 +83,6 @@ export const getReprogramacionById = async (req: AuthRequest, res: Response): Pr
   }
 };
 
-// Cancelar una solicitud de reprogramación (si el usuario cambia de opinión)
 export const cancelarReprogramacion = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
@@ -101,7 +98,6 @@ export const cancelarReprogramacion = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Verificar que la reprogramación pertenece al usuario y está pendiente
     const checkQuery = `
       SELECT id FROM reprogramaciones 
       WHERE id = $1 AND usuario_id = $2 AND estado = 'pendiente'
@@ -113,7 +109,6 @@ export const cancelarReprogramacion = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    // Actualizar estado a cancelada
     const updateQuery = `
       UPDATE reprogramaciones 
       SET estado = 'cancelada', updated_at = NOW()
@@ -130,13 +125,10 @@ export const cancelarReprogramacion = async (req: AuthRequest, res: Response): P
   }
 };
 
-// ============================================
-// NUEVA: Solicitar cambio de guía (preferencia general)
-// ============================================
 export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
-    const { preferencia } = req.body; // 'mismo_guia' o 'otro_guia'
+    const { preferencia } = req.body;
 
     if (!usuarioId) {
       res.status(401).json({ error: 'No autenticado' });
@@ -153,7 +145,6 @@ export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Verificar si ya existe una preferencia pendiente
     const checkQuery = `
       SELECT id FROM preferencias_usuario 
       WHERE usuario_id = $1 AND estado = 'pendiente'
@@ -161,7 +152,6 @@ export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Prom
     const checkResult = await pool.query(checkQuery, [usuarioId]);
 
     if (checkResult.rows.length > 0) {
-      // Actualizar la preferencia existente
       const updateQuery = `
         UPDATE preferencias_usuario 
         SET preferencia = $1, updated_at = NOW()
@@ -170,7 +160,6 @@ export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Prom
       `;
       await pool.query(updateQuery, [preferencia, usuarioId]);
     } else {
-      // Crear nueva preferencia
       const insertQuery = `
         INSERT INTO preferencias_usuario (usuario_id, preferencia, estado)
         VALUES ($1, $2, 'pendiente')
@@ -179,7 +168,6 @@ export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Prom
       await pool.query(insertQuery, [usuarioId, preferencia]);
     }
 
-    // Notificar a admins (opcional)
     console.log(`📢 Usuario ${usuarioId} solicitó cambio de guía: ${preferencia}`);
 
     res.json({ 
@@ -192,4 +180,3 @@ export const solicitarCambioGuia = async (req: AuthRequest, res: Response): Prom
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

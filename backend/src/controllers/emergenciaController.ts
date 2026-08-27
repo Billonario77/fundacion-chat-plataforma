@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario, notificarAAdmins } from '../services/socketService';
 
@@ -14,7 +14,6 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Obtener información del turno
     const turnoQuery = `
       SELECT 
         t.*,
@@ -39,9 +38,7 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
 
     const turno = turnoResult.rows[0];
 
-    // Determinar a quién notificar según quién activa la emergencia
     if (usuariorol === 'usuario') {
-      // Usuario activa emergencia → notificar al guía
       if (turno.guia_id) {
         notificarUsuario(turno.guia_id, 'emergencia-activada', {
           turnoId: turnoId,
@@ -51,7 +48,6 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
         });
       }
     } else if (usuariorol === 'guia') {
-      // Guía activa emergencia → notificar al usuario
       if (turno.usuario_id) {
         notificarUsuario(turno.usuario_id, 'emergencia-activada', {
           turnoId: turnoId,
@@ -62,7 +58,6 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
       }
     }
 
-    // Siempre notificar a todos los admins
     notificarAAdmins('emergencia-activada', {
       turnoId: turnoId,
       activadoPor: usuariorol,
@@ -72,7 +67,6 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
       timestamp: new Date().toISOString()
     });
 
-    // Registrar en auditoría
     await pool.query(
       `INSERT INTO auditoria_logs (usuario_afectado_id, admin_id, accion, detalles)
        VALUES ($1, $2, $3, $4)`,
@@ -98,4 +92,3 @@ export const activarEmergencia = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

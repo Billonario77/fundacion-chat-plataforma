@@ -1,59 +1,68 @@
 import { Router } from 'express';
 import { authenticateToken, requireGuia } from '../middleware/auth';
-import { 
-  solicitarApoyo, 
-  misTurnos, 
-  actualizarEstadoTurno, 
-  obtenerTurnoPorId,
-  misSolicitudes,
-  getHistorialTurnos,
-  cancelarTurno,
-  reprogramarTurno,
-  getMisReprogramaciones,
-  marcarCancelacionesComoVistas,
-  hayCancelacionesNoVistas,
-  contarCancelacionesNoVistas,
-  obtenerCancelacionesAdmin,
-  obtenerMetricasCancelaciones,
-  getHistorialAdmin,
-  getMiGuiaActual,
-  getMiPerfil,
-  completarMisDatos,
-  actualizarMiFoto
-} from '../controllers/turnosController';
+import * as turnosController from '../controllers/turnosController';
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
-router.use(authenticateToken);
-router.get('/mi-guia-actual', getMiGuiaActual);
-router.get('/mi-perfil', getMiPerfil);
-router.post('/completar-datos', completarMisDatos);
-router.patch('/mi-foto', actualizarMiFoto);
+// ============================================
+// TURNOS
+// ============================================
 
-// PRIMERO: Rutas específicas (que no tienen parámetro variable)
-router.get('/mis-solicitudes', misSolicitudes);
-router.get('/mis-turnos', requireGuia, misTurnos);
-router.get('/historial', getHistorialTurnos);
+// Solicitar apoyo (usuario)
+router.post('/solicitar', authenticateToken, turnosController.solicitarApoyo);
 
-// Marcar cancelaciones como vistas (van antes de las rutas con parámetro)
-router.post('/marcar-cancelaciones-vistas', marcarCancelacionesComoVistas);
-router.get('/cancelaciones-no-vistas', hayCancelacionesNoVistas);
+// Obtener turnos del guía
+router.get('/mis-turnos', authenticateToken, requireGuia, turnosController.misTurnos);
 
-// SEGUNDO: Rutas con acción (tienen parámetro :turnoId)
-router.post('/solicitar', solicitarApoyo);
-router.patch('/:turnoId/cancelar', cancelarTurno);
-router.post('/:turnoId/reprogramar', reprogramarTurno);
-router.patch('/:turnoId/estado', actualizarEstadoTurno);
+// Obtener solicitudes del usuario
+router.get('/mis-solicitudes', authenticateToken, turnosController.misSolicitudes);
 
-// ÚLTIMO: Ruta genérica por ID (debe ir al final)
-router.get('/:turnoId', obtenerTurnoPorId);
+// Obtener historial de turnos
+router.get('/historial', authenticateToken, turnosController.getHistorialTurnos);
 
-router.get('/cancelaciones-no-vistas/count', authenticateToken, contarCancelacionesNoVistas);
+// Obtener turno por ID
+router.get('/:turnoId', authenticateToken, turnosController.obtenerTurnoPorId);
 
-// Rutas para admin (cancelaciones)
-router.get('/admin/cancelaciones', authenticateToken, obtenerCancelacionesAdmin);
-router.get('/admin/cancelaciones/metricas', authenticateToken, obtenerMetricasCancelaciones);
-router.get('/admin/historial', authenticateToken, getHistorialAdmin);
+// Actualizar estado del turno
+router.patch('/:turnoId/estado', authenticateToken, turnosController.actualizarEstadoTurno);
+
+// Cancelar turno
+router.post('/:turnoId/cancelar', authenticateToken, turnosController.cancelarTurno);
+
+// ============================================
+// REPROGRAMACIONES
+// ============================================
+
+// Reprogramar turno (usuario)
+router.post('/:turnoId/reprogramar', authenticateToken, turnosController.reprogramarTurno);
+
+// Obtener reprogramaciones del usuario
+router.get('/mis-reprogramaciones', authenticateToken, turnosController.getMisReprogramaciones);
+
+// ============================================
+// CANCELACIONES
+// ============================================
+
+// Marcar cancelaciones como vistas
+router.post('/cancelaciones/marcar-vistas', authenticateToken, turnosController.marcarCancelacionesComoVistas);
+
+// Contar cancelaciones no vistas
+router.get('/cancelaciones/no-vistas/count', authenticateToken, turnosController.contarCancelacionesNoVistas);
+
+// ============================================
+// PERFIL
+// ============================================
+
+// Obtener mi guía actual
+router.get('/mi-guia', authenticateToken, turnosController.getMiGuiaActual);
+
+// Obtener mi perfil
+router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
+
+// Actualizar foto de perfil
+router.put('/mi-foto', authenticateToken, turnosController.actualizarFotoPerfil);
+
+// Completar mis datos
+router.post('/completar-datos', authenticateToken, turnosController.completarMisDatos);
 
 export default router;

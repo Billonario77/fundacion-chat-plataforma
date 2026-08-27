@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Request, Response } from 'express';`nimport { AuthRequest } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 
@@ -13,7 +13,6 @@ export const iniciarGrabacion = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // Verificar que el usuario tiene acceso al turno
     const turnoQuery = `
       SELECT t.*, u.id as usuario_id, g.id as guia_id
       FROM turnos t
@@ -31,14 +30,12 @@ export const iniciarGrabacion = async (req: AuthRequest, res: Response): Promise
 
     const turno = turnoResult.rows[0];
 
-    // Registrar solicitud de grabación
     await pool.query(
       `INSERT INTO grabaciones (turno_id, solicitado_por, estado)
        VALUES ($1, $2, 'solicitado')`,
       [turnoId, usuarioId]
     );
 
-    // Notificar al otro participante
     const otroParticipanteId = req.user?.rol === 'usuario' ? turno.guia_id : turno.usuario_id;
     
     if (otroParticipanteId) {
@@ -64,7 +61,7 @@ export const responderGrabacion = async (req: AuthRequest, res: Response): Promi
   try {
     const usuarioId = req.user?.id;
     const { turnoId } = req.params;
-    const { respuesta } = req.body; // 'aprobado' o 'rechazado'
+    const { respuesta } = req.body;
 
     if (!usuarioId) {
       res.status(401).json({ error: 'No autenticado' });
@@ -76,7 +73,6 @@ export const responderGrabacion = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    // Actualizar estado de la grabación
     const query = `
       UPDATE grabaciones 
       SET estado = $1
@@ -93,7 +89,6 @@ export const responderGrabacion = async (req: AuthRequest, res: Response): Promi
 
     const solicitadoPor = result.rows[0].solicitado_por;
 
-    // Notificar al solicitante
     notificarUsuario(solicitadoPor, 'respuesta-grabacion', {
       turnoId,
       respuesta,
@@ -141,4 +136,3 @@ export const finalizarGrabacion = async (req: AuthRequest, res: Response): Promi
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

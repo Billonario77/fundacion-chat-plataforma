@@ -1,13 +1,12 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import * as adminController from '../controllers/adminController';
-// Importamos solo lo que existe
-// Si no existen estas funciones, las comentamos o las quitamos
 
 const router = Router();
 
 // Todas las rutas requieren autenticación y rol admin
-router.use(authMiddleware);
+router.use(authenticateToken);
+router.use(requireAdmin);
 
 // ============================================
 // GUÍAS
@@ -19,8 +18,11 @@ router.get('/guias-disponibles', adminController.getGuiasDisponibles);
 // Obtener guías con usuarios asignados
 router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuarios);
 
-// Obtener carga de guías (NUEVO)
+// Obtener carga de guías
 router.get('/carga-guias', adminController.getCargaGuias);
+
+// Obtener carga de un guía específico
+router.get('/mi-carga', adminController.getMiCarga);
 
 // ============================================
 // TURNOS
