@@ -119,7 +119,7 @@ export const perfilService = {
 };
 
 // ============================================
-// TURNOS SERVICE
+// TURNOS SERVICE (CON TODAS LAS FUNCIONES)
 // ============================================
 
 export const turnosService = {
@@ -175,6 +175,20 @@ export const turnosService = {
       return response.data;
     } catch (error) {
       console.error('Error al cancelar turno:', error);
+      throw error;
+    }
+  },
+
+  // 👈 NUEVA FUNCIÓN: Obtener detalle de un turno específico
+  getTurnoDetalle: async (turnoId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/${turnoId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener detalle del turno:', error);
       throw error;
     }
   },
