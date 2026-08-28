@@ -102,7 +102,6 @@ export const perfilService = {
 // ============================================
 
 export const turnosService = {
-  // Obtener turnos del guía
   getMisTurnos: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -116,7 +115,6 @@ export const turnosService = {
     }
   },
 
-  // Obtener solicitudes del usuario
   getMisSolicitudes: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -130,7 +128,6 @@ export const turnosService = {
     }
   },
 
-  // Actualizar estado del turno
   actualizarEstado: async (turnoId: string, estado: string, motivo?: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -146,7 +143,6 @@ export const turnosService = {
     }
   },
 
-  // Cancelar turno
   cancelarTurno: async (turnoId: string, motivo: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -162,7 +158,6 @@ export const turnosService = {
     }
   },
 
-  // Obtener historial de turnos
   getHistorial: async (page: number = 1, limit: number = 10) => {
     try {
       const token = localStorage.getItem('token');
@@ -177,7 +172,6 @@ export const turnosService = {
     }
   },
 
-  // 👈 FUNCIÓN PARA CANCELACIONES ADMIN
   obtenerCancelacionesAdmin: async (filtros: CancelacionFiltros & { page?: number; limit?: number }) => {
     try {
       const token = localStorage.getItem('token');
@@ -192,7 +186,6 @@ export const turnosService = {
     }
   },
 
-  // 👈 FUNCIÓN PARA MÉTRICAS DE CANCELACIONES
   obtenerMetricasCancelaciones: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -206,7 +199,6 @@ export const turnosService = {
     }
   },
 
-  // 👈 FUNCIÓN PARA HISTORIAL ADMIN
   getHistorialAdmin: async (filtros: { 
     fecha_desde?: string; 
     fecha_hasta?: string; 
@@ -229,7 +221,6 @@ export const turnosService = {
     }
   },
 
-  // Marcar cancelaciones como vistas
   marcarCancelacionesVistas: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -245,7 +236,6 @@ export const turnosService = {
     }
   },
 
-  // Contar cancelaciones no vistas
   contarCancelacionesNoVistas: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -309,6 +299,22 @@ export const usuarioService = {
       return response.data;
     } catch (error) {
       console.error('Error al reprogramar turno:', error);
+      throw error;
+    }
+  },
+
+  // 👈 NUEVA FUNCIÓN
+  completarMisDatos: async (datos: any) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/completar-datos`,
+        datos,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al completar datos:', error);
       throw error;
     }
   },
