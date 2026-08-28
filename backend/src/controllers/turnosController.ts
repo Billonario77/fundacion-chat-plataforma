@@ -972,7 +972,7 @@ export const getMiGuiaActual = async (req: AuthRequest, res: Response): Promise<
 };
 
 // ============================================
-// OBTENER MI PERFIL
+// OBTENER MI PERFIL (para foto y datos básicos)
 // ============================================
 
 export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1009,13 +1009,18 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
 // ACTUALIZAR FOTO DE PERFIL
 // ============================================
 
-export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
+export const actualizarMiFoto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const usuarioId = req.user?.id;
     const { foto_perfil } = req.body;
 
     if (!usuarioId) {
       res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    if (!foto_perfil) {
+      res.status(400).json({ error: 'La foto es requerida' });
       return;
     }
 
@@ -1033,7 +1038,10 @@ export const actualizarFotoPerfil = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    res.json({ message: 'Foto actualizada correctamente', foto_perfil: result.rows[0].foto_perfil });
+    res.json({ 
+      message: 'Foto actualizada correctamente', 
+      foto_perfil: result.rows[0].foto_perfil 
+    });
 
   } catch (error) {
     console.error('Error al actualizar foto:', error);

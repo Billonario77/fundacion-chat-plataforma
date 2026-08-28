@@ -292,8 +292,6 @@ export const usuarioService = {
 
 // Servicio común para cualquier rol (usuario, guía, admin)
 
-// frontend/src/services/turnosService.ts
-
 export const perfilService = {
   getMiPerfil: async () => {
     try {
