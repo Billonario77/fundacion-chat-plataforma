@@ -297,19 +297,22 @@ export const perfilService = {
     try {
       const token = localStorage.getItem('token');
       
-      // ✅ VERIFICAR: Si no hay token, no hacer la llamada
+      // 👈 DEBUG: Verificar que el token existe
+      console.log('🔑 Token para mi-perfil:', token ? 'Existe' : 'NO EXISTE');
+      
       if (!token) {
         console.warn('⚠️ No hay token, no se puede obtener el perfil');
         return null;
       }
       
       const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        }
       });
       return response.data;
     } catch (error) {
       console.error('Error al obtener perfil:', error);
-      // ✅ Devuelve null en lugar de lanzar error para no romper la UI
       return null;
     }
   },

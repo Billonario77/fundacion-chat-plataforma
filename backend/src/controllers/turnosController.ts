@@ -977,10 +977,14 @@ export const getMiGuiaActual = async (req: AuthRequest, res: Response): Promise<
 
 export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // 👈 DEBUG: Verificar si req.user existe
+    console.log('🔍 getMiPerfil - req.user:', req.user);
+    console.log('🔍 getMiPerfil - headers:', req.headers.authorization);
+    
     const usuarioId = req.user?.id;
 
-    // ✅ VERIFICAR: Si no hay usuarioId, devolver 401 no 400
     if (!usuarioId) {
+      console.log('❌ No hay usuarioId en req.user');
       res.status(401).json({ error: 'No autenticado' });
       return;
     }
@@ -998,10 +1002,11 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    console.log('✅ Perfil encontrado:', result.rows[0]);
     res.json(result.rows[0]);
 
   } catch (error) {
-    console.error('Error al obtener perfil:', error);
+    console.error('❌ Error al obtener perfil:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
