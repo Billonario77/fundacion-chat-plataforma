@@ -20,6 +20,12 @@ export interface Usuario {
   ciudad?: string;
 }
 
+// 👈 AGREGAR ESTA INTERFAZ
+export interface Guia extends Usuario {
+  especialidades?: string[];
+  verificado?: boolean;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -31,10 +37,9 @@ export interface PaginatedResponse<T> {
 }
 
 export const adminUsuariosService = {
-  // Obtener todos los usuarios (con paginación y búsqueda)
+  // Obtener todos los usuarios
   getUsuarios: async (page = 1, limit = 20, search = ''): Promise<PaginatedResponse<Usuario>> => {
     const token = localStorage.getItem('token');
-    // ✅ CORREGIDO: Eliminar el /usuarios extra
     const response = await axios.get(`${API_URL}/admin/usuarios/`, {
       params: { page, limit, search },
       headers: { Authorization: `Bearer ${token}` }

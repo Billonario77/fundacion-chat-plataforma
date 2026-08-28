@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminUsuariosService, Usuario, Guia } from '../services/adminUsuariosService';
 import ModalEditarUsuario from './ModalEditarUsuario';
+import toast from 'react-hot-toast';
 
 type TabType = 'usuarios' | 'guias';
 
