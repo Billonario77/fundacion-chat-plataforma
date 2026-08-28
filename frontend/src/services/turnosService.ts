@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
 
 // ============================================
-// INTERFAZ PARA TURNOS
+// INTERFACES
 // ============================================
 
 export interface Turno {
@@ -24,8 +24,30 @@ export interface Turno {
   turno_original_id?: string;
 }
 
+export interface Cancelacion {
+  id: string;
+  fecha_cancelacion: string;
+  fecha_programada: string;
+  motivo_cancelacion: string;
+  cancelado_por: string;
+  usuario_id: string;
+  usuario_nombre: string;
+  usuario_email: string;
+  guia_id: string | null;
+  guia_nombre: string | null;
+  guia_email: string | null;
+}
+
+export interface CancelacionFiltros {
+  fecha_desde?: string;
+  fecha_hasta?: string;
+  cancelado_por?: string;
+  guia_id?: string;
+  usuario_id?: string;
+}
+
 // ============================================
-// SERVICIO DE PERFIL (CORREGIDO)
+// PERFIL SERVICE
 // ============================================
 
 export const perfilService = {
@@ -33,36 +55,21 @@ export const perfilService = {
     try {
       const token = localStorage.getItem('token');
       
-      // 👈 DEBUG: Verificar si el token existe
-      console.log('🔑 getMiPerfil - Token:', token ? '✅ Existe' : '❌ NO EXISTE');
-      
       if (!token) {
         console.warn('⚠️ No hay token, no se puede obtener el perfil');
         return null;
       }
 
-      console.log('📡 Haciendo llamada a /turnos/mi-perfil');
-      
       const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
         headers: { 
           Authorization: `Bearer ${token}` 
         }
       });
       
-      console.log('✅ Perfil obtenido:', response.data);
       return response.data;
       
     } catch (error) {
-      // 👈 Manejo detallado del error
-      if (axios.isAxiosError(error)) {
-        console.error('❌ Error al obtener perfil:');
-        console.error('   - Status:', error.response?.status);
-        console.error('   - Data:', error.response?.data);
-        console.error('   - Config:', error.config);
-      } else {
-        console.error('❌ Error desconocido:', error);
-      }
-      // 👈 Retornar null en lugar de lanzar error
+      console.error('❌ Error al obtener perfil:', error);
       return null;
     }
   },
@@ -91,7 +98,7 @@ export const perfilService = {
 };
 
 // ============================================
-// SERVICIO DE TURNOS
+// TURNOS SERVICE
 // ============================================
 
 export const turnosService = {
@@ -170,6 +177,58 @@ export const turnosService = {
     }
   },
 
+  // 👈 FUNCIÓN PARA CANCELACIONES ADMIN
+  obtenerCancelacionesAdmin: async (filtros: CancelacionFiltros & { page?: number; limit?: number }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/cancelaciones/admin`, {
+        params: filtros,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener cancelaciones:', error);
+      throw error;
+    }
+  },
+
+  // 👈 FUNCIÓN PARA MÉTRICAS DE CANCELACIONES
+  obtenerMetricasCancelaciones: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/cancelaciones/metricas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener métricas de cancelaciones:', error);
+      throw error;
+    }
+  },
+
+  // 👈 FUNCIÓN PARA HISTORIAL ADMIN
+  getHistorialAdmin: async (filtros: { 
+    fecha_desde?: string; 
+    fecha_hasta?: string; 
+    estado?: string; 
+    usuario_id?: string; 
+    guia_id?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/historial/admin`, {
+        params: filtros,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener historial admin:', error);
+      throw error;
+    }
+  },
+
   // Marcar cancelaciones como vistas
   marcarCancelacionesVistas: async () => {
     try {
@@ -203,7 +262,7 @@ export const turnosService = {
 };
 
 // ============================================
-// SERVICIO DE USUARIO (para solicitar apoyo)
+// USUARIO SERVICE
 // ============================================
 
 export const usuarioService = {

@@ -7,7 +7,7 @@ const router = Router();
 // ============================================
 // 🔴 IMPORTANTE: Las rutas específicas VAN PRIMERO
 // ============================================
-
+    
 // Obtener mi perfil
 router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
 
