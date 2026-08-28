@@ -59,8 +59,8 @@ router.get('/mi-guia', authenticateToken, turnosController.getMiGuiaActual);
 // Obtener mi perfil
 router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
 
-// Actualizar foto de perfil
-router.put('/mi-foto', authenticateToken, turnosController.actualizarFotoPerfil);
+// 👈 CORREGIDO: actualizarMiFoto en lugar de actualizarFotoPerfil
+router.put('/mi-foto', authenticateToken, turnosController.actualizarMiFoto);
 
 // Completar mis datos
 router.post('/completar-datos', authenticateToken, turnosController.completarMisDatos);
