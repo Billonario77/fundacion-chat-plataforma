@@ -12,15 +12,26 @@ export interface Usuario {
   datos_completados: boolean;
   created_at: string;
   primer_nombre?: string;
+  segundo_nombre?: string;
   primer_apellido?: string;
+  segundo_apellido?: string;
   foto_perfil?: string;
   cedula?: string;
   edad?: number;
   celular?: string;
   ciudad?: string;
+  altura?: number;
+  peso?: number;
+  direccion?: string;
+  tipo_adiccion?: string;
+  observaciones?: string;
+  rh?: string;
+  sexo?: string;
+  cto_emerg_nombre?: string;
+  cto_emerg_celular?: string;
+  cto_emerg_email?: string;
 }
 
-// 👈 AGREGAR ESTA INTERFAZ
 export interface Guia extends Usuario {
   especialidades?: string[];
   verificado?: boolean;
