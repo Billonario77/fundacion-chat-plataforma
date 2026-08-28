@@ -296,25 +296,33 @@ export const perfilService = {
   getMiPerfil: async () => {
     try {
       const token = localStorage.getItem('token');
+      
+      // ✅ VERIFICAR: Si no hay token, no hacer la llamada
       if (!token) {
-        throw new Error('No token found');
+        console.warn('⚠️ No hay token, no se puede obtener el perfil');
+        return null;
       }
+      
       const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
     } catch (error) {
       console.error('Error al obtener perfil:', error);
-      throw error;
+      // ✅ Devuelve null en lugar de lanzar error para no romper la UI
+      return null;
     }
   },
 
   actualizarFoto: async (foto_perfil: string) => {
     try {
       const token = localStorage.getItem('token');
+      
       if (!token) {
-        throw new Error('No token found');
+        console.warn('⚠️ No hay token, no se puede actualizar la foto');
+        return null;
       }
+      
       const response = await axios.put(
         `${API_URL}/turnos/mi-foto`,
         { foto_perfil },
@@ -323,7 +331,7 @@ export const perfilService = {
       return response.data;
     } catch (error) {
       console.error('Error al actualizar foto:', error);
-      throw error;
+      return null;
     }
   },
 };

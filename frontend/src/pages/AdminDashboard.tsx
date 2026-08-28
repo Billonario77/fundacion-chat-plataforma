@@ -254,9 +254,13 @@ const AdminDashboard: React.FC = () => {
     const cargarMiFoto = async () => {
       try {
         const data = await perfilService.getMiPerfil();
-        setMiFoto(data.foto_perfil);
+        // ✅ Verificar que data existe antes de usarla
+        if (data) {
+          setMiFoto(data.foto_perfil);
+        }
       } catch (err) {
-        console.error('Error al cargar mi foto:', err);
+        // ✅ No mostrar error en consola, solo silencioso
+        console.log('ℹ️ No se pudo cargar la foto de perfil');
       }
     };
     cargarMiFoto();

@@ -979,6 +979,7 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
   try {
     const usuarioId = req.user?.id;
 
+    // ✅ VERIFICAR: Si no hay usuarioId, devolver 401 no 400
     if (!usuarioId) {
       res.status(401).json({ error: 'No autenticado' });
       return;
