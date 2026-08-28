@@ -24,6 +24,27 @@ export interface Turno {
   turno_original_id?: string;
 }
 
+export interface TurnoDetalle extends Turno {
+  usuario_id?: string;
+  guia_id?: string;
+  hora_inicio?: string;
+  recordatorio_24h_enviado?: boolean;
+  recordatorio_1h_enviado?: boolean;
+  usuario?: {
+    id: string;
+    nombre: string;
+    email: string;
+  };
+  guia?: {
+    id: string;
+    nombre: string;
+  };
+  recordatorios?: {
+    enviado_24h: boolean;
+    enviado_1h: boolean;
+  };
+}
+
 export interface Cancelacion {
   id: string;
   fecha_cancelacion: string;
@@ -98,7 +119,7 @@ export const perfilService = {
 };
 
 // ============================================
-// TURNOS SERVICE (COMPLETO CON TODAS LAS FUNCIONES)
+// TURNOS SERVICE
 // ============================================
 
 export const turnosService = {
@@ -158,7 +179,6 @@ export const turnosService = {
     }
   },
 
-  // 👈 NUEVA FUNCIÓN: getHistorialTurnos (alias de getHistorial)
   getHistorialTurnos: async (page: number = 1, limit: number = 10) => {
     try {
       const token = localStorage.getItem('token');
@@ -308,7 +328,6 @@ export const usuarioService = {
     }
   },
 
-  // 👈 NUEVA FUNCIÓN
   completarMisDatos: async (datos: any) => {
     try {
       const token = localStorage.getItem('token');
