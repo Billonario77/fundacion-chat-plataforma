@@ -5,7 +5,37 @@ import * as turnosController from '../controllers/turnosController';
 const router = Router();
 
 // ============================================
-// TURNOS
+// 🔴 IMPORTANTE: Las rutas específicas VAN PRIMERO
+// ============================================
+
+// Obtener mi perfil
+router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
+
+// Actualizar foto de perfil
+router.put('/mi-foto', authenticateToken, turnosController.actualizarMiFoto);
+
+// Obtener mi guía actual
+router.get('/mi-guia', authenticateToken, turnosController.getMiGuiaActual);
+
+// ============================================
+// REPROGRAMACIONES (rutas específicas)
+// ============================================
+
+// Obtener reprogramaciones del usuario
+router.get('/mis-reprogramaciones', authenticateToken, turnosController.getMisReprogramaciones);
+
+// ============================================
+// CANCELACIONES (rutas específicas)
+// ============================================
+
+// Marcar cancelaciones como vistas
+router.post('/cancelaciones/marcar-vistas', authenticateToken, turnosController.marcarCancelacionesComoVistas);
+
+// Contar cancelaciones no vistas
+router.get('/cancelaciones/no-vistas/count', authenticateToken, turnosController.contarCancelacionesNoVistas);
+
+// ============================================
+// TURNOS (rutas específicas)
 // ============================================
 
 // Solicitar apoyo (usuario)
@@ -20,8 +50,8 @@ router.get('/mis-solicitudes', authenticateToken, turnosController.misSolicitude
 // Obtener historial de turnos
 router.get('/historial', authenticateToken, turnosController.getHistorialTurnos);
 
-// Obtener turno por ID
-router.get('/:turnoId', authenticateToken, turnosController.obtenerTurnoPorId);
+// Reprogramar turno (usuario)
+router.post('/:turnoId/reprogramar', authenticateToken, turnosController.reprogramarTurno);
 
 // Actualizar estado del turno
 router.patch('/:turnoId/estado', authenticateToken, turnosController.actualizarEstadoTurno);
@@ -29,40 +59,14 @@ router.patch('/:turnoId/estado', authenticateToken, turnosController.actualizarE
 // Cancelar turno
 router.post('/:turnoId/cancelar', authenticateToken, turnosController.cancelarTurno);
 
-// ============================================
-// REPROGRAMACIONES
-// ============================================
-
-// Reprogramar turno (usuario)
-router.post('/:turnoId/reprogramar', authenticateToken, turnosController.reprogramarTurno);
-
-// Obtener reprogramaciones del usuario
-router.get('/mis-reprogramaciones', authenticateToken, turnosController.getMisReprogramaciones);
-
-// ============================================
-// CANCELACIONES
-// ============================================
-
-// Marcar cancelaciones como vistas
-router.post('/cancelaciones/marcar-vistas', authenticateToken, turnosController.marcarCancelacionesComoVistas);
-
-// Contar cancelaciones no vistas
-router.get('/cancelaciones/no-vistas/count', authenticateToken, turnosController.contarCancelacionesNoVistas);
-
-// ============================================
-// PERFIL
-// ============================================
-
-// Obtener mi guía actual
-router.get('/mi-guia', authenticateToken, turnosController.getMiGuiaActual);
-
-// Obtener mi perfil
-router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
-
-// 👈 CORREGIDO: actualizarMiFoto en lugar de actualizarFotoPerfil
-router.put('/mi-foto', authenticateToken, turnosController.actualizarMiFoto);
-
 // Completar mis datos
 router.post('/completar-datos', authenticateToken, turnosController.completarMisDatos);
+
+// ============================================
+// 🔴 RUTA DINÁMICA - DEBE IR AL FINAL
+// ============================================
+
+// Obtener turno por ID (dinámica - va al final)
+router.get('/:turnoId', authenticateToken, turnosController.obtenerTurnoPorId);
 
 export default router;

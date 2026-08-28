@@ -2,317 +2,67 @@ import axios from 'axios';
 
 const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
 
+// ============================================
+// INTERFAZ PARA TURNOS
+// ============================================
+
 export interface Turno {
   id: string;
   fecha_programada: string;
   duracion_minutos: number;
-  modalidad: 'video' | 'audio' | 'chat';
-  estado: 'pendiente' | 'aceptado' | 'iniciado' | 'completado' | 'cancelado';
+  modalidad: string;
+  estado: string;
   created_at: string;
+  motivo_cancelacion?: string;
+  cancelado_por?: string;
   usuario_nombre?: string;
   usuario_email?: string;
   guia_nombre?: string;
   guia_email?: string;
-  motivo_cancelacion?: string;
-  cancelado_por?: 'usuario' | 'guia' | 'admin';
+  requiere_asignacion_admin?: boolean;
   es_reprogramacion?: boolean;
+  turno_original_id?: string;
 }
 
-export interface TurnoDetalle extends Turno {
-  recordatorios: {
-    enviado_24h: boolean;
-    enviado_1h: boolean;
-  };
-  usuario: {
-    id: string;
-    nombre: string;
-    email: string;
-  };
-  guia: {
-    id: string;
-    nombre: string;
-  } | null;
-  hora_inicio?: string;
-}
-
-export interface HistorialResponse {
-  data: Turno[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
-
-export const turnosService = {
-  // Obtener turnos del guía autenticado
-  getMisTurnos: async (): Promise<{ total: number; turnos: Turno[] }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/mis-turnos`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  // Obtener detalle de un turno específico
-  getTurnoDetalle: async (turnoId: string): Promise<{ turno: TurnoDetalle }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/${turnoId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  // Actualizar estado de un turno
-  actualizarEstado: async (turnoId: string, estado: string, motivo?: string) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.patch(
-      `${API_URL}/turnos/${turnoId}/estado`,
-      { estado, motivo },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Obtener historial de turnos con paginación
-  getHistorialTurnos: async (page: number = 1, limit: number = 10): Promise<HistorialResponse> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/historial?page=${page}&limit=${limit}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  // Cancelar un turno
-  cancelarTurno: async (turnoId: string, motivo?: string): Promise<any> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.patch(
-      `${API_URL}/turnos/${turnoId}/cancelar`,
-      { motivo },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Reprogramar un turno cancelado
-  reprogramarTurno: async (
-    turnoId: string,
-    preferencia?: string,
-    fecha_preferida?: string,
-    comentarios?: string
-  ): Promise<any> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_URL}/turnos/${turnoId}/reprogramar`,
-      { preferencia, fecha_preferida, comentarios },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Marcar cancelaciones como vistas
-  marcarCancelacionesVistas: async (): Promise<any> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_URL}/turnos/marcar-cancelaciones-vistas`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Verificar si hay cancelaciones no vistas
-  verificarCancelacionesNoVistas: async (): Promise<{ hayNoVistas: boolean }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(
-      `${API_URL}/turnos/cancelaciones-no-vistas`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Contar cancelaciones no vistas
-  contarCancelacionesNoVistas: async (): Promise<{ count: number }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(
-      `${API_URL}/turnos/cancelaciones-no-vistas/count`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Obtener cancelaciones para admin (con filtros)
-  obtenerCancelacionesAdmin: async (filtros?: {
-    fecha_desde?: string;
-    fecha_hasta?: string;
-    cancelado_por?: string;
-    guia_id?: string;
-    usuario_id?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ data: any[]; pagination: any }> => {
-    const token = localStorage.getItem('token');
-    const params = new URLSearchParams();
-
-    if (filtros?.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
-    if (filtros?.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
-    if (filtros?.cancelado_por) params.append('cancelado_por', filtros.cancelado_por);
-    if (filtros?.guia_id) params.append('guia_id', filtros.guia_id);
-    if (filtros?.usuario_id) params.append('usuario_id', filtros.usuario_id);
-    if (filtros?.page) params.append('page', String(filtros.page));
-    if (filtros?.limit) params.append('limit', String(filtros.limit));
-
-    const response = await axios.get(
-      `${API_URL}/turnos/admin/cancelaciones?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Obtener métricas de cancelaciones para admin
-  obtenerMetricasCancelaciones: async (): Promise<{
-    total: number;
-    porRol: { cancelado_por: string; count: number }[];
-    topGuias: { nombre: string; count: number }[];
-    topUsuarios: { nombre: string; count: number }[];
-  }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(
-      `${API_URL}/turnos/admin/cancelaciones/metricas`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Obtener historial para admin (con filtros)
-  getHistorialAdmin: async (filtros?: {
-    fecha_desde?: string;
-    fecha_hasta?: string;
-    estado?: string;
-    usuario_id?: string;
-    guia_id?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ data: any[]; pagination: any }> => {
-    const token = localStorage.getItem('token');
-    const params = new URLSearchParams();
-
-    if (filtros?.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
-    if (filtros?.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
-    if (filtros?.estado) params.append('estado', filtros.estado);
-    if (filtros?.usuario_id) params.append('usuario_id', filtros.usuario_id);
-    if (filtros?.guia_id) params.append('guia_id', filtros.guia_id);
-    if (filtros?.page) params.append('page', String(filtros.page));
-    if (filtros?.limit) params.append('limit', String(filtros.limit));
-
-    const response = await axios.get(
-      `${API_URL}/turnos/admin/historial?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  }
-};
-
-// Servicio para usuarios
-export const usuarioService = {
-  // Obtener solicitudes del usuario autenticado
-  getMisSolicitudes: async (): Promise<{ total: number; turnos: Turno[] }> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/mis-solicitudes`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  // Solicitar nuevo apoyo
-  solicitarApoyo: async (rol: string, mensajeInicial: string, fechaPreferida?: string) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(`${API_URL}/turnos/solicitar`, 
-      { rol, mensajeInicial, fechaPreferida },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Reprogramar un turno cancelado
-  reprogramarTurno: async (
-    turnoId: string,
-    preferencia?: string,
-    fecha_preferida?: string,
-    comentarios?: string
-  ): Promise<any> => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_URL}/turnos/${turnoId}/reprogramar`,
-      { preferencia, fecha_preferida, comentarios },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return response.data;
-  },
-
-  // Obtener guía actual del usuario
-  getMiGuiaActual: async () => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/mi-guia-actual`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  // Obtener perfil del usuario autenticado (foto, nombre, email)
-  getMiPerfil: async () => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-
-  completarMisDatos: async (datos: any) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(`${API_URL}/turnos/completar-datos`, datos, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-
-  actualizarMiFoto: async (foto_perfil: string) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.patch(`${API_URL}/turnos/mi-foto`, { foto_perfil }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-};
-
-
-// Servicio común para cualquier rol (usuario, guía, admin)
+// ============================================
+// SERVICIO DE PERFIL (CORREGIDO)
+// ============================================
 
 export const perfilService = {
   getMiPerfil: async () => {
     try {
       const token = localStorage.getItem('token');
       
-      // 👈 DEBUG: Verificar que el token existe
-      console.log('🔑 Token para mi-perfil:', token ? 'Existe' : 'NO EXISTE');
+      // 👈 DEBUG: Verificar si el token existe
+      console.log('🔑 getMiPerfil - Token:', token ? '✅ Existe' : '❌ NO EXISTE');
       
       if (!token) {
         console.warn('⚠️ No hay token, no se puede obtener el perfil');
         return null;
       }
+
+      console.log('📡 Haciendo llamada a /turnos/mi-perfil');
       
       const response = await axios.get(`${API_URL}/turnos/mi-perfil`, {
         headers: { 
           Authorization: `Bearer ${token}` 
         }
       });
+      
+      console.log('✅ Perfil obtenido:', response.data);
       return response.data;
+      
     } catch (error) {
-      console.error('Error al obtener perfil:', error);
+      // 👈 Manejo detallado del error
+      if (axios.isAxiosError(error)) {
+        console.error('❌ Error al obtener perfil:');
+        console.error('   - Status:', error.response?.status);
+        console.error('   - Data:', error.response?.data);
+        console.error('   - Config:', error.config);
+      } else {
+        console.error('❌ Error desconocido:', error);
+      }
+      // 👈 Retornar null en lugar de lanzar error
       return null;
     }
   },
@@ -332,9 +82,175 @@ export const perfilService = {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data;
+      
     } catch (error) {
-      console.error('Error al actualizar foto:', error);
+      console.error('❌ Error al actualizar foto:', error);
       return null;
+    }
+  },
+};
+
+// ============================================
+// SERVICIO DE TURNOS
+// ============================================
+
+export const turnosService = {
+  // Obtener turnos del guía
+  getMisTurnos: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/mis-turnos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener turnos:', error);
+      throw error;
+    }
+  },
+
+  // Obtener solicitudes del usuario
+  getMisSolicitudes: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/mis-solicitudes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener solicitudes:', error);
+      throw error;
+    }
+  },
+
+  // Actualizar estado del turno
+  actualizarEstado: async (turnoId: string, estado: string, motivo?: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.patch(
+        `${API_URL}/turnos/${turnoId}/estado`,
+        { estado, motivo },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al actualizar estado:', error);
+      throw error;
+    }
+  },
+
+  // Cancelar turno
+  cancelarTurno: async (turnoId: string, motivo: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/${turnoId}/cancelar`,
+        { motivo },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al cancelar turno:', error);
+      throw error;
+    }
+  },
+
+  // Obtener historial de turnos
+  getHistorial: async (page: number = 1, limit: number = 10) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/historial`, {
+        params: { page, limit },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener historial:', error);
+      throw error;
+    }
+  },
+
+  // Marcar cancelaciones como vistas
+  marcarCancelacionesVistas: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/cancelaciones/marcar-vistas`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al marcar cancelaciones:', error);
+      throw error;
+    }
+  },
+
+  // Contar cancelaciones no vistas
+  contarCancelacionesNoVistas: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/turnos/cancelaciones/no-vistas/count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al contar cancelaciones:', error);
+      throw error;
+    }
+  },
+};
+
+// ============================================
+// SERVICIO DE USUARIO (para solicitar apoyo)
+// ============================================
+
+export const usuarioService = {
+  solicitarApoyo: async (rol: string, mensaje: string, fechaPreferida?: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/solicitar`,
+        { rol, mensajeInicial: mensaje, fechaPreferida },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al solicitar apoyo:', error);
+      throw error;
+    }
+  },
+
+  getMisSolicitudes: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/mis-solicitudes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener solicitudes:', error);
+      throw error;
+    }
+  },
+
+  getMiPerfil: async () => {
+    return perfilService.getMiPerfil();
+  },
+
+  reprogramarTurno: async (turnoId: string, preferencia: string, fechaPreferida: string, comentarios?: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/${turnoId}/reprogramar`,
+        { preferencia, fecha_preferida: fechaPreferida, comentarios },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al reprogramar turno:', error);
+      throw error;
     }
   },
 };
