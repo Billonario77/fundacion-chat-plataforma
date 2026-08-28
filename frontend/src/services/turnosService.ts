@@ -98,7 +98,7 @@ export const perfilService = {
 };
 
 // ============================================
-// TURNOS SERVICE
+// TURNOS SERVICE (COMPLETO CON TODAS LAS FUNCIONES)
 // ============================================
 
 export const turnosService = {
@@ -158,7 +158,8 @@ export const turnosService = {
     }
   },
 
-  getHistorial: async (page: number = 1, limit: number = 10) => {
+  // 👈 NUEVA FUNCIÓN: getHistorialTurnos (alias de getHistorial)
+  getHistorialTurnos: async (page: number = 1, limit: number = 10) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/turnos/historial`, {
@@ -167,9 +168,13 @@ export const turnosService = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error al obtener historial:', error);
+      console.error('Error al obtener historial de turnos:', error);
       throw error;
     }
+  },
+
+  getHistorial: async (page: number = 1, limit: number = 10) => {
+    return turnosService.getHistorialTurnos(page, limit);
   },
 
   obtenerCancelacionesAdmin: async (filtros: CancelacionFiltros & { page?: number; limit?: number }) => {
