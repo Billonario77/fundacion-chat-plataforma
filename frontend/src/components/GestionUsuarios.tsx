@@ -15,8 +15,8 @@ const GestionUsuarios: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [busqueda, setBusqueda] = useState('');
   const [modalEditar, setModalEditar] = useState<{ 
-  abierto: boolean; 
-  usuario: Usuario | null 
+    abierto: boolean; 
+    usuario: Usuario | null 
   }>({
     abierto: false,
     usuario: null
@@ -27,8 +27,6 @@ const GestionUsuarios: React.FC = () => {
       setLoading(true);
       setError('');
       const data = await adminUsuariosService.getUsuarios(page, 20, search);
-      
-      // 👈 CORREGIDO: Acceder a data.data en lugar de data directamente
       setUsuarios(data.data);
       setTotalPaginas(data.pagination.totalPages);
       setTotalItems(data.pagination.totalItems);
@@ -85,7 +83,9 @@ const GestionUsuarios: React.FC = () => {
   };
 
   const handleEliminar = async (id: string, nombre: string) => {
-    if (!window.confirm(`¿Estás seguro de eliminar a ${nombre}?`)) return;
+    if (!window.confirm(`¿Estás seguro de eliminar a ${nombre}?`)) {
+      return;
+    }
     
     try {
       await adminUsuariosService.eliminarUsuario(id);
@@ -97,15 +97,18 @@ const GestionUsuarios: React.FC = () => {
     }
   };
 
-  const getColorEstado = (disponible: boolean) => {
+  const getColorEstado = (disponible: boolean): string => {
     return disponible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const getColorRol = (rol: string) => {
+  const getColorRol = (rol: string): string => {
     switch (rol) {
-      case 'admin': return 'bg-purple-100 text-purple-800';
-      case 'guia': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'admin': 
+        return 'bg-purple-100 text-purple-800';
+      case 'guia': 
+        return 'bg-blue-100 text-blue-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -122,14 +125,14 @@ const GestionUsuarios: React.FC = () => {
     <div className="card">
       <h2 className="text-2xl font-bold text-primario mb-6">👥 Gestión de Usuarios</h2>
 
-      {error && (
+      {error && error.length > 0 && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
 
       {/* Barra de búsqueda */}
-      <form onSubmit={handleBuscar} className="flex gap-2 mb-4">
+      <form onSubmit={handleBuscar} className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           value={busqueda}
@@ -194,7 +197,7 @@ const GestionUsuarios: React.FC = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primario text-white flex items-center justify-center text-sm font-medium">
-                        {usuario.nombre?.charAt(0) || 'U'}
+                        {usuario.nombre ? usuario.nombre.charAt(0) : 'U'}
                       </div>
                       <span className="font-medium text-gray-900">{usuario.nombre}</span>
                     </div>
@@ -214,7 +217,7 @@ const GestionUsuarios: React.FC = () => {
                     {usuario.datos_completados ? '✅ Completos' : '⏳ Pendientes'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
                       <button
                         onClick={() => handleEditar(usuario)}
                         className="text-blue-600 hover:text-blue-800 text-sm"
@@ -247,7 +250,7 @@ const GestionUsuarios: React.FC = () => {
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
           <p className="text-sm text-gray-500">
             Mostrando {usuarios.length} de {totalItems} usuarios
           </p>
@@ -274,12 +277,9 @@ const GestionUsuarios: React.FC = () => {
       )}
 
       {/* Modal de edición */}
-      // En GestionUsuarios.tsx, en la sección del modal:
-
-      {/* Modal de edición */}
       {modalEditar.abierto && modalEditar.usuario && (
         <ModalEditarUsuario
-          usuarioId={modalEditar.usuario.id}  // 👈 CAMBIAR: usuario → usuarioId
+          usuarioId={modalEditar.usuario.id}
           onGuardar={handleGuardarEdicion}
           onCerrar={() => setModalEditar({ abierto: false, usuario: null })}
         />
@@ -288,4 +288,4 @@ const GestionUsuarios: React.FC = () => {
   );
 };
 
-export default GestionUsuarios;8
+export default GestionUsuarios;
