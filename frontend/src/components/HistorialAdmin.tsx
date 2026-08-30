@@ -52,15 +52,25 @@ const HistorialAdmin: React.FC = () => {
         page: pagination.currentPage,
         limit: pagination.itemsPerPage
       });
-      setTurnos(response.data);
-      setPagination({
-        ...pagination,
-        totalPages: response.pagination.totalPages,
-        totalItems: response.pagination.totalItems
-      });
+      
+      // 👈 CORREGIDO: Verificar que response.data sea un array
+      if (response && response.data && Array.isArray(response.data)) {
+        setTurnos(response.data);
+      } else {
+        setTurnos([]);
+      }
+      
+      if (response && response.pagination) {
+        setPagination({
+          ...pagination,
+          totalPages: response.pagination.totalPages,
+          totalItems: response.pagination.totalItems
+        });
+      }
     } catch (err) {
       setError('Error al cargar historial');
       console.error(err);
+      setTurnos([]);
     } finally {
       setLoading(false);
     }
@@ -72,10 +82,13 @@ const HistorialAdmin: React.FC = () => {
         adminService.obtenerGuiasLista(),
         adminService.obtenerUsuariosLista()
       ]);
-      setGuias(guiasData);
-      setUsuarios(usuariosData);
+      // 👈 CORREGIDO: Verificar que sean arrays
+      setGuias(Array.isArray(guiasData) ? guiasData : []);
+      setUsuarios(Array.isArray(usuariosData) ? usuariosData : []);
     } catch (err) {
       console.error('Error al cargar listas:', err);
+      setGuias([]);
+      setUsuarios([]);
     }
   };
 
@@ -117,7 +130,11 @@ const HistorialAdmin: React.FC = () => {
   };
 
   const exportarCSV = () => {
-    const data = turnos.map(t => ({
+    // 👈 CORREGIDO: Usar turnosList en lugar de turnos
+    const turnosList = Array.isArray(turnos) ? turnos : [];
+    if (turnosList.length === 0) return;
+    
+    const data = turnosList.map(t => ({
       ID: t.id,
       'Fecha programada': formatFecha(t.fecha_programada),
       Estado: t.estado,
@@ -144,7 +161,10 @@ const HistorialAdmin: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  if (loading && turnos.length === 0) {
+  // 👈 CORREGIDO: Crear variable segura para el array
+  const turnosList = Array.isArray(turnos) ? turnos : [];
+
+  if (loading && turnosList.length === 0) {
     return (
       <div className="card">
         <h2 className="text-2xl font-bold text-primario mb-6">📋 Historial de Turnos</h2>
@@ -159,7 +179,7 @@ const HistorialAdmin: React.FC = () => {
         <h2 className="text-2xl font-bold text-primario">📋 Historial de Turnos</h2>
         <button
           onClick={exportarCSV}
-          disabled={turnos.length === 0}
+          disabled={turnosList.length === 0}
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all text-sm font-medium flex items-center gap-2 disabled:opacity-50"
         >
           📥 Exportar CSV
@@ -258,46 +278,55 @@ const HistorialAdmin: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {turnos.map((turno) => (
-              <tr key={turno.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm">{formatFecha(turno.fecha_programada)}</td>
-                <td className="px-4 py-3 text-sm">
-                  <div className="font-medium">{turno.usuario_nombre}</div>
-                  <div className="text-xs text-gray-500">{turno.usuario_email}</div>
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {turno.guia_nombre ? (
-                    <>
-                      <div className="font-medium">{turno.guia_nombre}</div>
-                      <div className="text-xs text-gray-500">{turno.guia_email}</div>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">Sin asignar</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(turno.estado)}`}>
-                      {turno.estado}
-                    </span>
-                    {turno.es_reprogramacion && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        Reprogramado
-                      </span>
-                    )}
-                  </div>
-                  {turno.cancelado_por && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      por: {turno.cancelado_por}
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm capitalize">{turno.modalidad}</td>
-                <td className="px-4 py-3 text-sm max-w-xs truncate">
-                  {turno.motivo_cancelacion || '-'}
+            {/* 👈 CORREGIDO: Usar turnosList en lugar de turnos */}
+            {turnosList.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  No hay turnos registrados
                 </td>
               </tr>
-            ))}
+            ) : (
+              turnosList.map((turno) => (
+                <tr key={turno.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm">{formatFecha(turno.fecha_programada)}</td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="font-medium">{turno.usuario_nombre}</div>
+                    <div className="text-xs text-gray-500">{turno.usuario_email}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {turno.guia_nombre ? (
+                      <>
+                        <div className="font-medium">{turno.guia_nombre}</div>
+                        <div className="text-xs text-gray-500">{turno.guia_email}</div>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">Sin asignar</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(turno.estado)}`}>
+                        {turno.estado}
+                      </span>
+                      {turno.es_reprogramacion && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          Reprogramado
+                        </span>
+                      )}
+                    </div>
+                    {turno.cancelado_por && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        por: {turno.cancelado_por}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm capitalize">{turno.modalidad}</td>
+                  <td className="px-4 py-3 text-sm max-w-xs truncate">
+                    {turno.motivo_cancelacion || '-'}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
