@@ -7,7 +7,7 @@ const router = Router();
 // ============================================
 // 🔴 IMPORTANTE: Las rutas específicas VAN PRIMERO
 // ============================================
-    
+
 // Obtener mi perfil
 router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
 
@@ -33,6 +33,22 @@ router.post('/cancelaciones/marcar-vistas', authenticateToken, turnosController.
 
 // Contar cancelaciones no vistas
 router.get('/cancelaciones/no-vistas/count', authenticateToken, turnosController.contarCancelacionesNoVistas);
+
+// Marcar cancelaciones como vistas
+router.post('/cancelaciones/marcar-vistas', authenticateToken, turnosController.marcarCancelacionesComoVistas);
+
+// Contar cancelaciones no vistas
+router.get('/cancelaciones/no-vistas/count', authenticateToken, turnosController.contarCancelacionesNoVistas);
+
+// 👈 NUEVAS RUTAS PARA ADMIN
+// Obtener cancelaciones para admin
+router.get('/cancelaciones/admin', authenticateToken, turnosController.obtenerCancelacionesAdmin);
+
+// Obtener métricas de cancelaciones
+router.get('/cancelaciones/metricas', authenticateToken, turnosController.obtenerMetricasCancelaciones);
+
+// Obtener historial para admin
+router.get('/historial/admin', authenticateToken, turnosController.getHistorialAdmin);
 
 // ============================================
 // TURNOS (rutas específicas)

@@ -1348,3 +1348,288 @@ export const cancelarReprogramacion = async (req: AuthRequest, res: Response): P
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// ============================================
+// OBTENER CANCELACIONES PARA ADMIN
+// ============================================
+
+export const obtenerCancelacionesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Verificar que sea admin
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { fecha_desde, fecha_hasta, cancelado_por, guia_id, usuario_id, page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    let whereConditions: string[] = [];
+    let params: any[] = [];
+    let paramIndex = 1;
+
+    // Filtro por fecha
+    if (fecha_desde) {
+      whereConditions.push(`t.created_at >= $${paramIndex}`);
+      params.push(fecha_desde);
+      paramIndex++;
+    }
+    if (fecha_hasta) {
+      whereConditions.push(`t.created_at <= $${paramIndex}`);
+      params.push(fecha_hasta);
+      paramIndex++;
+    }
+
+    // Filtro por quien canceló
+    if (cancelado_por && ['usuario', 'guia', 'admin'].includes(cancelado_por as string)) {
+      whereConditions.push(`t.cancelado_por = $${paramIndex}`);
+      params.push(cancelado_por);
+      paramIndex++;
+    }
+
+    // Filtro por guía
+    if (guia_id) {
+      whereConditions.push(`t.guia_id = $${paramIndex}`);
+      params.push(guia_id);
+      paramIndex++;
+    }
+
+    // Filtro por usuario
+    if (usuario_id) {
+      whereConditions.push(`t.usuario_id = $${paramIndex}`);
+      params.push(usuario_id);
+      paramIndex++;
+    }
+
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE t.estado = 'cancelado' AND ${whereConditions.join(' AND ')}`
+      : `WHERE t.estado = 'cancelado'`;
+
+    // Query principal
+    const query = `
+      SELECT 
+        t.id,
+        t.created_at as fecha_cancelacion,
+        t.fecha_programada,
+        t.motivo_cancelacion,
+        t.cancelado_por,
+        u.id as usuario_id,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.id as guia_id,
+        g.nombre as guia_nombre,
+        g.email as guia_email
+      FROM turnos t
+      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      ${whereClause}
+      ORDER BY t.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    // Query para contar total
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM turnos t
+      ${whereClause}
+    `;
+
+    const paramsConPaginacion = [...params, Number(limit), offset];
+    const [result, countResult] = await Promise.all([
+      pool.query(query, paramsConPaginacion),
+      pool.query(countQuery, params)
+    ]);
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
+        totalItems: Number(countResult.rows[0].total),
+        itemsPerPage: Number(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener cancelaciones:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// OBTENER MÉTRICAS DE CANCELACIONES
+// ============================================
+
+export const obtenerMetricasCancelaciones = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    // Total de cancelaciones
+    const totalResult = await pool.query(`
+      SELECT COUNT(*) as total FROM turnos WHERE estado = 'cancelado'
+    `);
+
+    // Cancelaciones por rol
+    const porRolResult = await pool.query(`
+      SELECT cancelado_por, COUNT(*) as count 
+      FROM turnos 
+      WHERE estado = 'cancelado' 
+      GROUP BY cancelado_por
+    `);
+
+    // Top guías con más cancelaciones
+    const topGuiasResult = await pool.query(`
+      SELECT g.nombre, COUNT(*) as count
+      FROM turnos t
+      JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'guia'
+      GROUP BY g.id, g.nombre
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+
+    // Top usuarios con más cancelaciones
+    const topUsuariosResult = await pool.query(`
+      SELECT u.nombre, COUNT(*) as count
+      FROM turnos t
+      JOIN usuarios u ON t.usuario_id = u.id
+      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'usuario'
+      GROUP BY u.id, u.nombre
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      total: parseInt(totalResult.rows[0].total),
+      porRol: porRolResult.rows,
+      topGuias: topGuiasResult.rows,
+      topUsuarios: topUsuariosResult.rows
+    });
+
+  } catch (error) {
+    console.error('Error al obtener métricas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// OBTENER HISTORIAL PARA ADMIN
+// ============================================
+
+export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const { 
+      fecha_desde, 
+      fecha_hasta, 
+      estado, 
+      usuario_id, 
+      guia_id,
+      page = 1, 
+      limit = 20 
+    } = req.query;
+    
+    const offset = (Number(page) - 1) * Number(limit);
+    let whereConditions: string[] = [];
+    let params: any[] = [];
+    let paramIndex = 1;
+
+    // Filtro por fecha (usando fecha_programada)
+    if (fecha_desde) {
+      whereConditions.push(`t.fecha_programada >= $${paramIndex}`);
+      params.push(fecha_desde);
+      paramIndex++;
+    }
+    if (fecha_hasta) {
+      whereConditions.push(`t.fecha_programada <= $${paramIndex}`);
+      params.push(fecha_hasta);
+      paramIndex++;
+    }
+
+    // Filtro por estado
+    if (estado) {
+      if (estado === 'reprogramado') {
+        whereConditions.push(`t.es_reprogramacion = true`);
+      } else {
+        whereConditions.push(`t.estado = $${paramIndex}`);
+        params.push(estado);
+        paramIndex++;
+      }
+    }
+
+    // Filtro por usuario
+    if (usuario_id) {
+      whereConditions.push(`t.usuario_id = $${paramIndex}`);
+      params.push(usuario_id);
+      paramIndex++;
+    }
+
+    // Filtro por guía
+    if (guia_id) {
+      whereConditions.push(`t.guia_id = $${paramIndex}`);
+      params.push(guia_id);
+      paramIndex++;
+    }
+
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}`
+      : '';
+
+    const query = `
+      SELECT 
+        t.id,
+        t.fecha_programada,
+        t.estado,
+        t.modalidad,
+        t.created_at,
+        t.motivo_cancelacion,
+        t.cancelado_por,
+        t.es_reprogramacion,
+        u.id as usuario_id,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.id as guia_id,
+        g.nombre as guia_nombre,
+        g.email as guia_email
+      FROM turnos t
+      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      ${whereClause}
+      ORDER BY t.fecha_programada DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM turnos t
+      ${whereClause}
+    `;
+
+    const paramsConPaginacion = [...params, Number(limit), offset];
+    const [result, countResult] = await Promise.all([
+      pool.query(query, paramsConPaginacion),
+      pool.query(countQuery, params)
+    ]);
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
+        totalItems: Number(countResult.rows[0].total),
+        itemsPerPage: Number(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener historial para admin:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
