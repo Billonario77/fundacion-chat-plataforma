@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useMensajesNoLeidos } from '../contexts/MensajesNoLeidosContext';
 import toast from 'react-hot-toast';
-import { turnosService, Turno, usuarioService, perfilService } from '../services/turnosService';
+import { turnosService, Turno, perfilService } from '../services/turnosService';
 import HistorialTurnos from '../components/HistorialTurnos';
 import Layout from '../components/Layout';
 import ModalCancelarTurno from '../components/ModalCancelarTurno';
@@ -32,11 +32,9 @@ const GuiaDashboard: React.FC = () => {
     turnoId: null
   });
   
-  // Estados para cancelaciones y foto
   const [nuevasCancelacionesCount, setNuevasCancelacionesCount] = useState(0);
   const [miFoto, setMiFoto] = useState<string | null>(null);
 
-  // 👈 NUEVO: Estado para la carga del guía
   const [miCarga, setMiCarga] = useState<{ 
     activos: number; 
     pendientes: number; 
@@ -51,8 +49,7 @@ const GuiaDashboard: React.FC = () => {
     proximas24h: 0
   });
 
-  // Turnos cancelados por el GUÍA
-  const turnosCanceladosPorMi = turnos.filter(t => 
+  const turnosCanceladosPorMi = turnos.filter((t: Turno) => 
     t.estado === 'cancelado' && t.cancelado_por === 'guia'
   );
 
@@ -62,9 +59,6 @@ const GuiaDashboard: React.FC = () => {
     }
   }, [pestañaActiva]);
 
-  // ============================================
-  // 👈 NUEVA FUNCIÓN: Cargar carga del guía
-  // ============================================
   const cargarMiCarga = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -81,7 +75,6 @@ const GuiaDashboard: React.FC = () => {
       });
     } catch (error) {
       console.error('Error al cargar mi carga:', error);
-      // Si falla, intentar con el endpoint alternativo (filtrado)
       try {
         const token = localStorage.getItem('token');
         const response = await axios.get(`${API_URL}/admin/carga-guias`, {
@@ -106,7 +99,6 @@ const GuiaDashboard: React.FC = () => {
     }
   };
 
-  // ESCUCHAR NOTIFICACIONES EN TIEMPO REAL
   useEffect(() => {
     if (!socket || !connected) return;
 
@@ -118,7 +110,7 @@ const GuiaDashboard: React.FC = () => {
     socket.on('nuevo-turno-disponible', (data) => {
       console.log('📨 Nueva solicitud recibida:', data);
       cargarTurnos();
-      cargarMiCarga(); // 👈 Actualizar carga cuando llega nuevo turno
+      cargarMiCarga();
       
       const eventId = `${data.turnoId}-${data.timestamp || Date.now()}`;
       if (ultimoEvento === eventId) {
@@ -141,7 +133,7 @@ const GuiaDashboard: React.FC = () => {
       });
 
       cargarTurnos();
-      cargarMiCarga(); // 👈 Actualizar carga nuevamente
+      cargarMiCarga();
     });
 
     socket.on('nuevo-mensaje', (data) => {
@@ -152,7 +144,7 @@ const GuiaDashboard: React.FC = () => {
     socket.on('estado-turno-actualizado', async (data) => {
       console.log('🔥 Cambio de estado en guía:', data);
       await cargarTurnos();
-      await cargarMiCarga(); // 👈 Actualizar carga cuando cambia estado
+      await cargarMiCarga();
       
       if (data.estado === 'cancelado') {
         try {
@@ -179,7 +171,7 @@ const GuiaDashboard: React.FC = () => {
       });
       
       cargarTurnos();
-      cargarMiCarga(); // 👈 Actualizar carga
+      cargarMiCarga();
     });
 
     return () => {
@@ -190,7 +182,6 @@ const GuiaDashboard: React.FC = () => {
     };
   }, [socket, connected, ultimoEvento, recargarNoLeidos]);
 
-  // Marcar cancelaciones como vistas al entrar a la pestaña
   useEffect(() => {
     if (pestañaActiva === 'cancelados' && turnosCanceladosPorMi.length > 0) {
       const marcarComoVistas = async () => {
@@ -206,7 +197,6 @@ const GuiaDashboard: React.FC = () => {
     }
   }, [pestañaActiva, turnosCanceladosPorMi]);
 
-  // Cargar conteo de cancelaciones no vistas al iniciar
   useEffect(() => {
     const cargarConteo = async () => {
       try {
@@ -220,12 +210,11 @@ const GuiaDashboard: React.FC = () => {
     cargarConteo();
   }, []);
 
-  // Cargar foto de perfil del guía
   useEffect(() => {
     const cargarMiFoto = async () => {
       try {
         const data = await perfilService.getMiPerfil();
-        setMiFoto(data.foto_perfil);
+        setMiFoto(data?.foto_perfil || null);
       } catch (err) {
         console.error('Error al cargar mi foto:', err);
       }
@@ -233,11 +222,9 @@ const GuiaDashboard: React.FC = () => {
     cargarMiFoto();
   }, []);
 
-  // 👈 NUEVO: Cargar carga al iniciar y cada 30 segundos
   useEffect(() => {
     cargarMiCarga();
 
-    // Auto-refresh cada 30 segundos
     const interval = setInterval(() => {
       cargarMiCarga();
     }, 30000);
@@ -249,7 +236,8 @@ const GuiaDashboard: React.FC = () => {
     try {
       setLoading(true);
       const data = await turnosService.getMisTurnos();
-      console.log('📋 Turnos recibidos:', data.turnos.map(t => ({ id: t.id, estado: t.estado })));
+      // 👈 CORREGIDO: Tipar el parámetro 't' en el map
+      console.log('📋 Turnos recibidos:', data.turnos.map((t: Turno) => ({ id: t.id, estado: t.estado })));
       setTurnos(data.turnos);
     } catch (err) {
       setError('Error al cargar turnos');
@@ -263,7 +251,7 @@ const GuiaDashboard: React.FC = () => {
     try {
       await turnosService.actualizarEstado(turnoId, nuevoEstado, motivo);
       cargarTurnos();
-      cargarMiCarga(); // 👈 Actualizar carga después de cambiar estado
+      cargarMiCarga();
       
       toast.success(`Turno ${nuevoEstado}`, {
         duration: 3000,
@@ -325,7 +313,6 @@ const GuiaDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 👈 NUEVO: Indicador de carga del guía */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
@@ -382,7 +369,7 @@ const GuiaDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Pestañas con menú hamburguesa para móvil */}
+      {/* Pestañas - El resto del código sigue igual */}
       <div className="mb-8">
         <div className="md:hidden">
           <button
