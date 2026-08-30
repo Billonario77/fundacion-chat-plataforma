@@ -55,15 +55,25 @@ const CancelacionesAdmin: React.FC = () => {
         page: pagination.currentPage,
         limit: pagination.itemsPerPage
       });
-      setCancelaciones(response.data);
-      setPagination({
-        ...pagination,
-        totalPages: response.pagination.totalPages,
-        totalItems: response.pagination.totalItems
-      });
+      
+      // 👈 CORREGIDO: Verificar que response.data sea un array
+      if (response && response.data && Array.isArray(response.data)) {
+        setCancelaciones(response.data);
+      } else {
+        setCancelaciones([]);
+      }
+      
+      if (response && response.pagination) {
+        setPagination({
+          ...pagination,
+          totalPages: response.pagination.totalPages,
+          totalItems: response.pagination.totalItems
+        });
+      }
     } catch (err) {
       setError('Error al cargar cancelaciones');
       console.error(err);
+      setCancelaciones([]);
     } finally {
       setLoading(false);
     }
@@ -72,51 +82,60 @@ const CancelacionesAdmin: React.FC = () => {
   const cargarMetricas = async () => {
     try {
       const data = await turnosService.obtenerMetricasCancelaciones();
-      setMetricas(data);
+      
+      // 👈 CORREGIDO: Verificar que cada propiedad sea un array
+      setMetricas({
+        total: data?.total || 0,
+        porRol: Array.isArray(data?.porRol) ? data.porRol : [],
+        topGuias: Array.isArray(data?.topGuias) ? data.topGuias : [],
+        topUsuarios: Array.isArray(data?.topUsuarios) ? data.topUsuarios : []
+      });
     } catch (err) {
       console.error('Error al cargar métricas:', err);
+      // Mantener valores por defecto
     }
   };
 
-    useEffect(() => {
-        if (user?.rol === 'admin') {
-        cargarMetricas();
-        cargarCancelaciones();
-        }
-    }, [user]);
+  useEffect(() => {
+    if (user?.rol === 'admin') {
+      cargarMetricas();
+      cargarCancelaciones();
+    }
+  }, [user]);
 
-    useEffect(() => {
-        if (user?.rol === 'admin') {
-        cargarCancelaciones();
-        }
-    }, [pagination.currentPage, filtros]);
-
+  useEffect(() => {
+    if (user?.rol === 'admin') {
+      cargarCancelaciones();
+    }
+  }, [pagination.currentPage, filtros]);
 
   // Cargar listas de guías y usuarios para filtros
-    useEffect(() => {
+  useEffect(() => {
     const cargarListas = async () => {
-        try {
+      try {
         const [guiasData, usuariosData] = await Promise.all([
-            adminService.obtenerGuiasLista(),
-            adminService.obtenerUsuariosLista()
+          adminService.obtenerGuiasLista(),
+          adminService.obtenerUsuariosLista()
         ]);
-        setGuias(guiasData);
-        setUsuarios(usuariosData);
-        } catch (err) {
+        setGuias(Array.isArray(guiasData) ? guiasData : []);
+        setUsuarios(Array.isArray(usuariosData) ? usuariosData : []);
+      } catch (err) {
         console.error('Error al cargar listas:', err);
-        }
+        setGuias([]);
+        setUsuarios([]);
+      }
     };
     cargarListas();
-    }, []);
+  }, []);
 
-    // Limpiar filtros dependientes cuando cambia cancelado_por
-    useEffect(() => {
+  // Limpiar filtros dependientes cuando cambia cancelado_por
+  useEffect(() => {
     if (filtros.cancelado_por === 'guia') {
-        setFiltros(prev => ({ ...prev, usuario_id: '' }));
+      setFiltros(prev => ({ ...prev, usuario_id: '' }));
     } else if (filtros.cancelado_por === 'usuario') {
-        setFiltros(prev => ({ ...prev, guia_id: '' }));
+      setFiltros(prev => ({ ...prev, guia_id: '' }));
     }
-    }, [filtros.cancelado_por]);
+  }, [filtros.cancelado_por]);
 
   const handleFiltroChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFiltros({
@@ -149,6 +168,12 @@ const CancelacionesAdmin: React.FC = () => {
     return <div className="text-center py-8">Cargando cancelaciones...</div>;
   }
 
+  // 👈 CORREGIDO: Verificar que metricas.porRol sea un array antes de usar map
+  const porRolList = Array.isArray(metricas.porRol) ? metricas.porRol : [];
+  const topGuiasList = Array.isArray(metricas.topGuias) ? metricas.topGuias : [];
+  const topUsuariosList = Array.isArray(metricas.topUsuarios) ? metricas.topUsuarios : [];
+  const cancelacionesList = Array.isArray(cancelaciones) ? cancelaciones : [];
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-primario">Cancelaciones</h2>
@@ -159,7 +184,8 @@ const CancelacionesAdmin: React.FC = () => {
           <p className="text-gray-500 text-sm">Total cancelaciones</p>
           <p className="text-3xl font-bold text-primario">{metricas.total}</p>
         </div>
-        {metricas.porRol.map((rol) => (
+        {/* 👈 CORREGIDO: Usar porRolList en lugar de metricas.porRol */}
+        {porRolList.map((rol) => (
           <div key={rol.cancelado_por} className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-500 text-sm">Cancelado por {rol.cancelado_por === 'usuario' ? 'Usuarios' : rol.cancelado_por === 'guia' ? 'Guías' : 'Admin'}</p>
             <p className="text-3xl font-bold text-primario">{rol.count}</p>
@@ -171,11 +197,12 @@ const CancelacionesAdmin: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="font-semibold text-gray-700 mb-3">Top Guías con cancelaciones</h3>
-          {metricas.topGuias.length === 0 ? (
+          {/* 👈 CORREGIDO: Usar topGuiasList */}
+          {topGuiasList.length === 0 ? (
             <p className="text-gray-500 text-sm">No hay datos</p>
           ) : (
             <ul className="space-y-2">
-              {metricas.topGuias.map((guia, idx) => (
+              {topGuiasList.map((guia, idx) => (
                 <li key={idx} className="flex justify-between">
                   <span>{guia.nombre}</span>
                   <span className="font-medium text-red-600">{guia.count} cancelaciones</span>
@@ -186,11 +213,12 @@ const CancelacionesAdmin: React.FC = () => {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="font-semibold text-gray-700 mb-3">Top Usuarios con cancelaciones</h3>
-          {metricas.topUsuarios.length === 0 ? (
+          {/* 👈 CORREGIDO: Usar topUsuariosList */}
+          {topUsuariosList.length === 0 ? (
             <p className="text-gray-500 text-sm">No hay datos</p>
           ) : (
             <ul className="space-y-2">
-              {metricas.topUsuarios.map((usuario, idx) => (
+              {topUsuariosList.map((usuario, idx) => (
                 <li key={idx} className="flex justify-between">
                   <span>{usuario.nombre}</span>
                   <span className="font-medium text-red-600">{usuario.count} cancelaciones</span>
@@ -297,7 +325,8 @@ const CancelacionesAdmin: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {cancelaciones.map((cancelacion) => (
+              {/* 👈 CORREGIDO: Usar cancelacionesList */}
+              {cancelacionesList.map((cancelacion) => (
                 <tr key={cancelacion.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm">{formatFecha(cancelacion.fecha_cancelacion)}</td>
                   <td className="px-4 py-3 text-sm">{formatFecha(cancelacion.fecha_programada)}</td>
