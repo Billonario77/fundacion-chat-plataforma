@@ -23,90 +23,85 @@ const DetalleTurno: React.FC = () => {
   const [duracionTotal] = useState(60); // Duración estándar en minutos
 
   useEffect(() => {
-  if (id) {
-    cargarTurno();
-  }
-}, [id]);
-
-// ============================================
-// ESCUCHAR CAMBIOS DE ESTADO EN TIEMPO REAL
-// ============================================
-useEffect(() => {
-  if (!socket || !connected || !turno) return;
-
-  console.log('👂 DetalleTurno: Escuchando cambios de estado...');
-
-  const handleEstadoCambiado = (data: any) => {
-    console.log('🔄 DetalleTurno: Cambio de estado recibido:', data);
-    
-    if (data.turnoId === turno.id) {
-      // Recargar el turno para mostrar el nuevo estado
+    if (id) {
       cargarTurno();
+    }
+  }, [id]);
+
+  // ============================================
+  // ESCUCHAR CAMBIOS DE ESTADO EN TIEMPO REAL
+  // ============================================
+  useEffect(() => {
+    if (!socket || !connected || !turno) return;
+
+    console.log('👂 DetalleTurno: Escuchando cambios de estado...');
+
+    const handleEstadoCambiado = (data: any) => {
+      console.log('🔄 DetalleTurno: Cambio de estado recibido:', data);
       
-      toast(`📢 ${data.mensaje}`, {
-        duration: 5000,
-        icon: '✅',
-        style: {
-          background: '#10b981',
-          color: 'white',
-          padding: '16px',
-          fontSize: '16px',
-          fontWeight: '500'
-        }
-      });
+      if (data.turnoId === turno.id) {
+        cargarTurno();
+        
+        toast(`📢 ${data.mensaje}`, {
+          duration: 5000,
+          icon: '✅',
+          style: {
+            background: '#10b981',
+            color: 'white',
+            padding: '16px',
+            fontSize: '16px',
+            fontWeight: '500'
+          }
+        });
 
-      // Si el estado es 'completado', cerrar el chat automáticamente
-      if (data.estado === 'completado') {
-        setMostrarChat(false);
-        setMostrarVideo(false);
+        if (data.estado === 'completado') {
+          setMostrarChat(false);
+          setMostrarVideo(false);
+        }
       }
-    }
-  };
+    };
 
-  socket.on('estado-turno-actualizado', handleEstadoCambiado);
+    socket.on('estado-turno-actualizado', handleEstadoCambiado);
 
-  return () => {
-    socket.off('estado-turno-actualizado', handleEstadoCambiado);
-  };
-}, [socket, connected, turno]);
+    return () => {
+      socket.off('estado-turno-actualizado', handleEstadoCambiado);
+    };
+  }, [socket, connected, turno]);
 
+  // Temporizador para sesiones iniciadas
+  useEffect(() => {
+    if (!turno || turno.estado !== 'iniciado' || !turno.hora_inicio) return;
 
-// Temporizador para sesiones iniciadas
-useEffect(() => {
-  if (!turno || turno.estado !== 'iniciado' || !turno.hora_inicio) return;
-
-  const horaInicio = new Date(turno.hora_inicio);
-  
-  const actualizarTiempo = () => {
-    const ahora = new Date();
-    const transcurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000); // en segundos
-    const transcurridoMinutos = Math.floor(transcurrido / 60);
-    const transcurridoSegundos = transcurrido % 60;
+    const horaInicio = new Date(turno.hora_inicio);
     
-    setTiempoTranscurrido(transcurrido);
-    
-    const restante = (duracionTotal * 60) - transcurrido;
-    if (restante <= 0) {
-      // El tiempo se acabó, finalizar automáticamente
-      handleCambiarEstado('completado');
-      toast('La sesión ha finalizado por tiempo', {
-        icon: '⏰',
-        duration: 5000,
-        style: {
-          background: '#fef2f2',
-          color: '#dc2626',
-        }
-      });
-    }
-    setTiempoRestante(restante > 0 ? restante : 0);
-  };
+    const actualizarTiempo = () => {
+      const ahora = new Date();
+      const transcurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000);
+      const transcurridoMinutos = Math.floor(transcurrido / 60);
+      const transcurridoSegundos = transcurrido % 60;
+      
+      setTiempoTranscurrido(transcurrido);
+      
+      const restante = (duracionTotal * 60) - transcurrido;
+      if (restante <= 0) {
+        handleCambiarEstado('completado');
+        toast('La sesión ha finalizado por tiempo', {
+          icon: '⏰',
+          duration: 5000,
+          style: {
+            background: '#fef2f2',
+            color: '#dc2626',
+          }
+        });
+      }
+      setTiempoRestante(restante > 0 ? restante : 0);
+    };
 
-  actualizarTiempo();
-  const intervalo = setInterval(actualizarTiempo, 1000);
+    actualizarTiempo();
+    const intervalo = setInterval(actualizarTiempo, 1000);
 
-  return () => clearInterval(intervalo);
-}, [turno, duracionTotal]);
-
+    return () => clearInterval(intervalo);
+  }, [turno, duracionTotal]);
 
   const cargarTurno = async () => {
     try {
@@ -170,6 +165,10 @@ useEffect(() => {
   console.log('📌 PÁGINA DETALLE TURNO CARGADA');
   console.log('🔍 hora_inicio:', turno.hora_inicio);
 
+  // 👈 OBTENER NOMBRES DE USUARIO Y GUÍA DE FORMA SEGURA
+  const nombreUsuario = turno.usuario?.nombre || turno.usuario_nombre || 'Usuario';
+  const nombreGuia = turno.guia?.nombre || turno.guia_nombre || 'Guía';
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
@@ -206,12 +205,14 @@ useEffect(() => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Usuario</p>
-              <p className="font-semibold">{turno.usuario.nombre}</p>
+              {/* 👈 CORREGIDO: Usar variable segura */}
+              <p className="font-semibold">{nombreUsuario}</p>
             </div>
             {turno.guia && (
               <div>
                 <p className="text-sm text-gray-500">Guía</p>
-                <p className="font-semibold">{turno.guia.nombre}</p>
+                {/* 👈 CORREGIDO: Usar variable segura */}
+                <p className="font-semibold">{nombreGuia}</p>
               </div>
             )}
           </div>
@@ -255,7 +256,10 @@ useEffect(() => {
         {puedeChat && (
           <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-4">
             <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-              <h2 className="font-semibold text-primario">Chat con {esGuia ? turno.usuario.nombre : turno.guia?.nombre}</h2>
+              <h2 className="font-semibold text-primario">
+                {/* 👈 CORREGIDO: Usar variables seguras */}
+                Chat con {esGuia ? nombreUsuario : nombreGuia}
+              </h2>
               <button
                 onClick={() => setMostrarChat(!mostrarChat)}
                 className="text-primario hover:text-primario-dark"
@@ -302,8 +306,6 @@ useEffect(() => {
             />
           </div>
         )}
-
-
       </div>
     </Layout>
   );
