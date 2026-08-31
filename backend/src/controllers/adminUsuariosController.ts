@@ -18,7 +18,7 @@ export const getUsuarios = async (req: AuthRequest, res: Response): Promise<void
     const { page = 1, limit = 20, search = '' } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    let whereClause = "WHERE rol = 'usuario'";
+    let whereClause = "WHERE 1=1";  // En lugar de "WHERE rol = 'usuario'"
     const params: any[] = [];
     let paramIndex = 1;
 
