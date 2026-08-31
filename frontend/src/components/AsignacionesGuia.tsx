@@ -197,15 +197,21 @@ const AsignacionesGuia: React.FC = () => {
                 ) : (
                   <div className="divide-y divide-gray-200">
                     {guia.usuarios.map((usuario, idx) => (
-                      <div key={`${guia.guiaId}-${usuario.usuarioId}-${idx}`} className="p-4 hover:bg-gray-50">
-                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                          <div>
-                            <p className="font-medium">{usuario.usuarioNombre}</p>
+                      <div key={`${guia.guiaId}-${usuario.usuarioId}-${idx}`} className="p-4 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{usuario.usuarioNombre}</p>
                             <p className="text-sm text-gray-600">{usuario.usuarioEmail}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              <span className="font-medium">Último turno:</span>{' '}
+                              {formatFecha(usuario.ultimoTurno)}
+                            </p>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            <span className="font-medium">Último turno:</span>{' '}
-                            {formatFecha(usuario.ultimoTurno)}
+                          {/* 👈 AGREGAR EL GUÍA AQUÍ */}
+                          <div className="bg-blue-50 p-3 rounded-lg min-w-[180px]">
+                            <p className="text-xs font-medium text-primario uppercase">Guía asignado</p>
+                            <p className="text-sm font-medium text-gray-800">{guia.guiaNombre}</p>
+                            <p className="text-xs text-gray-500">{guia.guiaEmail}</p>
                           </div>
                         </div>
                       </div>
