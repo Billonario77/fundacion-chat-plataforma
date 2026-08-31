@@ -39,15 +39,20 @@ app.set('etag', false);
 const server = http.createServer(app);
 
 // ============================================
-// CONFIGURACIÓN DE ORÍGENES PERMITIDOS (MEJORADA)
+// CONFIGURACIÓN DE ORÍGENES PERMITIDOS
 // ============================================
+
+// 👈 LISTA EXPLÍCITA CON TODOS LOS ORÍGENES
 const allowedOrigins = [
-  'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:5173',
+  'http://localhost:5174',
   'http://192.168.3.44:3000',
-  'https://fundacion-chat-frontend-api.netlify.app',  // 👈 AGREGAR EXPLÍCITAMENTE
-  'https://fundacion-chat-frontend-api.netlify.app/', // 👈 CON SLASH
+  'https://fundacion-chat-frontend-api.netlify.app',           // 👈 CON SLASH AL FINAL
+  'https://fundacion-chat-frontend-api.netlify.app/',          // 👈 SIN SLASH
+  'https://fundacion-chat-frontend-api.netlify.app//',         // 👈 POR SI ACASO
+  'https://fundacion-chat-frontend-api.netlify.app./',         // 👈 CON PUNTO
 ];
 
 // Agregar FRONTEND_URL desde variables de entorno
@@ -61,33 +66,42 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-console.log('📋 Orígenes permitidos:', allowedOrigins);
+console.log('📋 Orígenes permitidos FINALES:', allowedOrigins);
 
 // ============================================
-// CONFIGURACIÓN CORS PARA EXPRESS (MEJORADA)
+// CONFIGURACIÓN CORS
 // ============================================
+
 const corsOptions: cors.CorsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Permitir solicitudes sin origen (ej: Postman, curl, tests)
+    // Permitir solicitudes sin origen (Postman, curl)
     if (!origin) {
       return callback(null, true);
     }
 
-    // Verificar si el origen está en la lista de permitidos
-    if (allowedOrigins.includes(origin)) {
+    // Verificar si el origen está en la lista
+    const originSinSlash = origin.replace(/\/$/, '');
+    const originConSlash = origin + '/';
+    const originConDobleSlash = origin + '//';
+    
+    const permitido = allowedOrigins.includes(origin) || 
+                      allowedOrigins.includes(originSinSlash) ||
+                      allowedOrigins.includes(originConSlash) ||
+                      allowedOrigins.includes(originConDobleSlash);
+
+    if (permitido) {
       console.log(`✅ CORS permitido para: ${origin}`);
       return callback(null, true);
     }
 
-    // En desarrollo, permitir todos los orígenes para facilitar pruebas
+    // En desarrollo, permitir todo
     if (process.env.NODE_ENV === 'development') {
-      console.warn(`⚠️ CORS en desarrollo: permitiendo ${origin} aunque no esté en la lista`);
+      console.warn(`⚠️ CORS en desarrollo: permitiendo ${origin}`);
       return callback(null, true);
     }
 
-    // En producción, bloquear orígenes no autorizados
     console.error(`❌ CORS bloqueado para: ${origin}`);
-    console.error(`📋 Orígenes permitidos:`, allowedOrigins);
+    console.error(`📋 Lista de orígenes permitidos:`, allowedOrigins);
     return callback(new Error(`Origen ${origin} no permitido por CORS`));
   },
   credentials: true,
@@ -102,10 +116,10 @@ const corsOptions: cors.CorsOptions = {
     'Access-Control-Request-Method',
     'Access-Control-Request-Headers',
     'cache-control',
-    'expires',           // ✅ AGREGAR
-    'pragma',            // ✅ AGREGAR
-    'if-modified-since', // ✅ AGREGAR
-    'if-none-match'      // ✅ AGREGAR
+    'expires',
+    'pragma',
+    'if-modified-since',
+    'if-none-match'
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
@@ -132,7 +146,11 @@ const io = new SocketServer(server, {
         return callback(null, true);
       }
       
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      const originSinSlash = origin.replace(/\/$/, '');
+      const permitido = allowedOrigins.includes(origin) || 
+                        allowedOrigins.includes(originSinSlash);
+
+      if (permitido || process.env.NODE_ENV === 'development') {
         console.log(`✅ Socket.IO CORS permitido para: ${origin}`);
         return callback(null, true);
       }
