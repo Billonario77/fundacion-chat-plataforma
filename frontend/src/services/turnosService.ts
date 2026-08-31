@@ -164,9 +164,14 @@ export const turnosService = {
     }
   },
 
+  // ============================================
+  // CANCELAR TURNO
+  // ============================================
+
   cancelarTurno: async (turnoId: string, motivo: string) => {
     try {
       const token = localStorage.getItem('token');
+      // 👈 CAMBIAR de PATCH a POST
       const response = await axios.post(
         `${API_URL}/turnos/${turnoId}/cancelar`,
         { motivo },
@@ -174,7 +179,7 @@ export const turnosService = {
       );
       return response.data;
     } catch (error) {
-      console.error('Error al cancelar turno:', error);
+      console.error('❌ Error al cancelar turno:', error);
       throw error;
     }
   },

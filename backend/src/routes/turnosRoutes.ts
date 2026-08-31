@@ -8,10 +8,6 @@ const router = Router();
 // 🔴 IMPORTANTE: Las rutas específicas VAN PRIMERO
 // ============================================
 
-// ============================================
-// PERFIL (rutas específicas - van primero)
-// ============================================
-
 router.get('/mi-perfil', authenticateToken, turnosController.getMiPerfil);
 router.put('/mi-foto', authenticateToken, turnosController.actualizarMiFoto);
 router.get('/mi-guia', authenticateToken, turnosController.getMiGuiaActual);
