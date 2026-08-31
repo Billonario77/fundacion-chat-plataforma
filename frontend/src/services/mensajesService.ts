@@ -16,8 +16,9 @@ export const mensajesService = {
   // Enviar un mensaje
   enviarMensaje: async (turnoId: string, contenido: string): Promise<Mensaje> => {
     const token = localStorage.getItem('token');
+    // 👈 CORREGIDO: /mensajes/ en lugar de /mensajes/enviar
     const response = await axios.post(
-      `${API_URL}/mensajes/enviar`,
+      `${API_URL}/mensajes/`,
       { turnoId, contenido },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -36,7 +37,8 @@ export const mensajesService = {
   // Marcar mensajes como leídos
   marcarComoLeidos: async (turnoId: string): Promise<any> => {
     const token = localStorage.getItem('token');
-    const response = await axios.patch(
+    // 👈 CORREGIDO: usar PUT en lugar de PATCH (coincide con el backend)
+    const response = await axios.put(
       `${API_URL}/mensajes/turno/${turnoId}/leer`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
