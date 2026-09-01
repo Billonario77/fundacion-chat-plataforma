@@ -584,7 +584,11 @@ const GuiaDashboard: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorEstado(turno.estado)}`}>
-                          {turno.estado}
+                          {turno.estado === 'pendiente' && '⏳ Pendiente'}
+                          {turno.estado === 'aceptado' && '✅ Aceptado'}
+                          {turno.estado === 'iniciado' && '🔄 En curso'}
+                          {turno.estado === 'completado' && '✅ Completado'}
+                          {turno.estado === 'cancelado' && '❌ Cancelado'}
                         </span>
                         <span className="text-sm text-gray-500">
                           {formatFecha(turno.fecha_programada)}
