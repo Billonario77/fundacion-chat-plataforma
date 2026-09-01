@@ -516,6 +516,9 @@ export const getCargaGuias = async (req: AuthRequest, res: Response): Promise<vo
 
 export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+
+    console.log('🔍 getMiCarga - INICIO');
+    console.log('🔍 req.user:', req.user);
     // Verificar que sea guía
     if (req.user?.rol !== 'guia') {
       res.status(403).json({ error: 'Acceso solo para guías' });
@@ -523,6 +526,8 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const guiaId = req.user.id;
+
+    console.log('🔍 getMiCarga - guiaId:', guiaId);
 
     const query = `
       SELECT 
@@ -542,6 +547,8 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
 
     const result = await pool.query(query, [guiaId]);
 
+    console.log('📊 getMiCarga - resultado:', result.rows[0]);
+
     res.json({
       turnos_activos: parseInt(result.rows[0].turnos_activos) || 0,
       turnos_pendientes: parseInt(result.rows[0].turnos_pendientes) || 0,
@@ -552,8 +559,11 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
     });
 
   } catch (error) {
-    console.error('Error al obtener carga del guía:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error al obtener carga del guía:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    });
   }
 };
 
