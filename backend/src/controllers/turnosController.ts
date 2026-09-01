@@ -1634,7 +1634,7 @@ export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promis
   }
 };
 
-// ============================================
+/// ============================================
 // OBTENER TIEMPO RESTANTE DE SESIÓN (CORREGIDO)
 // ============================================
 
@@ -1685,16 +1685,32 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // 👈 CORREGIDO: Ajustar a zona horaria de Colombia (UTC-5)
-    const horaInicio = new Date(turno.hora_inicio);
-    // Restar 5 horas para ajustar a Colombia
-    horaInicio.setHours(horaInicio.getHours() - 5);
-    
+    // 👈 CORREGIDO: Usar la hora actual en Colombia
     const ahora = new Date();
+    // La hora_inicio en la BD está en UTC, restamos 5 horas para Colombia
+    const horaInicio = new Date(turno.hora_inicio);
+    // Ajustar a Colombia restando 5 horas (UTC-5)
+    const horaInicioColombia = new Date(horaInicio.getTime() - (5 * 60 * 60 * 1000));
+    
     const duracionTotal = turno.duracion_solicitada || 60;
-    const tiempoTranscurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000);
     const tiempoTotalSegundos = duracionTotal * 60;
-    const tiempoRestante = Math.max(0, tiempoTotalSegundos - tiempoTranscurrido);
+    
+    // Calcular tiempo transcurrido en segundos desde que inició hasta ahora
+    let transcurrido = Math.floor((ahora.getTime() - horaInicioColombia.getTime()) / 1000);
+    
+    // Si el tiempo transcurrido es negativo, es porque la hora_inicio es futura
+    if (transcurrido < 0) transcurrido = 0;
+    
+    // Calcular tiempo restante
+    let tiempoRestante = tiempoTotalSegundos - transcurrido;
+    if (tiempoRestante < 0) tiempoRestante = 0;
+
+    console.log('📊 getTiempoSesion:');
+    console.log('   hora_inicio (BD):', turno.hora_inicio);
+    console.log('   horaInicioColombia:', horaInicioColombia);
+    console.log('   ahora:', ahora);
+    console.log('   transcurrido (seg):', transcurrido);
+    console.log('   tiempoRestante (seg):', tiempoRestante);
 
     const debeAdvertir = tiempoRestante <= 300 && tiempoRestante > 0 && !turno.advertencia_5min_enviada;
 
@@ -1707,7 +1723,7 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
 
     res.json({
       tiempoRestante,
-      tiempoTranscurrido: Math.max(0, tiempoTranscurrido),
+      tiempoTranscurrido: transcurrido,
       duracionTotal,
       debeAdvertir,
       advertenciaEnviada: turno.advertencia_5min_enviada,
