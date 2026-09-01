@@ -974,59 +974,44 @@ const [modalCerrado, setModalCerrado] = useState(false);
                 {solicitudesActivas.map((solicitud) => (
                   <div
                     key={solicitud.id}
-                    className="bg-white rounded-xl p-5 hover:shadow-lg transition-all duration-300 border-l-4 border-primario border-t border-r border-b border-gray-100 cursor-pointer"
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => navigate(`/turnos/${solicitud.id}`)}
                   >
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3 flex-wrap">
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-medium shadow-sm ${getColorEstado(solicitud.estado)}`}>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorEstado(solicitud.estado)}`}>
                             {solicitud.estado === 'pendiente' && '⏳ Pendiente'}
                             {solicitud.estado === 'aceptado' && '✅ Aceptado'}
                             {solicitud.estado === 'iniciado' && '🔄 En curso'}
                           </span>
-                          <span className="text-sm text-texto-claro flex items-center gap-1">
-                            <span>📅</span> {formatFecha(solicitud.fecha_programada)}
+                          <span className="text-sm text-gray-500">
+                            {formatFecha(solicitud.fecha_programada)}
                           </span>
                         </div>
-                        
                         <div className="flex items-center gap-2">
-                          <span className="text-primario">👤</span>
-                          <p className="font-medium">Guía:</p>
-                          <div className="flex items-center gap-2">
-                            <p>{solicitud.guia_nombre || 'Esperando asignación'}</p>
-                            {noLeidos[solicitud.id] > 0 && (
-                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
-                                {noLeidos[solicitud.id]}
-                              </span>
-                            )}
-                          </div>
+                          <p className="font-medium">{solicitud.guia_nombre || 'Esperando asignación'}</p>
+                          {noLeidos[solicitud.id] > 0 && (
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                              {noLeidos[solicitud.id]}
+                            </span>
+                          )}
                         </div>
-                        
-                        {solicitud.modalidad && (
-                          <p className="text-sm text-texto-claro mt-2 flex items-center gap-2">
-                            <span className="text-secundario">📹</span>
-                            <span className="font-medium">Modalidad:</span>{' '}
-                            <span className="capitalize">{solicitud.modalidad}</span>
-                          </p>
-                        )}
+                        <p className="text-sm text-gray-600">{solicitud.usuario_email}</p>
                       </div>
                       
-                      <div className="flex flex-col items-end gap-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); navigate(`/turnos/${solicitud.id}`); }}
-                          className="bg-blue-500 text-white px-3 py-1 text-xs rounded"
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => navigate(`/turnos/${solicitud.id}`)}
+                          className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600"
                         >
-                          Iniciar
+                          Chatear
                         </button>
                         
                         {solicitud.estado !== 'cancelado' && solicitud.estado !== 'completado' && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setModalCancelar({ abierto: true, turnoId: solicitud.id });
-                            }}
-                            className="bg-red-500 text-white px-3 py-1 text-xs rounded hover:bg-red-600"
+                            onClick={() => setModalCancelar({ abierto: true, turnoId: solicitud.id })}
+                            className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600"
                           >
                             Cancelar
                           </button>
