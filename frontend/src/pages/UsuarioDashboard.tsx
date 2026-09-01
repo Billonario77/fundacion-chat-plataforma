@@ -416,6 +416,96 @@ const [modalCerrado, setModalCerrado] = useState(false);
   }, [pestañaActiva, solicitudes]);
 
 
+  // TEMPORIZADOR DE SESIÓN EN TIEMPO REAL
+ 
+  useEffect(() => {
+    // Verificar si hay un turno en curso
+    const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
+    if (!turnoActivo) return;
+
+    let intervalo: NodeJS.Timeout;
+
+    const actualizarTiempo = async () => {
+      try {
+        const data = await turnosService.getTiempoSesion(turnoActivo.id);
+        
+        if (data.estado !== 'iniciado') {
+          // Si la sesión ya no está activa, limpiar el intervalo
+          clearInterval(intervalo);
+          return;
+        }
+
+        const tiempoRestante = data.tiempoRestante || 0;
+        const duracionTotal = data.duracionTotal || 60;
+
+        // Formatear tiempo (HH:MM:SS)
+        const horas = Math.floor(tiempoRestante / 3600);
+        const minutos = Math.floor((tiempoRestante % 3600) / 60);
+        const segundos = Math.floor(tiempoRestante % 60);
+
+        const tiempoFormateado = 
+          `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+
+        // Tiempo transcurrido
+        const transcurrido = data.tiempoTranscurrido || 0;
+        const horasTrans = Math.floor(transcurrido / 3600);
+        const minTrans = Math.floor((transcurrido % 3600) / 60);
+        const segTrans = Math.floor(transcurrido % 60);
+        const transcurridoFormateado = 
+          `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
+
+        // Actualizar elementos del DOM
+        const tiempoSesionEl = document.getElementById('tiempo-sesion-usuario');
+        const tiempoRestanteEl = document.getElementById('tiempo-restante-usuario');
+        const barraProgresoEl = document.getElementById('barra-progreso-usuario');
+        const porcentajeEl = document.getElementById('porcentaje-usuario');
+
+        if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
+        if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
+
+        const porcentaje = duracionTotal > 0 ? ((transcurrido / (duracionTotal * 60)) * 100) : 0;
+        const porcentajeFinal = Math.min(100, porcentaje);
+        
+        if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
+        if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
+
+        // Si el tiempo restante es 5 minutos o menos y no se ha enviado advertencia
+        if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
+          toast.error('⚠️ Quedan 5 minutos de sesión. Solicita más tiempo si lo necesitas.', {
+            duration: 10000,
+            icon: '⏰',
+            style: {
+              background: '#fef3c7',
+              color: '#92400e',
+            }
+          });
+        }
+
+        // Si el tiempo se acabó
+        if (tiempoRestante <= 0) {
+          toast('⏰ Tiempo de sesión agotado. La sesión se cerrará automáticamente.', {
+            duration: 5000,
+            icon: '⏰',
+          });
+        }
+
+      } catch (error) {
+        console.error('Error al actualizar tiempo de sesión:', error);
+      }
+    };
+
+    // Actualizar inmediatamente
+    actualizarTiempo();
+
+    // Actualizar cada segundo
+    intervalo = setInterval(actualizarTiempo, 1000);
+
+    return () => {
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, [solicitudesActivas]);
+
+
   // ============================================
   // FUNCIONES DE CARGA
   // ============================================
@@ -1187,7 +1277,10 @@ const [modalCerrado, setModalCerrado] = useState(false);
                 const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
                 if (turnoActivo) {
                   // Aquí irá la lógica para solicitar extensión
-                  toast.info('Próximamente: Solicitar más tiempo');
+                  toast('⏰ Próximamente: Solicitar más tiempo', {
+                    duration: 4000,
+                    icon: '⏰'
+                  });
                 }
               }}
               className="bg-primario text-white px-4 py-2 rounded-lg text-sm hover:bg-primario-dark whitespace-nowrap"

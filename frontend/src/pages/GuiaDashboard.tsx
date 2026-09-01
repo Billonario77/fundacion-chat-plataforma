@@ -232,6 +232,86 @@ const GuiaDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+
+    // ============================================
+  // TEMPORIZADOR DE SESIÓN EN TIEMPO REAL (GUÍA)
+  // ============================================
+  useEffect(() => {
+    const turnoActivo = turnos.find(t => t.estado === 'iniciado');
+    if (!turnoActivo) return;
+
+    let intervalo: NodeJS.Timeout;
+
+    const actualizarTiempo = async () => {
+      try {
+        const data = await turnosService.getTiempoSesion(turnoActivo.id);
+        
+        if (data.estado !== 'iniciado') {
+          clearInterval(intervalo);
+          return;
+        }
+
+        const tiempoRestante = data.tiempoRestante || 0;
+        const duracionTotal = data.duracionTotal || 60;
+
+        const horas = Math.floor(tiempoRestante / 3600);
+        const minutos = Math.floor((tiempoRestante % 3600) / 60);
+        const segundos = Math.floor(tiempoRestante % 60);
+        const tiempoFormateado = 
+          `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+
+        const transcurrido = data.tiempoTranscurrido || 0;
+        const horasTrans = Math.floor(transcurrido / 3600);
+        const minTrans = Math.floor((transcurrido % 3600) / 60);
+        const segTrans = Math.floor(transcurrido % 60);
+        const transcurridoFormateado = 
+          `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
+
+        const tiempoSesionEl = document.getElementById('tiempo-sesion-guia');
+        const tiempoRestanteEl = document.getElementById('tiempo-restante-guia');
+        const barraProgresoEl = document.getElementById('barra-progreso-guia');
+        const porcentajeEl = document.getElementById('porcentaje-guia');
+
+        if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
+        if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
+
+        const porcentaje = duracionTotal > 0 ? ((transcurrido / (duracionTotal * 60)) * 100) : 0;
+        const porcentajeFinal = Math.min(100, porcentaje);
+        
+        if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
+        if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
+
+        if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
+          toast('⚠️ Quedan 5 minutos de sesión. El cliente podrá solicitar más tiempo.', {
+            duration: 10000,
+            icon: '⏰',
+            style: {
+              background: '#fef3c7',
+              color: '#92400e',
+            }
+          });
+        }
+
+        if (tiempoRestante <= 0) {
+          toast.error('⏰ Tiempo de sesión agotado. La sesión se cerrará automáticamente.', {
+            duration: 5000,
+            icon: '⏰',
+          });
+        }
+
+      } catch (error) {
+        console.error('Error al actualizar tiempo de sesión:', error);
+      }
+    };
+
+    actualizarTiempo();
+    intervalo = setInterval(actualizarTiempo, 1000);
+
+    return () => {
+      if (intervalo) clearInterval(intervalo);
+    };
+  }, [turnos]);
+
   const cargarTurnos = async () => {
     try {
       setLoading(true);
