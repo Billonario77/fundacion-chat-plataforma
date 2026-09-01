@@ -9,6 +9,12 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
     const emisorrol = req.user?.rol;
     const { turnoId, contenido } = req.body;
 
+    console.log('📨 enviarMensaje - body:', req.body);
+    console.log('📨 turnoId:', turnoId);
+    console.log('📨 contenido:', contenido);
+    console.log('📨 emisorId:', emisorId);
+    console.log('📨 emisorrol:', emisorrol);
+
     if (!emisorId || !emisorrol) {
       res.status(401).json({ error: 'No autenticado' });
       return;
@@ -16,6 +22,11 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
 
     if (!contenido || contenido.trim() === '') {
       res.status(400).json({ error: 'El mensaje no puede estar vacío' });
+      return;
+    }
+
+    if (!turnoId) {
+      res.status(400).json({ error: 'Turno ID es requerido' });
       return;
     }
 
@@ -29,7 +40,7 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
       turnoQuery = 'SELECT id, usuario_id, guia_id FROM turnos WHERE id = $1 AND guia_id = $2';
       turnoParams = [turnoId, emisorId];
     } else {
-      res.status(403).json({ error: 'rol de usuario no autorizado para enviar mensajes' });
+      res.status(403).json({ error: 'Rol de usuario no autorizado para enviar mensajes' });
       return;
     }
 
@@ -48,6 +59,7 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    // 👈 CORREGIDO: emisor_tipo en lugar de emisor_rol
     const insertQuery = `
       INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido)
       VALUES ($1, $2, $3, $4)
@@ -60,7 +72,7 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
 
     const mensajeQuery = `
       SELECT 
-        id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
+        id, turno_id, emisor_id, emisor_tipo as emisor_rol, contenido, leido, created_at
       FROM mensajes
       WHERE id = $1
     `;
@@ -76,7 +88,7 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
     res.status(201).json(mensaje);
 
   } catch (error) {
-    console.error('Error al enviar mensaje:', error);
+    console.error('❌ Error al enviar mensaje:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -113,9 +125,10 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
+    // 👈 CORREGIDO: emisor_tipo en lugar de emisor_rol
     const mensajesQuery = `
       SELECT 
-        id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
+        id, turno_id, emisor_id, emisor_tipo as emisor_rol, contenido, leido, created_at
       FROM mensajes
       WHERE turno_id = $1
       ORDER BY created_at ASC
@@ -134,7 +147,7 @@ export const getMensajesPorTurno = async (req: AuthRequest, res: Response): Prom
     res.json(mensajesResult.rows);
 
   } catch (error) {
-    console.error('Error al obtener mensajes:', error);
+    console.error('❌ Error al obtener mensajes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -195,7 +208,7 @@ export const marcarComoLeidos = async (req: AuthRequest, res: Response): Promise
     });
 
   } catch (error) {
-    console.error('Error al marcar mensajes:', error);
+    console.error('❌ Error al marcar mensajes:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -210,11 +223,9 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Permitir admin también (como guía o usuario según su rol)
     let query = '';
     
     if (rol === 'guia' || rol === 'admin') {
-      // Para guías y admins: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,
@@ -228,7 +239,6 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
         GROUP BY m.turno_id
       `;
     } else if (rol === 'usuario') {
-      // Para usuarios: mensajes no leídos de sus turnos activos
       query = `
         SELECT 
           m.turno_id,
@@ -255,7 +265,7 @@ export const getMensajesNoLeidos = async (req: AuthRequest, res: Response): Prom
 
     res.json({ noLeidos });
   } catch (error) {
-    console.error('Error al obtener mensajes no leídos:', error);
+    console.error('❌ Error al obtener mensajes no leídos:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

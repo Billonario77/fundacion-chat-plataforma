@@ -13,14 +13,24 @@ export interface Mensaje {
 }
 
 export const mensajesService = {
-  // Enviar un mensaje
+  // Enviar un mensaje - RUTA CORRECTA
   enviarMensaje: async (turnoId: string, contenido: string): Promise<Mensaje> => {
     const token = localStorage.getItem('token');
-    // 👈 CORREGIDO: /mensajes/ en lugar de /mensajes/enviar
+    
+    if (!token) {
+      throw new Error('No hay token de autenticación');
+    }
+
+    // 👈 USAR LA RUTA CORRECTA: /mensajes/ (sin /enviar)
     const response = await axios.post(
       `${API_URL}/mensajes/`,
-      { turnoId, contenido },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { turnoId, contenido },  // 👈 Asegurar que los nombres coinciden con el backend
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
     );
     return response.data;
   },
@@ -37,7 +47,6 @@ export const mensajesService = {
   // Marcar mensajes como leídos
   marcarComoLeidos: async (turnoId: string): Promise<any> => {
     const token = localStorage.getItem('token');
-    // 👈 CORREGIDO: usar PUT en lugar de PATCH (coincide con el backend)
     const response = await axios.put(
       `${API_URL}/mensajes/turno/${turnoId}/leer`,
       {},
