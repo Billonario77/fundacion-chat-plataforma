@@ -1156,6 +1156,47 @@ const [modalCerrado, setModalCerrado] = useState(false);
         </div>
       )}
 
+      {/* Temporizador de sesión */}
+       {solicitudesActivas.some(s => s.estado === 'iniciado') && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-gray-600">⏱️ Tiempo de sesión</p>
+              <p className="text-2xl font-bold text-blue-600" id="tiempo-sesion-usuario">
+                00:00:00
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">⏳ Tiempo restante</p>
+              <p className="text-2xl font-bold text-orange-600" id="tiempo-restante-usuario">
+                01:00:00
+              </p>
+            </div>
+            <div className="flex-1 min-w-[100px]">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000"
+                  id="barra-progreso-usuario"
+                  style={{ width: '0%' }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1 text-center" id="porcentaje-usuario">0%</p>
+            </div>
+            <button
+              onClick={() => {
+                const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
+                if (turnoActivo) {
+                  // Aquí irá la lógica para solicitar extensión
+                  toast.info('Próximamente: Solicitar más tiempo');
+                }
+              }}
+              className="bg-primario text-white px-4 py-2 rounded-lg text-sm hover:bg-primario-dark whitespace-nowrap"
+            >
+              ⏰ Solicitar más tiempo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de cancelación */}
       <ModalCancelarTurno
