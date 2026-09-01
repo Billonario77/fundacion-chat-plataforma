@@ -216,6 +216,36 @@ export const turnosService = {
     return turnosService.getHistorialTurnos(page, limit);
   },
 
+    // Obtener tiempo restante de sesión
+  getTiempoSesion: async (turnoId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/${turnoId}/tiempo-sesion`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener tiempo de sesión:', error);
+      throw error;
+    }
+  },
+
+  // Solicitar extensión de hora
+  solicitarExtension: async (turnoId: string, horasExtra: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/turnos/${turnoId}/solicitar-extension`,
+        { horasExtra },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error al solicitar extensión:', error);
+      throw error;
+    }
+  },
+
   obtenerCancelacionesAdmin: async (filtros: CancelacionFiltros & { page?: number; limit?: number }) => {
     try {
       const token = localStorage.getItem('token');

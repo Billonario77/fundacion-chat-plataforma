@@ -1633,3 +1633,167 @@ export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// ============================================
+// OBTENER TIEMPO RESTANTE DE SESIÓN
+// ============================================
+
+export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    const { turnoId } = req.params;
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        id, 
+        hora_inicio, 
+        duracion_solicitada,
+        estado,
+        advertencia_5min_enviada
+       FROM turnos 
+       WHERE id = $1 AND (usuario_id = $2 OR guia_id = $2)`,
+      [turnoId, usuarioId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Turno no encontrado' });
+      return;
+    }
+
+    const turno = result.rows[0];
+
+    if (turno.estado !== 'iniciado') {
+      res.json({
+        tiempoRestante: null,
+        estado: turno.estado,
+        mensaje: 'La sesión no está activa'
+      });
+      return;
+    }
+
+    if (!turno.hora_inicio) {
+      res.json({
+        tiempoRestante: null,
+        estado: turno.estado,
+        mensaje: 'La sesión no ha iniciado'
+      });
+      return;
+    }
+
+    const horaInicio = new Date(turno.hora_inicio);
+    const ahora = new Date();
+    const duracionTotal = turno.duracion_solicitada || 60;
+    const tiempoTranscurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000);
+    const tiempoTotalSegundos = duracionTotal * 60;
+    const tiempoRestante = Math.max(0, tiempoTotalSegundos - tiempoTranscurrido);
+
+    const debeAdvertir = tiempoRestante <= 300 && tiempoRestante > 0 && !turno.advertencia_5min_enviada;
+
+    if (debeAdvertir) {
+      await pool.query(
+        `UPDATE turnos SET advertencia_5min_enviada = true WHERE id = $1`,
+        [turnoId]
+      );
+    }
+
+    res.json({
+      tiempoRestante,
+      tiempoTranscurrido,
+      duracionTotal,
+      debeAdvertir,
+      advertenciaEnviada: turno.advertencia_5min_enviada,
+      estado: turno.estado
+    });
+
+  } catch (error) {
+    console.error('Error al obtener tiempo de sesión:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// ============================================
+// SOLICITAR EXTENSIÓN DE HORA
+// ============================================
+
+export const solicitarExtension = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    const { turnoId } = req.params;
+    const { horasExtra } = req.body;
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    if (req.user?.rol !== 'usuario') {
+      res.status(403).json({ error: 'Solo los usuarios pueden solicitar extensión' });
+      return;
+    }
+
+    if (!horasExtra || horasExtra < 1) {
+      res.status(400).json({ error: 'Debes solicitar al menos 1 hora extra' });
+      return;
+    }
+
+    const turnoResult = await pool.query(
+      `SELECT * FROM turnos WHERE id = $1 AND usuario_id = $2 AND estado = 'iniciado'`,
+      [turnoId, usuarioId]
+    );
+
+    if (turnoResult.rows.length === 0) {
+      res.status(404).json({ error: 'Turno no encontrado o no está en curso' });
+      return;
+    }
+
+    const turno = turnoResult.rows[0];
+    const nuevaDuracion = (turno.duracion_solicitada || 60) + (horasExtra * 60);
+
+    const disponibilidadResult = await pool.query(
+      `SELECT id FROM turnos 
+       WHERE guia_id = $1 
+       AND id != $2
+       AND estado IN ('pendiente', 'aceptado', 'iniciado')
+       AND fecha_programada > NOW()
+       AND fecha_programada < NOW() + INTERVAL '${nuevaDuracion} minutes'`,
+      [turno.guia_id, turnoId]
+    );
+
+    if (disponibilidadResult.rows.length > 0) {
+      res.status(409).json({ 
+        error: 'El guía no tiene disponibilidad para extender la sesión',
+        conflictos: disponibilidadResult.rows
+      });
+      return;
+    }
+
+    await pool.query(
+      `UPDATE turnos 
+       SET duracion_solicitada = $1, 
+           extension_solicitada = true 
+       WHERE id = $2`,
+      [nuevaDuracion, turnoId]
+    );
+
+    notificarUsuario(turno.guia_id, 'extension-solicitada', {
+      turnoId: turnoId,
+      usuarioId: usuarioId,
+      horasExtra: horasExtra,
+      nuevaDuracion: nuevaDuracion
+    });
+
+    res.json({
+      message: `Sesión extendida ${horasExtra} hora(s)`,
+      nuevaDuracion: nuevaDuracion
+    });
+
+  } catch (error) {
+    console.error('Error al solicitar extensión:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

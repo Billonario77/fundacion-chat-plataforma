@@ -47,6 +47,16 @@ router.post('/:turnoId/cancelar', authenticateToken, turnosController.cancelarTu
 router.post('/completar-datos', authenticateToken, turnosController.completarMisDatos);
 
 // ============================================
+// TIEMPO DE SESIÓN
+// ============================================
+
+// Obtener tiempo restante de sesión
+router.get('/:turnoId/tiempo-sesion', authenticateToken, turnosController.getTiempoSesion);
+
+// Solicitar extensión de hora
+router.post('/:turnoId/solicitar-extension', authenticateToken, turnosController.solicitarExtension);
+
+// ============================================
 // 🔴 RUTA DINÁMICA - DEBE IR AL FINAL
 // ============================================
 
