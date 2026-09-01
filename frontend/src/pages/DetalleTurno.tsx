@@ -310,7 +310,7 @@ const DetalleTurno: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">⏳ Tiempo restante</p>
-              <p className="text-2xl font-bold text-orange-600" id="tiempo-restante-detalle">
+              <p className="text-lg font-bold text-orange-600" id="tiempo-restante-detalle">
                 01:00:00
               </p>
             </div>
