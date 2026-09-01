@@ -1017,7 +1017,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
                           onClick={(e) => { e.stopPropagation(); navigate(`/turnos/${solicitud.id}`); }}
                           className="bg-blue-500 text-white px-3 py-1 text-xs rounded"
                         >
-                          Chatear
+                          Iniciar
                         </button>
                         
                         {solicitud.estado !== 'cancelado' && solicitud.estado !== 'completado' && (
