@@ -103,6 +103,89 @@ const DetalleTurno: React.FC = () => {
     return () => clearInterval(intervalo);
   }, [turno, duracionTotal]);
 
+
+    // ============================================
+    // TEMPORIZADOR DE SESIÓN EN DETALLE DEL TURNO
+    // ============================================
+    useEffect(() => {
+      if (!turno || turno.estado !== 'iniciado') return;
+
+      let intervalo: NodeJS.Timeout;
+
+      const actualizarTiempo = async () => {
+        try {
+          const data = await turnosService.getTiempoSesion(turno.id);
+          
+          if (data.estado !== 'iniciado') {
+            clearInterval(intervalo);
+            return;
+          }
+
+          let tiempoRestante = data.tiempoRestante || 0;
+          let transcurrido = data.tiempoTranscurrido || 0;
+
+          if (tiempoRestante < 0) tiempoRestante = 0;
+          if (transcurrido < 0) transcurrido = 0;
+
+          const duracionTotal = data.duracionTotal || 60;
+
+          const horas = Math.floor(tiempoRestante / 3600);
+          const minutos = Math.floor((tiempoRestante % 3600) / 60);
+          const segundos = Math.floor(tiempoRestante % 60);
+          const tiempoFormateado = 
+            `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+
+          const horasTrans = Math.floor(transcurrido / 3600);
+          const minTrans = Math.floor((transcurrido % 3600) / 60);
+          const segTrans = Math.floor(transcurrido % 60);
+          const transcurridoFormateado = 
+            `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
+
+          const tiempoSesionEl = document.getElementById('tiempo-sesion-detalle');
+          const tiempoRestanteEl = document.getElementById('tiempo-restante-detalle');
+          const barraProgresoEl = document.getElementById('barra-progreso-detalle');
+          const porcentajeEl = document.getElementById('porcentaje-detalle');
+
+          if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
+          if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
+
+          const porcentaje = duracionTotal > 0 ? ((transcurrido / (duracionTotal * 60)) * 100) : 0;
+          const porcentajeFinal = Math.min(100, porcentaje);
+          
+          if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
+          if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
+
+          if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
+            toast('⚠️ Quedan 5 minutos de sesión.', {
+              duration: 10000,
+              icon: '⏰',
+              style: {
+                background: '#fef3c7',
+                color: '#92400e',
+              }
+            });
+          }
+
+          if (tiempoRestante <= 0) {
+            toast('⏰ Tiempo de sesión agotado.', {
+              duration: 5000,
+              icon: '⏰',
+            });
+          }
+
+        } catch (error) {
+          console.error('Error al actualizar tiempo de sesión:', error);
+        }
+      };
+
+      actualizarTiempo();
+      intervalo = setInterval(actualizarTiempo, 1000);
+
+      return () => {
+        if (intervalo) clearInterval(intervalo);
+      };
+    }, [turno]);
+
   const cargarTurno = async () => {
     try {
       setLoading(true);
@@ -185,37 +268,70 @@ const DetalleTurno: React.FC = () => {
           </h1>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
+  <div>
+    <p className="text-sm text-gray-500">Estado</p>
+    <p className={`font-semibold capitalize ${
+      turno.estado === 'completado' ? 'text-green-600' :
+      turno.estado === 'cancelado' ? 'text-red-600' :
+      'text-primario'
+    }`}>
+      {turno.estado}
+    </p>
+  </div>
+  <div>
+    <p className="text-sm text-gray-500">Fecha</p>
+    <p className="font-semibold">{formatFecha(turno.fecha_programada)}</p>
+  </div>
+  <div>
+    <p className="text-sm text-gray-500">Modalidad</p>
+    <p className="font-semibold capitalize">{turno.modalidad}</p>
+  </div>
+  <div>
+    <p className="text-sm text-gray-500">Usuario</p>
+    <p className="font-semibold">{nombreUsuario}</p>
+  </div>
+  {turno.guia && (
+    <div>
+      <p className="text-sm text-gray-500">Guía</p>
+      <p className="font-semibold">{nombreGuia}</p>
+    </div>
+  )}
+</div>
+
+      {/* 👈 TEMPORIZADOR DE SESIÓN EN DETALLE */}
+      {turno.estado === 'iniciado' && (
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-500">Estado</p>
-              <p className={`font-semibold capitalize ${
-                turno.estado === 'completado' ? 'text-green-600' :
-                turno.estado === 'cancelado' ? 'text-red-600' :
-                'text-primario'
-              }`}>
-                {turno.estado}
+              <p className="text-sm text-gray-600">⏱️ Tiempo de sesión</p>
+              <p className="text-2xl font-bold text-blue-600" id="tiempo-sesion-detalle">
+                00:00:00
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Fecha</p>
-              <p className="font-semibold">{formatFecha(turno.fecha_programada)}</p>
+              <p className="text-sm text-gray-600">⏳ Tiempo restante</p>
+              <p className="text-2xl font-bold text-orange-600" id="tiempo-restante-detalle">
+                01:00:00
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Modalidad</p>
-              <p className="font-semibold capitalize">{turno.modalidad}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Usuario</p>
-              {/* 👈 CORREGIDO: Usar variable segura */}
-              <p className="font-semibold">{nombreUsuario}</p>
-            </div>
-            {turno.guia && (
-              <div>
-                <p className="text-sm text-gray-500">Guía</p>
-                {/* 👈 CORREGIDO: Usar variable segura */}
-                <p className="font-semibold">{nombreGuia}</p>
+            <div className="flex-1 min-w-[100px]">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000"
+                  id="barra-progreso-detalle"
+                  style={{ width: '0%' }}
+                />
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-1 text-center" id="porcentaje-detalle">0%</p>
+            </div>
+            <button
+              className="bg-primario text-white px-4 py-2 rounded-lg text-sm hover:bg-primario-dark whitespace-nowrap"
+            >
+              ⏰ Solicitar más tiempo
+            </button>
           </div>
+        </div>
+      )}
 
           {esGuia && turno.estado === 'pendiente' && (
             <button
