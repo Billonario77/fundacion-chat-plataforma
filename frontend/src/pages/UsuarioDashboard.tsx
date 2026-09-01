@@ -157,7 +157,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
   
   // Solicitudes activas
   const solicitudesActivas = solicitudes.filter(s => 
-    ['pendiente', 'aceptado', 'iniciado'].includes(s.estado)
+    ['aceptado', 'iniciado'].includes(s.estado)
   );
   
   

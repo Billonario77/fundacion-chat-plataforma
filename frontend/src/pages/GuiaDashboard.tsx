@@ -476,7 +476,7 @@ const GuiaDashboard: React.FC = () => {
               >
                 <span>📋</span>
                 <span>Turnos Activos</span>
-                {turnos.filter(t => ['pendiente', 'aceptado', 'iniciado'].includes(t.estado)).length > 0 && (
+                {turnos.filter(t => ['aceptado', 'iniciado'].includes(t.estado)).length > 0 && (
                   <span className="bg-primario text-white text-xs px-2 py-0.5 rounded-full ml-auto">
                     {turnos.filter(t => ['pendiente', 'aceptado', 'iniciado'].includes(t.estado)).length}
                   </span>

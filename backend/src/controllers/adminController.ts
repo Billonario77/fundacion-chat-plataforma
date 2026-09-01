@@ -531,7 +531,7 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
 
     const query = `
       SELECT 
-        COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) as turnos_activos,
+        COUNT(t.id) FILTER (WHERE t.estado IN ('aceptado', 'iniciado')) as turnos_activos,
         COUNT(t.id) FILTER (WHERE t.estado = 'pendiente') as turnos_pendientes,
         COUNT(t.id) FILTER (WHERE t.estado = 'aceptado') as turnos_aceptados,
         COUNT(t.id) FILTER (WHERE t.estado = 'iniciado') as turnos_en_curso,
