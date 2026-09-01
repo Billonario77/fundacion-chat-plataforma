@@ -62,7 +62,8 @@ const GuiaDashboard: React.FC = () => {
   const cargarMiCarga = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/admin/mi-carga`, {
+      // 👈 USAR LA NUEVA RUTA /admin/mi-carga-guia
+      const response = await axios.get(`${API_URL}/admin/mi-carga-guia`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -75,27 +76,15 @@ const GuiaDashboard: React.FC = () => {
       });
     } catch (error) {
       console.error('Error al cargar mi carga:', error);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/admin/carga-guias`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        const guias = response.data.guias;
-        const miGuia = guias.find((g: any) => g.id === user?.id);
-        
-        if (miGuia) {
-          setMiCarga({
-            activos: miGuia.turnos_activos || 0,
-            pendientes: miGuia.turnos_pendientes || 0,
-            enCurso: miGuia.turnos_en_curso || 0,
-            totales: miGuia.turnos_totales || 0,
-            proximas24h: miGuia.turnos_proximas_24h || 0
-          });
-        }
-      } catch (err2) {
-        console.error('Error al cargar carga desde endpoint alternativo:', err2);
-      }
+      // 👈 ELIMINAR EL INTENTO CON /carga-guias porque requiere admin
+      // Solo mostrar valores por defecto
+      setMiCarga({
+        activos: 0,
+        pendientes: 0,
+        enCurso: 0,
+        totales: 0,
+        proximas24h: 0
+      });
     }
   };
 

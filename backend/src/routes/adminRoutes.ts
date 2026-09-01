@@ -1,10 +1,28 @@
 import { Router } from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import * as adminController from '../controllers/adminController';
 
 const router = Router();
 
-// Todas las rutas requieren autenticación y rol admin
+// ============================================
+// RUTAS PARA GUÍAS (sin requireAdmin)
+// ============================================
+
+// Obtener carga del guía autenticado (solo guías)
+router.get('/mi-carga-guia', authenticateToken, (req: AuthRequest, res, next) => {
+  // Verificar que sea guía
+  if (req.user?.rol !== 'guia') {
+    return res.status(403).json({ error: 'Acceso solo para guías' });
+  }
+  next();
+}, adminController.getMiCarga);
+
+// ============================================
+// RUTAS PARA ADMINISTRADORES (con requireAdmin)
+// ============================================
+
+// Todas las rutas a partir de aquí requieren rol admin
 router.use(authenticateToken);
 router.use(requireAdmin);
 
@@ -18,10 +36,10 @@ router.get('/guias-disponibles', adminController.getGuiasDisponibles);
 // Obtener guías con usuarios asignados
 router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuarios);
 
-// Obtener carga de guías
+// Obtener carga de guías (solo admin)
 router.get('/carga-guias', adminController.getCargaGuias);
 
-// Obtener carga de un guía específico
+// Obtener carga de un guía específico (solo admin)
 router.get('/mi-carga', adminController.getMiCarga);
 
 // ============================================
