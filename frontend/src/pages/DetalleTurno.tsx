@@ -304,13 +304,13 @@ const DetalleTurno: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="text-sm text-gray-600">⏱️ Tiempo de sesión</p>
-              <p className="text-base font-bold text-blue-600" id="tiempo-sesion-detalle">
+              <p className="text-lg font-bold text-blue-600" id="tiempo-sesion-detalle">
                 00:00:00
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">⏳ Tiempo restante</p>
-              <p className="text-base font-bold text-blue-600" id="tiempo-sesion-detalle">
+              <p className="text-2xl font-bold text-orange-600" id="tiempo-restante-detalle">
                 01:00:00
               </p>
             </div>
