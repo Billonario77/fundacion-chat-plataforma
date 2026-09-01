@@ -60,33 +60,32 @@ const GuiaDashboard: React.FC = () => {
   }, [pestañaActiva]);
 
   const cargarMiCarga = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      console.log('🔑 Token para mi-carga-guia:', token ? '✅ Existe' : '❌ NO EXISTE');
-      const response = await axios.get(`${API_URL}/admin/mi-carga-guia`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setMiCarga({
-        activos: response.data.turnos_activos || 0,
-        pendientes: response.data.turnos_pendientes || 0,
-        enCurso: response.data.turnos_en_curso || 0,
-        totales: response.data.turnos_totales || 0,
-        proximas24h: response.data.turnos_proximas_24h || 0
-      });
-    } catch (error) {
-      console.error('Error al cargar mi carga:', error);
-      // 👈 ELIMINAR EL INTENTO CON /carga-guias porque requiere admin
-      // Solo mostrar valores por defecto
-      setMiCarga({
-        activos: 0,
-        pendientes: 0,
-        enCurso: 0,
-        totales: 0,
-        proximas24h: 0
-      });
-    }
-  };
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/admin/mi-carga-guia`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    console.log('📊 Datos de carga recibidos:', response.data);
+    
+    setMiCarga({
+      activos: response.data.turnos_activos || 0,
+      pendientes: response.data.turnos_pendientes || 0,
+      enCurso: response.data.turnos_en_curso || 0,
+      totales: response.data.turnos_totales || 0,
+      proximas24h: response.data.turnos_proximas_24h || 0
+    });
+  } catch (error) {
+    console.error('Error al cargar mi carga:', error);
+    setMiCarga({
+      activos: 0,
+      pendientes: 0,
+      enCurso: 0,
+      totales: 0,
+      proximas24h: 0
+    });
+  }
+};
 
   useEffect(() => {
     if (!socket || !connected) return;
