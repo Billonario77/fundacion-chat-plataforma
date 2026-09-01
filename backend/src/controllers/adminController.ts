@@ -307,17 +307,20 @@ export const getGuiasConUsuarios = async (req: AuthRequest, res: Response): Prom
 
     const query = `
       SELECT 
-        g.id as guiaId,
-        g.nombre as guiaNombre,
-        g.email as guiaEmail,
-        json_agg(
-          json_build_object(
-            'usuarioId', u.id,
-            'usuarioNombre', u.nombre,
-            'usuarioEmail', u.email,
-            'ultimoTurno', t.fecha_programada,
-            'totalTurnos', t.total
-          )
+        g.id as "guiaId",
+        g.nombre as "guiaNombre",
+        g.email as "guiaEmail",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'usuarioId', u.id,
+              'usuarioNombre', u.nombre,
+              'usuarioEmail', u.email,
+              'ultimoTurno', t.fecha_programada,
+              'totalTurnos', t.total
+            )
+          ) FILTER (WHERE u.id IS NOT NULL),
+          '[]'
         ) as usuarios
       FROM usuarios g
       LEFT JOIN (
@@ -336,14 +339,14 @@ export const getGuiasConUsuarios = async (req: AuthRequest, res: Response): Prom
     `;
 
     const result = await pool.query(query);
+    console.log('📊 Guías con usuarios encontrados:', result.rows.length);
     
-    // Filtrar usuarios nulos y dar formato
-    const guias = result.rows.map((row: any) => ({
-      ...row,
-      usuarios: row.usuarios.filter((u: any) => u.usuarioId !== null)
-    }));
-
-    res.json(guias);
+    // Verificar que cada guía tenga usuarios
+    result.rows.forEach((row: any) => {
+      console.log(`👤 Guía ${row.guiaNombre} - ${row.usuarios?.length || 0} usuarios`);
+    });
+    
+    res.json(result.rows);
   } catch (error) {
     console.error('Error al obtener guías con usuarios:', error);
     res.status(500).json({ error: 'Error interno del servidor' });

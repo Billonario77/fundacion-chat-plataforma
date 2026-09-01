@@ -69,6 +69,16 @@ const AsignacionesGuia: React.FC = () => {
       const response = await axios.get(`${API_URL}/admin/asignaciones/guias-con-usuarios`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      // 👈 AGREGAR LOG PARA VER QUÉ LLEGA
+      console.log('📊 Datos de asignaciones recibidos:', response.data);
+      console.log('📊 Cantidad de guías:', response.data.length);
+      
+      if (response.data && response.data.length > 0) {
+        console.log('📊 Primer guía:', response.data[0]);
+        console.log('📊 Usuarios del primer guía:', response.data[0].usuarios);
+      }
+      
       setGuias(response.data);
     } catch (err) {
       setError('Error al cargar asignaciones');
