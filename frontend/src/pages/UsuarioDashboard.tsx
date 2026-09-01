@@ -416,10 +416,11 @@ const [modalCerrado, setModalCerrado] = useState(false);
   }, [pestañaActiva, solicitudes]);
 
 
-  // TEMPORIZADOR DE SESIÓN EN TIEMPO REAL
- 
+  // ============================================
+  // TEMPORIZADOR DE SESIÓN EN TIEMPO REAL (CORREGIDO)
+  // ============================================
+  
   useEffect(() => {
-    // Verificar si hay un turno en curso
     const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
     if (!turnoActivo) return;
 
@@ -430,35 +431,39 @@ const [modalCerrado, setModalCerrado] = useState(false);
         const data = await turnosService.getTiempoSesion(turnoActivo.id);
         
         if (data.estado !== 'iniciado') {
-          // Si la sesión ya no está activa, limpiar el intervalo
           clearInterval(intervalo);
           return;
         }
 
-        const tiempoRestante = data.tiempoRestante || 0;
+        // 👈 FORZAR VALORES POSITIVOS
+        let tiempoRestante = data.tiempoRestante || 0;
+        let transcurrido = data.tiempoTranscurrido || 0;
+
+        // Si son negativos, forzar a cero
+        if (tiempoRestante < 0) tiempoRestante = 0;
+        if (transcurrido < 0) transcurrido = 0;
+
         const duracionTotal = data.duracionTotal || 60;
 
-        // Formatear tiempo (HH:MM:SS)
+        // Formatear tiempo restante
         const horas = Math.floor(tiempoRestante / 3600);
         const minutos = Math.floor((tiempoRestante % 3600) / 60);
         const segundos = Math.floor(tiempoRestante % 60);
-
         const tiempoFormateado = 
           `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 
-        // Tiempo transcurrido
-        const transcurrido = data.tiempoTranscurrido || 0;
+        // Formatear tiempo transcurrido
         const horasTrans = Math.floor(transcurrido / 3600);
         const minTrans = Math.floor((transcurrido % 3600) / 60);
         const segTrans = Math.floor(transcurrido % 60);
         const transcurridoFormateado = 
           `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
 
-        // Actualizar elementos del DOM
-        const tiempoSesionEl = document.getElementById('tiempo-sesion-usuario');
-        const tiempoRestanteEl = document.getElementById('tiempo-restante-usuario');
-        const barraProgresoEl = document.getElementById('barra-progreso-usuario');
-        const porcentajeEl = document.getElementById('porcentaje-usuario');
+        // Actualizar DOM (cambiar los IDs según el dashboard)
+        const tiempoSesionEl = document.getElementById('tiempo-sesion-usuario') || document.getElementById('tiempo-sesion-guia');
+        const tiempoRestanteEl = document.getElementById('tiempo-restante-usuario') || document.getElementById('tiempo-restante-guia');
+        const barraProgresoEl = document.getElementById('barra-progreso-usuario') || document.getElementById('barra-progreso-guia');
+        const porcentajeEl = document.getElementById('porcentaje-usuario') || document.getElementById('porcentaje-guia');
 
         if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
         if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
@@ -469,9 +474,9 @@ const [modalCerrado, setModalCerrado] = useState(false);
         if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
         if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
 
-        // Si el tiempo restante es 5 minutos o menos y no se ha enviado advertencia
+        // Advertencia de 5 minutos
         if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
-          toast.error('⚠️ Quedan 5 minutos de sesión. Solicita más tiempo si lo necesitas.', {
+          toast('⚠️ Quedan 5 minutos de sesión. Solicita más tiempo si lo necesitas.', {
             duration: 10000,
             icon: '⏰',
             style: {
@@ -481,7 +486,6 @@ const [modalCerrado, setModalCerrado] = useState(false);
           });
         }
 
-        // Si el tiempo se acabó
         if (tiempoRestante <= 0) {
           toast('⏰ Tiempo de sesión agotado. La sesión se cerrará automáticamente.', {
             duration: 5000,
@@ -494,10 +498,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
       }
     };
 
-    // Actualizar inmediatamente
     actualizarTiempo();
-
-    // Actualizar cada segundo
     intervalo = setInterval(actualizarTiempo, 1000);
 
     return () => {
