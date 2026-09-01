@@ -419,93 +419,98 @@ const [modalCerrado, setModalCerrado] = useState(false);
   // ============================================
   // TEMPORIZADOR DE SESIÓN EN TIEMPO REAL (CORREGIDO)
   // ============================================
-  
-  useEffect(() => {
-    const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
-    if (!turnoActivo) return;
 
-    let intervalo: NodeJS.Timeout;
+ useEffect(() => {
+  const turnoActivo = solicitudesActivas.find(s => s.estado === 'iniciado');
+  if (!turnoActivo) return;
 
-    const actualizarTiempo = async () => {
-      try {
-        const data = await turnosService.getTiempoSesion(turnoActivo.id);
-        
-        if (data.estado !== 'iniciado') {
-          clearInterval(intervalo);
-          return;
-        }
+  let intervalo: NodeJS.Timeout;
 
-        // 👈 FORZAR VALORES POSITIVOS
-        let tiempoRestante = data.tiempoRestante || 0;
-        let transcurrido = data.tiempoTranscurrido || 0;
-
-        // Si son negativos, forzar a cero
-        if (tiempoRestante < 0) tiempoRestante = 0;
-        if (transcurrido < 0) transcurrido = 0;
-
-        const duracionTotal = data.duracionTotal || 60;
-
-        // Formatear tiempo restante
-        const horas = Math.floor(tiempoRestante / 3600);
-        const minutos = Math.floor((tiempoRestante % 3600) / 60);
-        const segundos = Math.floor(tiempoRestante % 60);
-        const tiempoFormateado = 
-          `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-
-        // Formatear tiempo transcurrido
-        const horasTrans = Math.floor(transcurrido / 3600);
-        const minTrans = Math.floor((transcurrido % 3600) / 60);
-        const segTrans = Math.floor(transcurrido % 60);
-        const transcurridoFormateado = 
-          `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
-
-        // Actualizar DOM (cambiar los IDs según el dashboard)
-        const tiempoSesionEl = document.getElementById('tiempo-sesion-usuario') || document.getElementById('tiempo-sesion-guia');
-        const tiempoRestanteEl = document.getElementById('tiempo-restante-usuario') || document.getElementById('tiempo-restante-guia');
-        const barraProgresoEl = document.getElementById('barra-progreso-usuario') || document.getElementById('barra-progreso-guia');
-        const porcentajeEl = document.getElementById('porcentaje-usuario') || document.getElementById('porcentaje-guia');
-
-        if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
-        if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
-
-        const porcentaje = duracionTotal > 0 ? ((transcurrido / (duracionTotal * 60)) * 100) : 0;
-        const porcentajeFinal = Math.min(100, porcentaje);
-        
-        if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
-        if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
-
-        // Advertencia de 5 minutos
-        if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
-          toast('⚠️ Quedan 5 minutos de sesión. Solicita más tiempo si lo necesitas.', {
-            duration: 10000,
-            icon: '⏰',
-            style: {
-              background: '#fef3c7',
-              color: '#92400e',
-            }
-          });
-        }
-
-        if (tiempoRestante <= 0) {
-          toast('⏰ Tiempo de sesión agotado. La sesión se cerrará automáticamente.', {
-            duration: 5000,
-            icon: '⏰',
-          });
-        }
-
-      } catch (error) {
-        console.error('Error al actualizar tiempo de sesión:', error);
+  const actualizarTiempo = async () => {
+    try {
+      const data = await turnosService.getTiempoSesion(turnoActivo.id);
+      
+      if (data.estado !== 'iniciado') {
+        clearInterval(intervalo);
+        return;
       }
-    };
 
-    actualizarTiempo();
-    intervalo = setInterval(actualizarTiempo, 1000);
+      let tiempoRestante = data.tiempoRestante || 0;
+      let transcurrido = data.tiempoTranscurrido || 0;
 
-    return () => {
-      if (intervalo) clearInterval(intervalo);
-    };
-  }, [solicitudesActivas]);
+      if (tiempoRestante < 0) tiempoRestante = 0;
+      if (transcurrido < 0) transcurrido = 0;
 
+      const duracionTotal = data.duracionTotal || 60;
+
+      // Formatear tiempo restante (HH:MM:SS)
+      const horas = Math.floor(tiempoRestante / 3600);
+      const minutos = Math.floor((tiempoRestante % 3600) / 60);
+      const segundos = Math.floor(tiempoRestante % 60);
+      const tiempoFormateado = 
+        `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+
+      // Formatear tiempo transcurrido
+      const horasTrans = Math.floor(transcurrido / 3600);
+      const minTrans = Math.floor((transcurrido % 3600) / 60);
+      const segTrans = Math.floor(transcurrido % 60);
+      const transcurridoFormateado = 
+        `${String(horasTrans).padStart(2, '0')}:${String(minTrans).padStart(2, '0')}:${String(segTrans).padStart(2, '0')}`;
+
+      // 👈 BUSCAR SOLO LOS IDs DEL USUARIO
+      const tiempoSesionEl = document.getElementById('tiempo-sesion-usuario');
+      const tiempoRestanteEl = document.getElementById('tiempo-restante-usuario');
+      const barraProgresoEl = document.getElementById('barra-progreso-usuario');
+      const porcentajeEl = document.getElementById('porcentaje-usuario');
+
+      // 👈 LOGS PARA DEPURAR
+      console.log('🔍 Tiempo sesión usuario - Elementos encontrados:', {
+        tiempoSesion: !!tiempoSesionEl,
+        tiempoRestante: !!tiempoRestanteEl,
+        barraProgreso: !!barraProgresoEl,
+        porcentaje: !!porcentajeEl
+      });
+      console.log('📊 Valores:', { transcurridoFormateado, tiempoFormateado });
+
+      if (tiempoSesionEl) tiempoSesionEl.textContent = transcurridoFormateado;
+      if (tiempoRestanteEl) tiempoRestanteEl.textContent = tiempoFormateado;
+
+      const porcentaje = duracionTotal > 0 ? ((transcurrido / (duracionTotal * 60)) * 100) : 0;
+      const porcentajeFinal = Math.min(100, porcentaje);
+      
+      if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
+      if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
+
+      if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
+        toast('⚠️ Quedan 5 minutos de sesión. Solicita más tiempo si lo necesitas.', {
+          duration: 10000,
+          icon: '⏰',
+          style: {
+            background: '#fef3c7',
+            color: '#92400e',
+          }
+        });
+      }
+
+      if (tiempoRestante <= 0) {
+        toast('⏰ Tiempo de sesión agotado. La sesión se cerrará automáticamente.', {
+          duration: 5000,
+          icon: '⏰',
+        });
+      }
+
+    } catch (error) {
+      console.error('Error al actualizar tiempo de sesión:', error);
+    }
+  };
+
+  actualizarTiempo();
+  intervalo = setInterval(actualizarTiempo, 1000);
+
+  return () => {
+    if (intervalo) clearInterval(intervalo);
+  };
+}, [solicitudesActivas]);
 
   // ============================================
   // FUNCIONES DE CARGA
