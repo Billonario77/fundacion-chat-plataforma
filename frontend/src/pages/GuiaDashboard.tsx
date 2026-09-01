@@ -444,35 +444,7 @@ const GuiaDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Temporizador de sesión para el guía */}
-      {turnos.some(t => t.estado === 'iniciado') && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-600">⏱️ Tiempo de sesión</p>
-              <p className="text-2xl font-bold text-blue-600" id="tiempo-sesion-guia">
-                00:00:00
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">⏳ Tiempo restante</p>
-              <p className="text-2xl font-bold text-orange-600" id="tiempo-restante-guia">
-                01:00:00
-              </p>
-            </div>
-            <div className="flex-1 min-w-[100px]">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000"
-                  id="barra-progreso-guia"
-                  style={{ width: '0%' }}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1 text-center" id="porcentaje-guia">0%</p>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
