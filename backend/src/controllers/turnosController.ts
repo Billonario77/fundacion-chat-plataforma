@@ -1635,7 +1635,7 @@ export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promis
 };
 
 /// ============================================
-// OBTENER TIEMPO RESTANTE DE SESIÓN (CORREGIDO)
+// OBTENER TIEMPO RESTANTE DE SESIÓN (CORREGIDO CON SQL)
 // ============================================
 
 export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1648,10 +1648,13 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    // 👈 OBTENER LA HORA INICIO AJUSTADA A COLOMBIA DIRECTAMENTE EN SQL
     const result = await pool.query(
       `SELECT 
         id, 
-        hora_inicio, 
+        hora_inicio,
+        -- Convertir hora_inicio a Colombia (UTC-5)
+        (hora_inicio - INTERVAL '5 hours') as hora_inicio_colombia,
         duracion_solicitada,
         estado,
         advertencia_5min_enviada
@@ -1685,32 +1688,24 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // 👈 CORREGIDO: Usar la hora actual en Colombia
+    // 👈 USAR LA HORA DE COLOMBIA DESDE LA CONSULTA SQL
+    const horaInicioColombia = new Date(turno.hora_inicio_colombia);
     const ahora = new Date();
-    // La hora_inicio en la BD está en UTC, restamos 5 horas para Colombia
-    const horaInicio = new Date(turno.hora_inicio);
-    // Ajustar a Colombia restando 5 horas (UTC-5)
-    const horaInicioColombia = new Date(horaInicio.getTime() - (5 * 60 * 60 * 1000));
-    
     const duracionTotal = turno.duracion_solicitada || 60;
     const tiempoTotalSegundos = duracionTotal * 60;
     
-    // Calcular tiempo transcurrido en segundos desde que inició hasta ahora
     let transcurrido = Math.floor((ahora.getTime() - horaInicioColombia.getTime()) / 1000);
-    
-    // Si el tiempo transcurrido es negativo, es porque la hora_inicio es futura
     if (transcurrido < 0) transcurrido = 0;
     
-    // Calcular tiempo restante
     let tiempoRestante = tiempoTotalSegundos - transcurrido;
     if (tiempoRestante < 0) tiempoRestante = 0;
 
     console.log('📊 getTiempoSesion:');
     console.log('   hora_inicio (BD):', turno.hora_inicio);
-    console.log('   horaInicioColombia:', horaInicioColombia);
+    console.log('   hora_inicio_colombia:', turno.hora_inicio_colombia);
     console.log('   ahora:', ahora);
-    console.log('   transcurrido (seg):', transcurrido);
-    console.log('   tiempoRestante (seg):', tiempoRestante);
+    console.log('   transcurrido:', transcurrido);
+    console.log('   tiempoRestante:', tiempoRestante);
 
     const debeAdvertir = tiempoRestante <= 300 && tiempoRestante > 0 && !turno.advertencia_5min_enviada;
 
