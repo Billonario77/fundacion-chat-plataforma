@@ -1635,7 +1635,7 @@ export const getHistorialAdmin = async (req: AuthRequest, res: Response): Promis
 };
 
 // ============================================
-// OBTENER TIEMPO RESTANTE DE SESIÓN
+// OBTENER TIEMPO RESTANTE DE SESIÓN (CORREGIDO)
 // ============================================
 
 export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1685,7 +1685,11 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    // 👈 CORREGIDO: Ajustar a zona horaria de Colombia (UTC-5)
     const horaInicio = new Date(turno.hora_inicio);
+    // Restar 5 horas para ajustar a Colombia
+    horaInicio.setHours(horaInicio.getHours() - 5);
+    
     const ahora = new Date();
     const duracionTotal = turno.duracion_solicitada || 60;
     const tiempoTranscurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000);
@@ -1703,7 +1707,7 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
 
     res.json({
       tiempoRestante,
-      tiempoTranscurrido,
+      tiempoTranscurrido: Math.max(0, tiempoTranscurrido),
       duracionTotal,
       debeAdvertir,
       advertenciaEnviada: turno.advertencia_5min_enviada,
