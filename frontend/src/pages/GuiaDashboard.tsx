@@ -62,7 +62,7 @@ const GuiaDashboard: React.FC = () => {
   const cargarMiCarga = async () => {
     try {
       const token = localStorage.getItem('token');
-      // 👈 USAR LA NUEVA RUTA /admin/mi-carga-guia
+      console.log('🔑 Token para mi-carga-guia:', token ? '✅ Existe' : '❌ NO EXISTE');
       const response = await axios.get(`${API_URL}/admin/mi-carga-guia`, {
         headers: { Authorization: `Bearer ${token}` }
       });
