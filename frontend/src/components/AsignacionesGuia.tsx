@@ -47,7 +47,6 @@ const AsignacionesGuia: React.FC = () => {
     }
   }, [vista]);
 
-
   useEffect(() => {
     if (vista === 'buscar-usuario') {
       if (busqueda === '') {
@@ -61,7 +60,6 @@ const AsignacionesGuia: React.FC = () => {
     }
   }, [busqueda, vista, todosUsuarios]);
 
-
   const cargarGuiasConUsuarios = async () => {
     try {
       setLoading(true);
@@ -69,16 +67,6 @@ const AsignacionesGuia: React.FC = () => {
       const response = await axios.get(`${API_URL}/admin/asignaciones/guias-con-usuarios`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      // 👈 AGREGAR LOG PARA VER QUÉ LLEGA
-      console.log('📊 Datos de asignaciones recibidos:', response.data);
-      console.log('📊 Cantidad de guías:', response.data.length);
-      
-      if (response.data && response.data.length > 0) {
-        console.log('📊 Primer guía:', response.data[0]);
-        console.log('📊 Usuarios del primer guía:', response.data[0].usuarios);
-      }
-      
       setGuias(response.data);
     } catch (err) {
       setError('Error al cargar asignaciones');
@@ -107,17 +95,15 @@ const AsignacionesGuia: React.FC = () => {
     }
   };
 
-
   const cargarTodosUsuarios = async () => {
     try {
       setCargandoUsuarios(true);
       const token = localStorage.getItem('token');
-      // Este endpoint debería devolver todos los usuarios con su guía
       const response = await axios.get(`${API_URL}/admin/usuarios-con-guia`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTodosUsuarios(response.data);
-      setResultadosBusqueda(response.data); // Mostrar todos inicialmente
+      setResultadosBusqueda(response.data);
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
       setError('Error al cargar la lista de usuarios');
@@ -125,7 +111,6 @@ const AsignacionesGuia: React.FC = () => {
       setCargandoUsuarios(false);
     }
   };
-
 
   const formatFecha = (fecha: string) => {
     if (!fecha) return 'Sin turnos';
@@ -195,6 +180,7 @@ const AsignacionesGuia: React.FC = () => {
           ) : (
             guias.map((guia) => (
               <div key={guia.guiaId} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* 👈 ENCABEZADO DEL GUÍA (UNA SOLA VEZ) */}
                 <div className="bg-primario text-white px-4 py-3">
                   <h3 className="font-semibold">{guia.guiaNombre}</h3>
                   <p className="text-sm opacity-90">{guia.guiaEmail}</p>
@@ -207,21 +193,15 @@ const AsignacionesGuia: React.FC = () => {
                 ) : (
                   <div className="divide-y divide-gray-200">
                     {guia.usuarios.map((usuario, idx) => (
-                      <div key={`${guia.guiaId}-${usuario.usuarioId}-${idx}`} className="p-4 hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
-                          <div className="flex-1">
+                      <div key={`${guia.guiaId}-${usuario.usuarioId}-${idx}`} className="p-4 hover:bg-gray-50">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                          <div>
                             <p className="font-medium text-gray-800">{usuario.usuarioNombre}</p>
                             <p className="text-sm text-gray-600">{usuario.usuarioEmail}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              <span className="font-medium">Último turno:</span>{' '}
-                              {formatFecha(usuario.ultimoTurno)}
-                            </p>
                           </div>
-                          {/* 👈 AGREGAR EL GUÍA AQUÍ */}
-                          <div className="bg-blue-50 p-3 rounded-lg min-w-[180px]">
-                            <p className="text-xs font-medium text-primario uppercase">Guía asignado</p>
-                            <p className="text-sm font-medium text-gray-800">{guia.guiaNombre}</p>
-                            <p className="text-xs text-gray-500">{guia.guiaEmail}</p>
+                          <div className="text-sm text-gray-500">
+                            <span className="font-medium">Último turno:</span>{' '}
+                            {formatFecha(usuario.ultimoTurno)}
                           </div>
                         </div>
                       </div>
@@ -295,8 +275,6 @@ const AsignacionesGuia: React.FC = () => {
           )}
         </div>
       )}
-
-
     </div>
   );
 };
