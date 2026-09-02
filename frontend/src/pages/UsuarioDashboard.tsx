@@ -11,6 +11,7 @@ import Layout from '../components/Layout';
 import ModalCancelarTurno from '../components/ModalCancelarTurno';
 import CompletarDatos from '../components/CompletarDatos';
 import Avatar from '../components/Avatar';
+import CalendarioHorarios from '../components/CalendarioHorarios';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -939,14 +940,18 @@ const [modalCerrado, setModalCerrado] = useState(false);
 
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2 font-medium">Fecha y hora preferida (opcional)</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    value={nuevaSolicitud.fecha_preferida}
-                    onChange={(e) => setNuevaSolicitud({ ...nuevaSolicitud, fecha_preferida: e.target.value })}
+                  <CalendarioHorarios
+                    guiaId={usuarioGuiaActual ? 'buscar-guia-id' : ''}
+                    fechaSeleccionada={nuevaSolicitud.fecha_preferida ? new Date(nuevaSolicitud.fecha_preferida) : null}
+                    onChange={(fecha) => {
+                      setNuevaSolicitud({
+                        ...nuevaSolicitud,
+                        fecha_preferida: fecha ? fecha.toISOString() : ''
+                      });
+                    }}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Si no seleccionas fecha, se asignará una automáticamente
+                    Las horas en rojo no están disponibles. Si no seleccionas fecha, se asignará una automáticamente.
                   </p>
                 </div>
 
