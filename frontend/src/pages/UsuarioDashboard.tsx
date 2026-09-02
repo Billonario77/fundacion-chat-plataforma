@@ -69,8 +69,8 @@ const [modalCerrado, setModalCerrado] = useState(false);
     : null;
 
   const solicitudActivaMasReciente = solicitudes
-    .filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  .filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado) && s.guia_id)
+  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
   const usuarioGuiaActual = solicitudActivaMasReciente?.guia_nombre;
   const usuarioTieneGuiaOriginal = !!usuarioGuiaOriginal;
@@ -941,7 +941,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2 font-medium">Fecha y hora preferida (opcional)</label>
                   <CalendarioHorarios
-                    guiaId={usuarioGuiaActual ? 'buscar-guia-id' : ''}
+                    guiaId={solicitudActivaMasReciente?.guia_id || ''}
                     fechaSeleccionada={nuevaSolicitud.fecha_preferida ? new Date(nuevaSolicitud.fecha_preferida) : null}
                     onChange={(fecha) => {
                       setNuevaSolicitud({

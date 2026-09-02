@@ -19,6 +19,7 @@ export interface Turno {
   usuario_email?: string;
   guia_nombre?: string;
   guia_email?: string;
+  guia_id?: string; // 👈 AGREGAR ESTA LÍNEA
   requiere_asignacion_admin?: boolean;
   es_reprogramacion?: boolean;
   turno_original_id?: string;
