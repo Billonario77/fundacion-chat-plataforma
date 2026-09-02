@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { turnosService } from '../services/turnosService';
-import { useAuth } from '../contexts/AuthContext';
-import { es } from 'date-fns/locale';
+import { es } from 'date-fns/locale/es';
 
 interface CalendarioHorariosProps {
   guiaId: string;
@@ -18,11 +17,9 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
   onChange,
   onHorariosCargados
 }) => {
-  const { user } = useAuth();
   const [horariosOcupados, setHorariosOcupados] = useState<any[]>([]);
   const [cargando, setCargando] = useState(false);
 
-  // Cargar horarios ocupados cuando cambia la fecha
   useEffect(() => {
     if (!fechaSeleccionada || !guiaId) return;
 
@@ -45,7 +42,6 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
     cargarHorarios();
   }, [fechaSeleccionada, guiaId]);
 
-  // Función para verificar si una hora está ocupada
   const isHoraOcupada = (fecha: Date) => {
     if (horariosOcupados.length === 0) return false;
 
@@ -58,12 +54,10 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
     });
   };
 
-  // Función para filtrar horas disponibles (excluir ocupadas)
   const filterTime = (time: Date) => {
     return !isHoraOcupada(time);
   };
 
-  // Función para deshabilitar días pasados
   const filterDate = (date: Date) => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -88,10 +82,6 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
         timeClassName={(time) => {
           return isHoraOcupada(time) ? 'hora-ocupada' : 'hora-disponible';
-        }}
-        dayClassName={(date) => {
-          // Puedes agregar clases para días con turnos ocupados
-          return 'dia-normal';
         }}
       />
       {cargando && (
