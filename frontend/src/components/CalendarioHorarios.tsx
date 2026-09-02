@@ -21,19 +21,26 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
-    if (!fechaSeleccionada || !guiaId) return;
+    if (!fechaSeleccionada || !guiaId) {
+      console.log('⚠️ No hay fecha o guía seleccionado');
+      return;
+    }
 
     const cargarHorarios = async () => {
       try {
         setCargando(true);
         const fechaStr = fechaSeleccionada.toISOString().split('T')[0];
+        console.log('🔍 Consultando horarios para guía:', guiaId, 'fecha:', fechaStr);
+        
         const data = await turnosService.getHorariosOcupados(guiaId, fechaStr);
+        console.log('📊 Horarios recibidos del backend:', data);
+        
         setHorariosOcupados(data.horarios || []);
         if (onHorariosCargados) {
           onHorariosCargados(data.horarios || []);
         }
       } catch (error) {
-        console.error('Error al cargar horarios ocupados:', error);
+        console.error('❌ Error al cargar horarios ocupados:', error);
       } finally {
         setCargando(false);
       }
@@ -43,15 +50,23 @@ const CalendarioHorarios: React.FC<CalendarioHorariosProps> = ({
   }, [fechaSeleccionada, guiaId]);
 
   const isHoraOcupada = (fecha: Date) => {
-    if (horariosOcupados.length === 0) return false;
+    if (horariosOcupados.length === 0) {
+      return false;
+    }
 
     const horaSeleccionada = fecha.getTime();
     
-    return horariosOcupados.some(horario => {
+    const ocupada = horariosOcupados.some(horario => {
       const inicio = new Date(horario.inicio).getTime();
       const fin = new Date(horario.fin).getTime();
       return horaSeleccionada >= inicio && horaSeleccionada < fin;
     });
+    
+    if (ocupada) {
+      console.log('❌ Hora ocupada:', fecha.toLocaleTimeString());
+    }
+    
+    return ocupada;
   };
 
   const filterTime = (time: Date) => {

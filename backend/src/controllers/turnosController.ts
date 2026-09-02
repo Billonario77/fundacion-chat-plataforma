@@ -533,6 +533,7 @@ export const misSolicitudes = async (req: AuthRequest, res: Response): Promise<v
         t.created_at,
         t.motivo_cancelacion,
         t.cancelado_por,
+        t.guia_id,
         g.nombre as guia_nombre,
         g.email as guia_email
       FROM turnos t

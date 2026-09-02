@@ -68,11 +68,13 @@ const [modalCerrado, setModalCerrado] = useState(false);
       ).guia_nombre 
     : null;
 
-  const solicitudActivaMasReciente = solicitudes
-  .filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado) && s.guia_id)
-  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  // Obtener el guía del último turno del usuario (cualquier estado)
+  const ultimoTurnoConGuia = solicitudes
+    .filter(s => s.guia_id)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-  const usuarioGuiaActual = solicitudActivaMasReciente?.guia_nombre;
+  const guiaId = ultimoTurnoConGuia?.guia_id || '';
+  const usuarioGuiaActual = ultimoTurnoConGuia?.guia_nombre || null;
   const usuarioTieneGuiaOriginal = !!usuarioGuiaOriginal;
   const usuarioTieneGuiaActual = !!usuarioGuiaActual;
   const usuarioGuiaCambio = usuarioTieneGuiaOriginal && usuarioTieneGuiaActual && usuarioGuiaOriginal !== usuarioGuiaActual;
@@ -941,7 +943,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
                 <div className="mb-4">
                   <label className="block text-gray-700 mb-2 font-medium">Fecha y hora preferida (opcional)</label>
                   <CalendarioHorarios
-                    guiaId={solicitudActivaMasReciente?.guia_id || ''}
+                    guiaId={solicitudes.length > 0 && solicitudes[0]?.guia_id ? solicitudes[0].guia_id : ''}
                     fechaSeleccionada={nuevaSolicitud.fecha_preferida ? new Date(nuevaSolicitud.fecha_preferida) : null}
                     onChange={(fecha) => {
                       setNuevaSolicitud({
@@ -950,6 +952,12 @@ const [modalCerrado, setModalCerrado] = useState(false);
                       });
                     }}
                   />
+
+                  {!guiaId && (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      ⚠️ No tienes un guía asignado. Agenda un turno primero para ver los horarios disponibles.
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">
                     Las horas en rojo no están disponibles. Si no seleccionas fecha, se asignará una automáticamente.
                   </p>
