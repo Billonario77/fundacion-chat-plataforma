@@ -46,6 +46,11 @@ router.patch('/:turnoId/estado', authenticateToken, turnosController.actualizarE
 router.post('/:turnoId/cancelar', authenticateToken, turnosController.cancelarTurno);
 router.post('/completar-datos', authenticateToken, turnosController.completarMisDatos);
 
+// Obtener horarios ocupados del guía
+
+router.get('/horarios-ocupados/:guiaId/:fecha', authenticateToken, turnosController.getHorariosOcupados);
+router.get('/horarios-ocupados/mi-guia/:fecha', authenticateToken, turnosController.getHorariosOcupados);
+
 // ============================================
 // TIEMPO DE SESIÓN
 // ============================================

@@ -119,7 +119,7 @@ export const perfilService = {
 };
 
 // ============================================
-// TURNOS SERVICE (CON TODAS LAS FUNCIONES)
+// TURNOS SERVICE
 // ============================================
 
 export const turnosService = {
@@ -164,14 +164,9 @@ export const turnosService = {
     }
   },
 
-  // ============================================
-  // CANCELAR TURNO
-  // ============================================
-
   cancelarTurno: async (turnoId: string, motivo: string) => {
     try {
       const token = localStorage.getItem('token');
-      // 👈 CAMBIAR de PATCH a POST
       const response = await axios.post(
         `${API_URL}/turnos/${turnoId}/cancelar`,
         { motivo },
@@ -184,7 +179,6 @@ export const turnosService = {
     }
   },
 
-  // 👈 NUEVA FUNCIÓN: Obtener detalle de un turno específico
   getTurnoDetalle: async (turnoId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -216,7 +210,6 @@ export const turnosService = {
     return turnosService.getHistorialTurnos(page, limit);
   },
 
-    // Obtener tiempo restante de sesión
   getTiempoSesion: async (turnoId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -230,7 +223,6 @@ export const turnosService = {
     }
   },
 
-  // Solicitar extensión de hora
   solicitarExtension: async (turnoId: string, horasExtra: number) => {
     try {
       const token = localStorage.getItem('token');
@@ -320,6 +312,19 @@ export const turnosService = {
       return response.data;
     } catch (error) {
       console.error('Error al contar cancelaciones:', error);
+      throw error;
+    }
+  },
+
+  getHorariosOcupados: async (guiaId: string, fecha: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/turnos/horarios-ocupados/${guiaId}/${fecha}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener horarios ocupados:', error);
       throw error;
     }
   },

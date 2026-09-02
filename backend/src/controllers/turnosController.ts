@@ -1812,3 +1812,79 @@ export const solicitarExtension = async (req: AuthRequest, res: Response): Promi
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+/// ============================================
+// OBTENER HORARIOS OCUPADOS DEL GUÍA
+// ============================================
+
+export const getHorariosOcupados = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    const { guiaId, fecha } = req.params;
+
+    console.log('🔍 getHorariosOcupados - usuarioId:', usuarioId);
+    console.log('🔍 getHorariosOcupados - guiaId:', guiaId);
+    console.log('🔍 getHorariosOcupados - fecha:', fecha);
+
+    if (!usuarioId) {
+      res.status(401).json({ error: 'No autenticado' });
+      return;
+    }
+
+    // Si no se pasa guiaId, obtener el guía del usuario
+    let guiaIdFinal = guiaId;
+    if (!guiaIdFinal || guiaIdFinal === 'mi-guia') {
+      const guiaQuery = await pool.query(
+        `SELECT guia_id FROM turnos 
+         WHERE usuario_id = $1 AND guia_id IS NOT NULL
+         ORDER BY created_at DESC LIMIT 1`,
+        [usuarioId]
+      );
+      
+      if (guiaQuery.rows.length === 0) {
+        res.json({ horarios: [] });
+        return;
+      }
+      guiaIdFinal = guiaQuery.rows[0].guia_id;
+    }
+
+    // Obtener turnos del guía en la fecha seleccionada
+    const query = `
+      SELECT 
+        fecha_programada,
+        duracion_minutos,
+        estado
+      FROM turnos 
+      WHERE guia_id = $1 
+        AND DATE(fecha_programada) = $2
+        AND estado IN ('pendiente', 'aceptado', 'iniciado')
+      ORDER BY fecha_programada ASC
+    `;
+
+    const result = await pool.query(query, [guiaIdFinal, fecha]);
+
+    // Formatear horarios ocupados
+    const horariosOcupados = result.rows.map((turno: any) => {
+      const inicio = new Date(turno.fecha_programada);
+      const fin = new Date(inicio.getTime() + (turno.duracion_minutos || 60) * 60000);
+      return {
+        inicio: inicio.toISOString(),
+        fin: fin.toISOString(),
+        estado: turno.estado
+      };
+    });
+
+    res.json({
+      guiaId: guiaIdFinal,
+      fecha,
+      horarios: horariosOcupados
+    });
+
+  } catch (error) {
+    console.error('❌ Error al obtener horarios ocupados:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
