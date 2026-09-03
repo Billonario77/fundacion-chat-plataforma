@@ -14,7 +14,8 @@ import {
   obtenerEntidades,
   obtenerResumenEntidad,
   asignarUsuarioAEntidad,
-  marcarUsuarioExento
+  marcarUsuarioExento,
+  obtenerCupones
 } from '../controllers/cobrosController';
 
 const router = Router();
@@ -66,6 +67,9 @@ router.post('/usuarios/marcar-exento', authenticateToken, isAdmin, marcarUsuario
 
 // Crear cupón (solo admin)
 router.post('/cupones', authenticateToken, isAdmin, crearCupon);
+
+// Obtener todos los cupones (solo admin)
+router.get('/cupones', authenticateToken, isAdmin, obtenerCupones);
 
 // Validar cupón
 router.get('/cupones/validar/:codigo', authenticateToken, validarCupon);

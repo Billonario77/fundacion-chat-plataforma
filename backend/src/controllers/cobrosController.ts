@@ -471,3 +471,29 @@ export const marcarUsuarioExento = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: error.message || 'Error al marcar usuario exento' });
   }
 };
+
+// ============================================
+// OBTENER TODOS LOS CUPONES (Admin)
+// ============================================
+export const obtenerCupones = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden ver cupones' });
+    }
+
+    const query = `
+      SELECT * FROM cupones 
+      ORDER BY created_at DESC
+    `;
+    const result = await pool.query(query);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener cupones:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener cupones' });
+  }
+};
