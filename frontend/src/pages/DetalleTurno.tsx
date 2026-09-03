@@ -21,6 +21,8 @@ const DetalleTurno: React.FC = () => {
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
   const [tiempoRestante, setTiempoRestante] = useState(0);
   const [duracionTotal] = useState(60);
+  const [advertencia5minMostrada, setAdvertencia5minMostrada] = useState(false);
+  const [tiempoAgotadoMostrado, setTiempoAgotadoMostrado] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -74,6 +76,10 @@ const DetalleTurno: React.FC = () => {
   useEffect(() => {
     if (!turno || turno.estado !== 'iniciado') return;
 
+    // Reiniciar estados de advertencia cuando el turno cambia
+      setAdvertencia5minMostrada(false);
+      setTiempoAgotadoMostrado(false);
+
     let intervalo: NodeJS.Timeout;
 
     const actualizarTiempo = async () => {
@@ -119,7 +125,8 @@ const DetalleTurno: React.FC = () => {
         if (barraProgresoEl) barraProgresoEl.style.width = `${porcentajeFinal}%`;
         if (porcentajeEl) porcentajeEl.textContent = `${Math.round(porcentajeFinal)}%`;
 
-        if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir) {
+        // Advertencia de 5 minutos (solo una vez)
+        if (tiempoRestante <= 300 && tiempoRestante > 0 && data.debeAdvertir && !advertencia5minMostrada) {
           toast('⚠️ Quedan 5 minutos de sesión.', {
             duration: 10000,
             icon: '⏰',
@@ -128,13 +135,16 @@ const DetalleTurno: React.FC = () => {
               color: '#92400e',
             }
           });
+          setAdvertencia5minMostrada(true); // ✅ Evita que se repita
         }
 
-        if (tiempoRestante <= 0) {
+        // Tiempo agotado (solo una vez)
+        if (tiempoRestante <= 0 && !tiempoAgotadoMostrado) {
           toast('⏰ Tiempo de sesión agotado.', {
             duration: 5000,
             icon: '⏰',
           });
+          setTiempoAgotadoMostrado(true); // ✅ Evita que se repita
         }
 
       } catch (error) {
