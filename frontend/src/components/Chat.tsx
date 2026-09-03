@@ -191,10 +191,10 @@ const Chat: React.FC<ChatProps> = ({ turnoId, onClose, estado, onFinalizar }) =>
   };
 
   const formatHora = (fecha: string) => {
-    return new Date(fecha).toLocaleTimeString('es-CO', {
+    const date = new Date(fecha);
+    return date.toLocaleTimeString('es-CO', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Bogota'
+      minute: '2-digit'
     });
   };
 
