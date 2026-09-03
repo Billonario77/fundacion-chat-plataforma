@@ -59,10 +59,9 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    // 👈 CORREGIDO: emisor_tipo en lugar de emisor_rol
     const insertQuery = `
-      INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido, created_at)
+      VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'America/Bogota')
       RETURNING id, created_at
     `;
 

@@ -191,7 +191,11 @@ const Chat: React.FC<ChatProps> = ({ turnoId, onClose, estado, onFinalizar }) =>
   };
 
   const formatHora = (fecha: string) => {
-    return new Date(fecha).toLocaleTimeString('es-CO', {
+    // Crear fecha en UTC y convertir a Colombia
+    const utcDate = new Date(fecha);
+    // Restar 5 horas para convertir de UTC a Colombia
+    const colombiaDate = new Date(utcDate.getTime() - (5 * 60 * 60 * 1000));
+    return colombiaDate.toLocaleTimeString('es-CO', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'America/Bogota'
