@@ -20,7 +20,7 @@ const DetalleTurno: React.FC = () => {
   const { socket, connected } = useSocket();
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
   const [tiempoRestante, setTiempoRestante] = useState(0);
-  const [duracionTotal] = useState(10);
+  const [duracionTotal] = useState(6);
   const [advertencia5minMostrada, setAdvertencia5minMostrada] = useState(false);
   const [tiempoAgotadoMostrado, setTiempoAgotadoMostrado] = useState(false);
 
