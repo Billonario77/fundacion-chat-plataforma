@@ -1,13 +1,47 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const mensajesController_1 = require("../controllers/mensajesController");
 const auth_1 = require("../middleware/auth");
+const mensajesController = __importStar(require("../controllers/mensajesController"));
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
-router.post('/enviar', mensajesController_1.enviarMensaje);
-router.get('/no-leidos', mensajesController_1.getMensajesNoLeidos);
-router.get('/turno/:turnoId', mensajesController_1.getMensajesPorTurno);
-router.patch('/turno/:turnoId/leer', mensajesController_1.marcarComoLeidos);
+router.post('/', mensajesController.enviarMensaje);
+router.get('/turno/:turnoId', mensajesController.getMensajesPorTurno);
+router.put('/turno/:turnoId/leer', mensajesController.marcarComoLeidos);
+router.get('/no-leidos', mensajesController.getMensajesNoLeidos);
+router.post('/enviar', mensajesController.enviarMensaje);
 exports.default = router;
 //# sourceMappingURL=mensajesRoutes.js.map

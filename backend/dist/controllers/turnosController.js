@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelarReprogramacion = exports.getMisReprogramaciones = exports.reprogramarTurno = exports.completarMisDatos = exports.actualizarFotoPerfil = exports.getMiPerfil = exports.getMiGuiaActual = exports.contarCancelacionesNoVistas = exports.marcarCancelacionesComoVistas = exports.cancelarTurno = exports.getHistorialTurnos = exports.misSolicitudes = exports.obtenerTurnoPorId = exports.actualizarEstadoTurno = exports.misTurnos = exports.solicitarApoyo = void 0;
+exports.getHorariosOcupados = exports.solicitarExtension = exports.getTiempoSesion = exports.getHistorialAdmin = exports.obtenerMetricasCancelaciones = exports.obtenerCancelacionesAdmin = exports.cancelarReprogramacion = exports.getMisReprogramaciones = exports.reprogramarTurno = exports.completarMisDatos = exports.actualizarMiFoto = exports.getMiPerfil = exports.getMiGuiaActual = exports.contarCancelacionesNoVistas = exports.marcarCancelacionesComoVistas = exports.cancelarTurno = exports.getHistorialTurnos = exports.misSolicitudes = exports.obtenerTurnoPorId = exports.actualizarEstadoTurno = exports.misTurnos = exports.solicitarApoyo = void 0;
 const connection_1 = require("../database/connection");
 const socketService_1 = require("../services/socketService");
 const socketService_2 = require("../services/socketService");
@@ -419,6 +419,7 @@ const misSolicitudes = async (req, res) => {
         t.created_at,
         t.motivo_cancelacion,
         t.cancelado_por,
+        t.guia_id,
         g.nombre as guia_nombre,
         g.email as guia_email
       FROM turnos t
@@ -793,8 +794,11 @@ const getMiGuiaActual = async (req, res) => {
 exports.getMiGuiaActual = getMiGuiaActual;
 const getMiPerfil = async (req, res) => {
     try {
+        console.log('🔍 getMiPerfil - req.user:', req.user);
+        console.log('🔍 getMiPerfil - headers:', req.headers.authorization);
         const usuarioId = req.user?.id;
         if (!usuarioId) {
+            console.log('❌ No hay usuarioId en req.user');
             res.status(401).json({ error: 'No autenticado' });
             return;
         }
@@ -808,20 +812,25 @@ const getMiPerfil = async (req, res) => {
             res.status(404).json({ error: 'Usuario no encontrado' });
             return;
         }
+        console.log('✅ Perfil encontrado:', result.rows[0]);
         res.json(result.rows[0]);
     }
     catch (error) {
-        console.error('Error al obtener perfil:', error);
+        console.error('❌ Error al obtener perfil:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
 exports.getMiPerfil = getMiPerfil;
-const actualizarFotoPerfil = async (req, res) => {
+const actualizarMiFoto = async (req, res) => {
     try {
         const usuarioId = req.user?.id;
         const { foto_perfil } = req.body;
         if (!usuarioId) {
             res.status(401).json({ error: 'No autenticado' });
+            return;
+        }
+        if (!foto_perfil) {
+            res.status(400).json({ error: 'La foto es requerida' });
             return;
         }
         const query = `
@@ -835,14 +844,17 @@ const actualizarFotoPerfil = async (req, res) => {
             res.status(404).json({ error: 'Usuario no encontrado' });
             return;
         }
-        res.json({ message: 'Foto actualizada correctamente', foto_perfil: result.rows[0].foto_perfil });
+        res.json({
+            message: 'Foto actualizada correctamente',
+            foto_perfil: result.rows[0].foto_perfil
+        });
     }
     catch (error) {
         console.error('Error al actualizar foto:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
-exports.actualizarFotoPerfil = actualizarFotoPerfil;
+exports.actualizarMiFoto = actualizarMiFoto;
 const completarMisDatos = async (req, res) => {
     try {
         const userId = req.user?.id;
@@ -1061,4 +1073,418 @@ const cancelarReprogramacion = async (req, res) => {
     }
 };
 exports.cancelarReprogramacion = cancelarReprogramacion;
+const obtenerCancelacionesAdmin = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            res.status(403).json({ error: 'Acceso solo para administradores' });
+            return;
+        }
+        const { fecha_desde, fecha_hasta, cancelado_por, guia_id, usuario_id, page = 1, limit = 20 } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+        let whereConditions = [];
+        let params = [];
+        let paramIndex = 1;
+        if (fecha_desde) {
+            whereConditions.push(`t.created_at >= $${paramIndex}`);
+            params.push(fecha_desde);
+            paramIndex++;
+        }
+        if (fecha_hasta) {
+            whereConditions.push(`t.created_at <= $${paramIndex}`);
+            params.push(fecha_hasta);
+            paramIndex++;
+        }
+        if (cancelado_por && ['usuario', 'guia', 'admin'].includes(cancelado_por)) {
+            whereConditions.push(`t.cancelado_por = $${paramIndex}`);
+            params.push(cancelado_por);
+            paramIndex++;
+        }
+        if (guia_id) {
+            whereConditions.push(`t.guia_id = $${paramIndex}`);
+            params.push(guia_id);
+            paramIndex++;
+        }
+        if (usuario_id) {
+            whereConditions.push(`t.usuario_id = $${paramIndex}`);
+            params.push(usuario_id);
+            paramIndex++;
+        }
+        const whereClause = whereConditions.length > 0
+            ? `WHERE t.estado = 'cancelado' AND ${whereConditions.join(' AND ')}`
+            : `WHERE t.estado = 'cancelado'`;
+        const query = `
+      SELECT 
+        t.id,
+        t.created_at as fecha_cancelacion,
+        t.fecha_programada,
+        t.motivo_cancelacion,
+        t.cancelado_por,
+        u.id as usuario_id,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.id as guia_id,
+        g.nombre as guia_nombre,
+        g.email as guia_email
+      FROM turnos t
+      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      ${whereClause}
+      ORDER BY t.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+        const countQuery = `
+      SELECT COUNT(*) as total
+      FROM turnos t
+      ${whereClause}
+    `;
+        const paramsConPaginacion = [...params, Number(limit), offset];
+        const [result, countResult] = await Promise.all([
+            connection_1.pool.query(query, paramsConPaginacion),
+            connection_1.pool.query(countQuery, params)
+        ]);
+        res.json({
+            data: result.rows,
+            pagination: {
+                currentPage: Number(page),
+                totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
+                totalItems: Number(countResult.rows[0].total),
+                itemsPerPage: Number(limit)
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener cancelaciones:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.obtenerCancelacionesAdmin = obtenerCancelacionesAdmin;
+const obtenerMetricasCancelaciones = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            res.status(403).json({ error: 'Acceso solo para administradores' });
+            return;
+        }
+        const totalResult = await connection_1.pool.query(`
+      SELECT COUNT(*) as total FROM turnos WHERE estado = 'cancelado'
+    `);
+        const porRolResult = await connection_1.pool.query(`
+      SELECT cancelado_por, COUNT(*) as count 
+      FROM turnos 
+      WHERE estado = 'cancelado' 
+      GROUP BY cancelado_por
+    `);
+        const topGuiasResult = await connection_1.pool.query(`
+      SELECT g.nombre, COUNT(*) as count
+      FROM turnos t
+      JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'guia'
+      GROUP BY g.id, g.nombre
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+        const topUsuariosResult = await connection_1.pool.query(`
+      SELECT u.nombre, COUNT(*) as count
+      FROM turnos t
+      JOIN usuarios u ON t.usuario_id = u.id
+      WHERE t.estado = 'cancelado' AND t.cancelado_por = 'usuario'
+      GROUP BY u.id, u.nombre
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+        res.json({
+            total: parseInt(totalResult.rows[0].total),
+            porRol: porRolResult.rows,
+            topGuias: topGuiasResult.rows,
+            topUsuarios: topUsuariosResult.rows
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener métricas:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.obtenerMetricasCancelaciones = obtenerMetricasCancelaciones;
+const getHistorialAdmin = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            res.status(403).json({ error: 'Acceso solo para administradores' });
+            return;
+        }
+        const { fecha_desde, fecha_hasta, estado, usuario_id, guia_id, page = 1, limit = 20 } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+        let whereConditions = [];
+        let params = [];
+        let paramIndex = 1;
+        if (fecha_desde) {
+            whereConditions.push(`t.fecha_programada >= $${paramIndex}`);
+            params.push(fecha_desde);
+            paramIndex++;
+        }
+        if (fecha_hasta) {
+            whereConditions.push(`t.fecha_programada <= $${paramIndex}`);
+            params.push(fecha_hasta);
+            paramIndex++;
+        }
+        if (estado) {
+            if (estado === 'reprogramado') {
+                whereConditions.push(`t.es_reprogramacion = true`);
+            }
+            else {
+                whereConditions.push(`t.estado = $${paramIndex}`);
+                params.push(estado);
+                paramIndex++;
+            }
+        }
+        if (usuario_id) {
+            whereConditions.push(`t.usuario_id = $${paramIndex}`);
+            params.push(usuario_id);
+            paramIndex++;
+        }
+        if (guia_id) {
+            whereConditions.push(`t.guia_id = $${paramIndex}`);
+            params.push(guia_id);
+            paramIndex++;
+        }
+        const whereClause = whereConditions.length > 0
+            ? `WHERE ${whereConditions.join(' AND ')}`
+            : '';
+        const query = `
+      SELECT 
+        t.id,
+        t.fecha_programada,
+        t.estado,
+        t.modalidad,
+        t.created_at,
+        t.motivo_cancelacion,
+        t.cancelado_por,
+        t.es_reprogramacion,
+        u.id as usuario_id,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.id as guia_id,
+        g.nombre as guia_nombre,
+        g.email as guia_email
+      FROM turnos t
+      LEFT JOIN usuarios u ON t.usuario_id = u.id
+      LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
+      ${whereClause}
+      ORDER BY t.fecha_programada DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+        const countQuery = `
+      SELECT COUNT(*) as total
+      FROM turnos t
+      ${whereClause}
+    `;
+        const paramsConPaginacion = [...params, Number(limit), offset];
+        const [result, countResult] = await Promise.all([
+            connection_1.pool.query(query, paramsConPaginacion),
+            connection_1.pool.query(countQuery, params)
+        ]);
+        res.json({
+            data: result.rows,
+            pagination: {
+                currentPage: Number(page),
+                totalPages: Math.ceil(Number(countResult.rows[0].total) / Number(limit)),
+                totalItems: Number(countResult.rows[0].total),
+                itemsPerPage: Number(limit)
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener historial para admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.getHistorialAdmin = getHistorialAdmin;
+const getTiempoSesion = async (req, res) => {
+    try {
+        const usuarioId = req.user?.id;
+        const { turnoId } = req.params;
+        if (!usuarioId) {
+            res.status(401).json({ error: 'No autenticado' });
+            return;
+        }
+        const result = await connection_1.pool.query(`SELECT 
+        id, 
+        hora_inicio,
+        -- Convertir hora_inicio a Colombia (UTC-5)
+        (hora_inicio - INTERVAL '5 hours') as hora_inicio_colombia,
+        duracion_solicitada,
+        estado,
+        advertencia_5min_enviada
+       FROM turnos 
+       WHERE id = $1 AND (usuario_id = $2 OR guia_id = $2)`, [turnoId, usuarioId]);
+        if (result.rows.length === 0) {
+            res.status(404).json({ error: 'Turno no encontrado' });
+            return;
+        }
+        const turno = result.rows[0];
+        if (turno.estado !== 'iniciado') {
+            res.json({
+                tiempoRestante: null,
+                estado: turno.estado,
+                mensaje: 'La sesión no está activa'
+            });
+            return;
+        }
+        if (!turno.hora_inicio) {
+            res.json({
+                tiempoRestante: null,
+                estado: turno.estado,
+                mensaje: 'La sesión no ha iniciado'
+            });
+            return;
+        }
+        const horaInicioColombia = new Date(turno.hora_inicio_colombia);
+        const ahora = new Date();
+        const duracionTotal = turno.duracion_solicitada || 6;
+        const tiempoTotalSegundos = duracionTotal * 60;
+        let transcurrido = Math.floor((ahora.getTime() - horaInicioColombia.getTime()) / 1000);
+        if (transcurrido < 0)
+            transcurrido = 0;
+        let tiempoRestante = tiempoTotalSegundos - transcurrido;
+        if (tiempoRestante < 0)
+            tiempoRestante = 0;
+        console.log('📊 getTiempoSesion:');
+        console.log('   hora_inicio (BD):', turno.hora_inicio);
+        console.log('   hora_inicio_colombia:', turno.hora_inicio_colombia);
+        console.log('   ahora:', ahora);
+        console.log('   transcurrido:', transcurrido);
+        console.log('   tiempoRestante:', tiempoRestante);
+        const debeAdvertir = tiempoRestante <= 300 && tiempoRestante > 0 && !turno.advertencia_5min_enviada;
+        if (debeAdvertir) {
+            await connection_1.pool.query(`UPDATE turnos SET advertencia_5min_enviada = true WHERE id = $1`, [turnoId]);
+        }
+        res.json({
+            tiempoRestante,
+            tiempoTranscurrido: transcurrido,
+            duracionTotal,
+            debeAdvertir,
+            advertenciaEnviada: turno.advertencia_5min_enviada,
+            estado: turno.estado
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener tiempo de sesión:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.getTiempoSesion = getTiempoSesion;
+const solicitarExtension = async (req, res) => {
+    try {
+        const usuarioId = req.user?.id;
+        const { turnoId } = req.params;
+        const { horasExtra } = req.body;
+        if (!usuarioId) {
+            res.status(401).json({ error: 'No autenticado' });
+            return;
+        }
+        if (req.user?.rol !== 'usuario') {
+            res.status(403).json({ error: 'Solo los usuarios pueden solicitar extensión' });
+            return;
+        }
+        if (!horasExtra || horasExtra < 1) {
+            res.status(400).json({ error: 'Debes solicitar al menos 1 hora extra' });
+            return;
+        }
+        const turnoResult = await connection_1.pool.query(`SELECT * FROM turnos WHERE id = $1 AND usuario_id = $2 AND estado = 'iniciado'`, [turnoId, usuarioId]);
+        if (turnoResult.rows.length === 0) {
+            res.status(404).json({ error: 'Turno no encontrado o no está en curso' });
+            return;
+        }
+        const turno = turnoResult.rows[0];
+        const nuevaDuracion = (turno.duracion_solicitada || 60) + (horasExtra * 60);
+        const disponibilidadResult = await connection_1.pool.query(`SELECT id FROM turnos 
+       WHERE guia_id = $1 
+       AND id != $2
+       AND estado IN ('pendiente', 'aceptado', 'iniciado')
+       AND fecha_programada > NOW()
+       AND fecha_programada < NOW() + INTERVAL '${nuevaDuracion} minutes'`, [turno.guia_id, turnoId]);
+        if (disponibilidadResult.rows.length > 0) {
+            res.status(409).json({
+                error: 'El guía no tiene disponibilidad para extender la sesión',
+                conflictos: disponibilidadResult.rows
+            });
+            return;
+        }
+        await connection_1.pool.query(`UPDATE turnos 
+       SET duracion_solicitada = $1, 
+           extension_solicitada = true 
+       WHERE id = $2`, [nuevaDuracion, turnoId]);
+        (0, socketService_1.notificarUsuario)(turno.guia_id, 'extension-solicitada', {
+            turnoId: turnoId,
+            usuarioId: usuarioId,
+            horasExtra: horasExtra,
+            nuevaDuracion: nuevaDuracion
+        });
+        res.json({
+            message: `Sesión extendida ${horasExtra} hora(s)`,
+            nuevaDuracion: nuevaDuracion
+        });
+    }
+    catch (error) {
+        console.error('Error al solicitar extensión:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.solicitarExtension = solicitarExtension;
+const getHorariosOcupados = async (req, res) => {
+    try {
+        const usuarioId = req.user?.id;
+        const { guiaId, fecha } = req.params;
+        console.log('🔍 getHorariosOcupados - usuarioId:', usuarioId);
+        console.log('🔍 getHorariosOcupados - guiaId:', guiaId);
+        console.log('🔍 getHorariosOcupados - fecha:', fecha);
+        if (!usuarioId) {
+            res.status(401).json({ error: 'No autenticado' });
+            return;
+        }
+        let guiaIdFinal = guiaId;
+        if (!guiaIdFinal || guiaIdFinal === 'mi-guia') {
+            const guiaQuery = await connection_1.pool.query(`SELECT guia_id FROM turnos 
+         WHERE usuario_id = $1 AND guia_id IS NOT NULL
+         ORDER BY created_at DESC LIMIT 1`, [usuarioId]);
+            if (guiaQuery.rows.length === 0) {
+                res.json({ horarios: [] });
+                return;
+            }
+            guiaIdFinal = guiaQuery.rows[0].guia_id;
+        }
+        const query = `
+      SELECT 
+        fecha_programada,
+        duracion_minutos,
+        estado
+      FROM turnos 
+      WHERE guia_id = $1 
+        AND DATE(fecha_programada) = $2
+        AND estado IN ('pendiente', 'aceptado', 'iniciado')
+      ORDER BY fecha_programada ASC
+    `;
+        const result = await connection_1.pool.query(query, [guiaIdFinal, fecha]);
+        const horariosOcupados = result.rows.map((turno) => {
+            const inicio = new Date(turno.fecha_programada);
+            const fin = new Date(inicio.getTime() + (turno.duracion_minutos || 60) * 60000);
+            return {
+                inicio: inicio.toISOString(),
+                fin: fin.toISOString(),
+                estado: turno.estado
+            };
+        });
+        res.json({
+            guiaId: guiaIdFinal,
+            fecha,
+            horarios: horariosOcupados
+        });
+    }
+    catch (error) {
+        console.error('❌ Error al obtener horarios ocupados:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: error instanceof Error ? error.message : 'Error desconocido'
+        });
+    }
+};
+exports.getHorariosOcupados = getHorariosOcupados;
 //# sourceMappingURL=turnosController.js.map

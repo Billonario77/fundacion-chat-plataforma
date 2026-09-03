@@ -1,57 +1,69 @@
-// backend/src/middleware/auth.ts
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
+// ✅ INTERFAZ PARA REQUEST CON USUARIO
 export interface AuthRequest extends Request {
-    user?: {
-        id: string;
-        rol: 'usuario' | 'guia' | 'admin';
-        email: string;
-    };
+  user?: {
+    id: string;
+    email: string;
+    rol: string;
+    nombre?: string;
+  } & JwtPayload;
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['authorization'];
-    console.log('Auth header recibido:', authHeader);
-    const token = authHeader && authHeader.split(' ')[1];
+// ============================================
+// AUTENTICACIÓN
+// ============================================
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-        return res.status(401).json({ error: 'Token no proporcionado' });
-    }
+  if (!token) {
+    res.status(401).json({ error: 'Token no proporcionado' });
+    return;
+  }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
-        req.user = {
-            id: decoded.id,
-            rol: decoded.rol,
-            email: decoded.email
-        };
-        next();
-    } catch (error) {
-        return res.status(403).json({ error: 'Token inválido' });
-    }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    (req as any).user = decoded;
+    next();
+  } catch (error) {
+    res.status(403).json({ error: 'Token inválido o expirado' });
+    return;
+  }
 };
 
-export const requireGuia = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'No autenticado' });
-    }
-    
-    if (req.user.rol !== 'guia' && req.user.rol !== 'admin') {
-        return res.status(403).json({ error: 'Acceso solo para guías' });
-    }
-    
-    next();
+// ============================================
+// VERIFICAR ROL DE GUÍA
+// ============================================
+export const requireGuia = (req: Request, res: Response, next: NextFunction): void => {
+  const user = (req as any).user;
+
+  if (!user) {
+    res.status(401).json({ error: 'Usuario no autenticado' });
+    return;
+  }
+
+  if (user.rol !== 'guia') {
+    res.status(403).json({ error: 'Acceso denegado. Se requiere rol de guía.' });
+    return;
+  }
+
+  next();
 };
 
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'No autenticado' });
-    }
-    
-    if (req.user.rol !== 'admin') {
-        return res.status(403).json({ error: 'Acceso solo para administradores' });
-    }
-    
-    next();
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  const user = (req as any).user;
+
+  if (!user) {
+    res.status(401).json({ error: 'Usuario no autenticado' });
+    return;
+  }
+
+  if (user.rol !== 'admin') {
+    res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+    return;
+  }
+
+  next();
 };

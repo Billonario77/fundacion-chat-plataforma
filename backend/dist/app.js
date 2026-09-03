@@ -24,11 +24,13 @@ const agoraRoutes_1 = __importDefault(require("./routes/agoraRoutes"));
 const emergenciaRoutes_1 = __importDefault(require("./routes/emergenciaRoutes"));
 const grabacionRoutes_1 = __importDefault(require("./routes/grabacionRoutes"));
 const recuperacionRoutes_1 = __importDefault(require("./routes/recuperacionRoutes"));
+const cobrosRoutes_1 = __importDefault(require("./routes/cobrosRoutes"));
 process.env.TZ = 'America/Bogota';
 console.log('🕐 Zona horaria configurada:', process.env.TZ);
 console.log('🕐 Hora en backend:', new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
 console.log('🕐 Hora actual:', new Date().toString());
-dotenv_1.default.config();
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv_1.default.config({ path: '.env.production' });
 console.log('🔍 FRONTEND_URL desde env:', process.env.FRONTEND_URL);
 console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
 const app = (0, express_1.default)();
@@ -38,38 +40,47 @@ app.set('etag', false);
 const server = http_1.default.createServer(app);
 exports.server = server;
 const allowedOrigins = [
-    'http://localhost:5173',
     'http://localhost:3000',
-    'http://192.168.3.44:3000'
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://192.168.3.44:3000',
+    'https://fundacion-chat-frontend-api.netlify.app',
+    'https://fundacion-chat-frontend-api.netlify.app/',
+    'https://fundacion-chat-frontend-api.netlify.app//',
+    'https://fundacion-chat-frontend-api.netlify.app./',
 ];
 if (process.env.FRONTEND_URL) {
-    console.log('✅ Agregando FRONTEND_URL a allowedOrigins:', process.env.FRONTEND_URL);
+    console.log('✅ Agregando FRONTEND_URL:', process.env.FRONTEND_URL);
     allowedOrigins.push(process.env.FRONTEND_URL);
+    const sinSlash = process.env.FRONTEND_URL.replace(/\/$/, '');
+    if (!allowedOrigins.includes(sinSlash)) {
+        allowedOrigins.push(sinSlash);
+    }
 }
-else {
-    console.warn('⚠️ FRONTEND_URL no está definida en el entorno');
-}
-const netlifyUrl = 'https://fundacion-chat-frontend-api.netlify.app';
-if (!allowedOrigins.includes(netlifyUrl)) {
-    console.log('✅ Agregando URL de Netlify como fallback:', netlifyUrl);
-    allowedOrigins.push(netlifyUrl);
-}
-console.log('📋 Orígenes permitidos finales:', allowedOrigins);
+console.log('📋 Orígenes permitidos FINALES:', allowedOrigins);
 const corsOptions = {
     origin: function (origin, callback) {
         if (!origin) {
             return callback(null, true);
         }
-        if (allowedOrigins.includes(origin)) {
+        const originSinSlash = origin.replace(/\/$/, '');
+        const originConSlash = origin + '/';
+        const originConDobleSlash = origin + '//';
+        const permitido = allowedOrigins.includes(origin) ||
+            allowedOrigins.includes(originSinSlash) ||
+            allowedOrigins.includes(originConSlash) ||
+            allowedOrigins.includes(originConDobleSlash);
+        if (permitido) {
             console.log(`✅ CORS permitido para: ${origin}`);
             return callback(null, true);
         }
         if (process.env.NODE_ENV === 'development') {
-            console.warn(`⚠️ CORS en desarrollo: permitiendo ${origin} aunque no esté en la lista`);
+            console.warn(`⚠️ CORS en desarrollo: permitiendo ${origin}`);
             return callback(null, true);
         }
         console.error(`❌ CORS bloqueado para: ${origin}`);
-        console.error(`📋 Orígenes permitidos:`, allowedOrigins);
+        console.error(`📋 Lista de orígenes permitidos:`, allowedOrigins);
         return callback(new Error(`Origen ${origin} no permitido por CORS`));
     },
     credentials: true,
@@ -103,7 +114,10 @@ const io = new socket_io_1.Server(server, {
             if (!origin) {
                 return callback(null, true);
             }
-            if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+            const originSinSlash = origin.replace(/\/$/, '');
+            const permitido = allowedOrigins.includes(origin) ||
+                allowedOrigins.includes(originSinSlash);
+            if (permitido || process.env.NODE_ENV === 'development') {
                 console.log(`✅ Socket.IO CORS permitido para: ${origin}`);
                 return callback(null, true);
             }
@@ -151,6 +165,7 @@ app.use('/api/agora', agoraRoutes_1.default);
 app.use('/api/emergencia', emergenciaRoutes_1.default);
 app.use('/api/grabacion', grabacionRoutes_1.default);
 app.use('/api/recuperacion', recuperacionRoutes_1.default);
+app.use('/api/cobros', cobrosRoutes_1.default);
 app.get('/health', (req, res) => {
     const currentAllowedOrigins = allowedOrigins;
     res.status(200).json({

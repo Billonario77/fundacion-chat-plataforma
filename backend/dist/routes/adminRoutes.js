@@ -37,6 +37,12 @@ const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const adminController = __importStar(require("../controllers/adminController"));
 const router = (0, express_1.Router)();
+router.get('/mi-carga-guia', auth_1.authenticateToken, (req, res, next) => {
+    if (req.user?.rol !== 'guia') {
+        return res.status(403).json({ error: 'Acceso solo para guías' });
+    }
+    next();
+}, adminController.getMiCarga);
 router.use(auth_1.authenticateToken);
 router.use(auth_1.requireAdmin);
 router.get('/guias-disponibles', adminController.getGuiasDisponibles);

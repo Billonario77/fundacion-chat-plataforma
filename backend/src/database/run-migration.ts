@@ -1,9 +1,7 @@
-import { Pool } from 'pg';
-import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config();
+const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: '.env.production' }); // ✅ Cargar .env.production
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

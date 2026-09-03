@@ -8,12 +8,21 @@ const enviarMensaje = async (req, res) => {
         const emisorId = req.user?.id;
         const emisorrol = req.user?.rol;
         const { turnoId, contenido } = req.body;
+        console.log('📨 enviarMensaje - body:', req.body);
+        console.log('📨 turnoId:', turnoId);
+        console.log('📨 contenido:', contenido);
+        console.log('📨 emisorId:', emisorId);
+        console.log('📨 emisorrol:', emisorrol);
         if (!emisorId || !emisorrol) {
             res.status(401).json({ error: 'No autenticado' });
             return;
         }
         if (!contenido || contenido.trim() === '') {
             res.status(400).json({ error: 'El mensaje no puede estar vacío' });
+            return;
+        }
+        if (!turnoId) {
+            res.status(400).json({ error: 'Turno ID es requerido' });
             return;
         }
         let turnoQuery = '';
@@ -27,7 +36,7 @@ const enviarMensaje = async (req, res) => {
             turnoParams = [turnoId, emisorId];
         }
         else {
-            res.status(403).json({ error: 'rol de usuario no autorizado para enviar mensajes' });
+            res.status(403).json({ error: 'Rol de usuario no autorizado para enviar mensajes' });
             return;
         }
         const turnoResult = await connection_1.pool.query(turnoQuery, turnoParams);
@@ -42,15 +51,15 @@ const enviarMensaje = async (req, res) => {
             return;
         }
         const insertQuery = `
-      INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido, created_at)
+      VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'America/Bogota')
       RETURNING id, created_at
     `;
         const result = await connection_1.pool.query(insertQuery, [turnoId, emisorId, emisorrol, contenido]);
         const mensajeId = result.rows[0].id;
         const mensajeQuery = `
       SELECT 
-        id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
+        id, turno_id, emisor_id, emisor_tipo as emisor_rol, contenido, leido, created_at
       FROM mensajes
       WHERE id = $1
     `;
@@ -63,7 +72,7 @@ const enviarMensaje = async (req, res) => {
         res.status(201).json(mensaje);
     }
     catch (error) {
-        console.error('Error al enviar mensaje:', error);
+        console.error('❌ Error al enviar mensaje:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
@@ -98,7 +107,7 @@ const getMensajesPorTurno = async (req, res) => {
         }
         const mensajesQuery = `
       SELECT 
-        id, turno_id, emisor_id, emisor_rol, contenido, leido, created_at
+        id, turno_id, emisor_id, emisor_tipo as emisor_rol, contenido, leido, created_at
       FROM mensajes
       WHERE turno_id = $1
       ORDER BY created_at ASC
@@ -113,7 +122,7 @@ const getMensajesPorTurno = async (req, res) => {
         res.json(mensajesResult.rows);
     }
     catch (error) {
-        console.error('Error al obtener mensajes:', error);
+        console.error('❌ Error al obtener mensajes:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
@@ -163,7 +172,7 @@ const marcarComoLeidos = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error al marcar mensajes:', error);
+        console.error('❌ Error al marcar mensajes:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
@@ -177,7 +186,7 @@ const getMensajesNoLeidos = async (req, res) => {
             return;
         }
         let query = '';
-        if (rol === 'guia') {
+        if (rol === 'guia' || rol === 'admin') {
             query = `
         SELECT 
           m.turno_id,
@@ -217,7 +226,7 @@ const getMensajesNoLeidos = async (req, res) => {
         res.json({ noLeidos });
     }
     catch (error) {
-        console.error('Error al obtener mensajes no leídos:', error);
+        console.error('❌ Error al obtener mensajes no leídos:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };

@@ -19,6 +19,7 @@ import agoraRoutes from './routes/agoraRoutes';
 import emergenciaRoutes from './routes/emergenciaRoutes';
 import grabacionRoutes from './routes/grabacionRoutes';
 import recuperacionRoutes from './routes/recuperacionRoutes';
+import cobrosRoutes from './routes/cobrosRoutes';
 
 
 // Configurar zona horaria para toda la aplicación
@@ -27,7 +28,8 @@ console.log('🕐 Zona horaria configurada:', process.env.TZ);
 console.log('🕐 Hora en backend:', new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
 console.log('🕐 Hora actual:', new Date().toString());
 
-dotenv.config();
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: '.env.production' });
 
 // Después de dotenv.config();
 console.log('🔍 FRONTEND_URL desde env:', process.env.FRONTEND_URL);
@@ -218,6 +220,7 @@ app.use('/api/agora', agoraRoutes);
 app.use('/api/emergencia', emergenciaRoutes);
 app.use('/api/grabacion', grabacionRoutes);
 app.use('/api/recuperacion', recuperacionRoutes);
+app.use('/api/cobros', cobrosRoutes);
 
 // ============================================
 // RUTAS PÚBLICAS

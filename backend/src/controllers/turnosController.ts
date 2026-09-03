@@ -1692,7 +1692,7 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
     // 👈 USAR LA HORA DE COLOMBIA DESDE LA CONSULTA SQL
     const horaInicioColombia = new Date(turno.hora_inicio_colombia);
     const ahora = new Date();
-    const duracionTotal = turno.duracion_solicitada || 60;
+    const duracionTotal = turno.duracion_solicitada || 6;
     const tiempoTotalSegundos = duracionTotal * 60;
     
     let transcurrido = Math.floor((ahora.getTime() - horaInicioColombia.getTime()) / 1000);

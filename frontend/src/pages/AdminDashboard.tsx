@@ -14,7 +14,10 @@ import toast from 'react-hot-toast';
 import AsignacionesGuia from '../components/AsignacionesGuia';
 import CancelacionesAdmin from '../components/CancelacionesAdmin';
 import HistorialAdmin from '../components/HistorialAdmin';
-import CargaGuias from '../components/CargaGuias'; // 👈 NUEVA IMPORTACIÓN
+import CargaGuias from '../components/CargaGuias';
+import GestionEntidades from './admin/GestionEntidades';
+import GestionCupones from './admin/GestionCupones';
+import EstadisticasCobros from './admin/EstadisticasCobros';
 import axios from 'axios';
 import Avatar from '../components/Avatar';
 import { perfilService } from '../services/turnosService';
@@ -77,7 +80,7 @@ const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { socket, connected } = useSocket();
   const navigate = useNavigate();
-  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias'>('usuarios'); // 👈 NUEVO TIPO
+  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias' | 'entidades' | 'cupones' | 'estadisticas-cobros'>('usuarios');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [pestañaAnterior, setPestañaAnterior] = useState(pestañaActiva);
   const [cambiandoPestaña, setCambiandoPestaña] = useState(false);
@@ -100,12 +103,10 @@ const AdminDashboard: React.FC = () => {
     setPestañaAnterior(pestañaActiva);
     setPestañaActiva(nuevaPestaña);
     
-    // Si vamos a la pestaña de asignación, resetear el badge
     if (nuevaPestaña === 'asignacion') {
       setHayNuevosUsuarios(false);
     }
     
-    // Pequeño delay para la animación
     setTimeout(() => {
       setCambiandoPestaña(false);
     }, 300);
@@ -128,7 +129,6 @@ const AdminDashboard: React.FC = () => {
         }
       });
       
-      // Forzar actualización después de asignar
       setTimeout(() => {
         setRefreshKey(prev => prev + 1);
       }, 2000);
@@ -156,12 +156,10 @@ const AdminDashboard: React.FC = () => {
   }
 };
 
-  // Manejadores para exportación
   const handleExportarEstadisticas = (formato: 'csv' | 'pdf') => {
     if (!estadisticasActuales) return;
 
     if (formato === 'csv') {
-      // Exportar turnos por día
       if (estadisticasActuales.turnosPorDia) {
         exportToCSV(
           estadisticasActuales.turnosPorDia.map(d => ({ fecha: d.fecha, cantidad: d.cantidad })),
@@ -169,7 +167,6 @@ const AdminDashboard: React.FC = () => {
         );
       }
       
-      // Exportar guías más activos
       if (estadisticasActuales.guiasMasActivos) {
         exportToCSV(
           estadisticasActuales.guiasMasActivos.map(g => ({ 
@@ -181,7 +178,6 @@ const AdminDashboard: React.FC = () => {
         );
       }
     } else {
-      // PDF (usando impresión)
       if (estadisticasActuales.turnosPorDia) {
         printTable(
           estadisticasActuales.turnosPorDia.map(d => ({ Fecha: d.fecha, Cantidad: d.cantidad })),
@@ -191,7 +187,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Establecer fechas por defecto (últimos 30 días)
   useEffect(() => {
     const hoy = new Date();
     const hace30Dias = new Date();
@@ -201,10 +196,6 @@ const AdminDashboard: React.FC = () => {
     setFechaInicio(hace30Dias.toISOString().split('T')[0]);
   }, []);
 
-  // ============================================
-  // ESCUCHAR EVENTOS DE SOCKET
-  // ============================================
-  
   useEffect(() => {
     if (!socket || !connected) return;
 
@@ -218,7 +209,6 @@ const AdminDashboard: React.FC = () => {
     };
   }, [socket, connected]);
 
-  // Escuchar nuevas solicitudes de reprogramación
   useEffect(() => {
     if (!socket || !connected) return;
 
@@ -248,27 +238,20 @@ const AdminDashboard: React.FC = () => {
     };
   }, [socket, connected]);
 
-
-  // Cargar foto de perfil del admin
   useEffect(() => {
     const cargarMiFoto = async () => {
       try {
         const data = await perfilService.getMiPerfil();
-        // ✅ Verificar que data existe antes de usarla
         if (data) {
           setMiFoto(data.foto_perfil);
         }
       } catch (err) {
-        // ✅ No mostrar error en consola, solo silencioso
         console.log('ℹ️ No se pudo cargar la foto de perfil');
       }
     };
     cargarMiFoto();
   }, []);
 
-  // ============================================
-  // NUEVO: Escuchar nuevos turnos para asignar
-  // ============================================
   useEffect(() => {
     if (!socket || !connected) return;
 
@@ -277,7 +260,6 @@ const AdminDashboard: React.FC = () => {
     socket.on('nuevo-turno-para-asignar', (data) => {
       console.log('🆕 Nuevo turno para asignar recibido:', data);
       
-      // Mostrar toast de notificación
       toast.success('🆕 Nuevo usuario requiere asignación', {
         duration: 6000,
         icon: '👤',
@@ -291,10 +273,8 @@ const AdminDashboard: React.FC = () => {
         }
       });
       
-      // Activar badge en la pestaña
       setHayNuevosUsuarios(true);
       
-      // Si estamos en la pestaña de asignación, forzar actualización
       if (pestañaActiva === 'asignacion') {
         setRefreshKey(prev => prev + 1);
       }
@@ -305,17 +285,15 @@ const AdminDashboard: React.FC = () => {
     };
   }, [socket, connected, pestañaActiva]);
 
-  // Cargar conteo de reprogramaciones pendientes al iniciar
-    useEffect(() => {
-      cargarConteoReprogramaciones();
-    }, []);
+  useEffect(() => {
+    cargarConteoReprogramaciones();
+  }, []);
 
-    // Cuando entramos a la pestaña de reprogramaciones, marcar como vistas
-    useEffect(() => {
-      if (pestañaActiva === 'reprogramaciones') {
-        setReprogramacionesPendientes(0);
-      }
-    }, [pestañaActiva]);
+  useEffect(() => {
+    if (pestañaActiva === 'reprogramaciones') {
+      setReprogramacionesPendientes(0);
+    }
+  }, [pestañaActiva]);
 
   if (!user || user.rol !== 'admin') {
     return <Navigate to="/" />;
@@ -335,7 +313,6 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Indicador de conexión WebSocket */}
           <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg transition-all hover:shadow-md">
             <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
             <span className="text-sm text-gray-600">
@@ -345,7 +322,6 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Mensajes de éxito/error con animación */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 animate-slideDown">
           {error}
@@ -354,234 +330,298 @@ const AdminDashboard: React.FC = () => {
       
       {/* Pestañas */}
       <div className="mb-8">
-  {/* Versión móvil: menú hamburguesa */}
-  <div className="md:hidden">
-    <button
-      onClick={() => setMenuAbierto(!menuAbierto)}
-      className="w-full bg-gray-100/80 p-3 rounded-2xl flex items-center justify-between"
-    >
-      <span className="font-medium text-primario">
-        {pestañaActiva === 'usuarios' && '👥 Usuarios'}
-        {pestañaActiva === 'asignacion' && '👤 Nuevos Usuarios'}
-        {pestañaActiva === 'reprogramaciones' && '🔄 Reprogramar'}
-        {pestañaActiva === 'asignaciones-guia' && '➡️ Asignaciones'}
-        {pestañaActiva === 'cancelaciones' && '✗ Cancelaciones'}
-        {pestañaActiva === 'historial' && '📋 Historial'}
-        {pestañaActiva === 'estadisticas' && '📊 Estadísticas'}
-        {pestañaActiva === 'carga-guias' && '📊 Carga Guías'} {/* 👈 NUEVO */}
-      </span>
-      <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
-    </button>
-    {menuAbierto && (
-      <div className="mt-2 bg-gray-100/80 rounded-2xl p-2 space-y-1">
-        <button
-          onClick={() => { cambiarPestaña('usuarios'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'usuarios' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>👥</span>
-          <span>Usuarios</span>
-        </button>
-        
-        <button
-          onClick={() => { cambiarPestaña('asignacion'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'asignacion' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>👤</span>
-          <span>Nuevos Usuarios</span>
-          {hayNuevosUsuarios && pestañaActiva !== 'asignacion' && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
-              !
+        <div className="md:hidden">
+          <button
+            onClick={() => setMenuAbierto(!menuAbierto)}
+            className="w-full bg-gray-100/80 p-3 rounded-2xl flex items-center justify-between"
+          >
+            <span className="font-medium text-primario">
+              {pestañaActiva === 'usuarios' && '👥 Usuarios'}
+              {pestañaActiva === 'asignacion' && '👤 Nuevos Usuarios'}
+              {pestañaActiva === 'reprogramaciones' && '🔄 Reprogramar'}
+              {pestañaActiva === 'asignaciones-guia' && '➡️ Asignaciones'}
+              {pestañaActiva === 'cancelaciones' && '✗ Cancelaciones'}
+              {pestañaActiva === 'historial' && '📋 Historial'}
+              {pestañaActiva === 'estadisticas' && '📊 Estadísticas'}
+              {pestañaActiva === 'carga-guias' && '📊 Carga Guías'}
+              {pestañaActiva === 'entidades' && '🏢 Entidades'}
+              {pestañaActiva === 'cupones' && '🎫 Cupones'}
+              {pestañaActiva === 'estadisticas-cobros' && '💰 Estadísticas Cobros'}
             </span>
+            <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          {menuAbierto && (
+            <div className="mt-2 bg-gray-100/80 rounded-2xl p-2 space-y-1">
+              <button
+                onClick={() => { cambiarPestaña('usuarios'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'usuarios' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>👥</span>
+                <span>Usuarios</span>
+              </button>
+              
+              <button
+                onClick={() => { cambiarPestaña('asignacion'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'asignacion' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>👤</span>
+                <span>Nuevos Usuarios</span>
+                {hayNuevosUsuarios && pestañaActiva !== 'asignacion' && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    !
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('reprogramaciones'); setMenuAbierto(false); }}
+                className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'reprogramaciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>🔄</span>
+                <span>Reprogramar</span>
+                {reprogramacionesPendientes > 0 && pestañaActiva !== 'reprogramaciones' && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    {reprogramacionesPendientes}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('asignaciones-guia'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'asignaciones-guia' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>➡️</span>
+                <span>Asignaciones</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('cancelaciones'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'cancelaciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>✗</span>
+                <span>Cancelaciones</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('historial'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'historial' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>📋</span>
+                <span>Historial</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('estadisticas'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'estadisticas' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>📊</span>
+                <span>Estadísticas</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('carga-guias'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'carga-guias' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>📊</span>
+                <span>Carga Guías</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('entidades'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'entidades' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>🏢</span>
+                <span>Entidades</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('cupones'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'cupones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>🎫</span>
+                <span>Cupones</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('estadisticas-cobros'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'estadisticas-cobros' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>💰</span>
+                <span>Estadísticas Cobros</span>
+              </button>
+            </div>
           )}
-        </button>
+        </div>
 
-        <button
-          onClick={() => { cambiarPestaña('reprogramaciones'); setMenuAbierto(false); }}
-          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'reprogramaciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>🔄</span>
-          <span>Reprogramar</span>
-          {reprogramacionesPendientes > 0 && pestañaActiva !== 'reprogramaciones' && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
-              {reprogramacionesPendientes}
-            </span>
-          )}
-        </button>
+        {/* Versión desktop */}
+        <div className="hidden md:flex flex-wrap gap-2 bg-gray-100/80 p-2 rounded-2xl">
+          <button
+            onClick={() => cambiarPestaña('usuarios')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'usuarios'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">👥</span>
+            <span>Usuarios</span>
+          </button>
 
-        <button
-          onClick={() => { cambiarPestaña('asignaciones-guia'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'asignaciones-guia' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>➡️</span>
-          <span>Asignaciones</span>
-        </button>
+          <button
+            onClick={() => cambiarPestaña('asignacion')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'asignacion'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">👤</span>
+            <span>Nuevos Usuarios</span>
+            {hayNuevosUsuarios && pestañaActiva !== 'asignacion' && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                !
+              </span>
+            )}
+          </button>
 
-        <button
-          onClick={() => { cambiarPestaña('cancelaciones'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'cancelaciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>✗</span>
-          <span>Cancelaciones</span>
-        </button>
+          <button
+            onClick={() => cambiarPestaña('reprogramaciones')}
+            className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'reprogramaciones'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">🔄</span>
+            <span>Reprogramar</span>
+            {reprogramacionesPendientes > 0 && pestañaActiva !== 'reprogramaciones' && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                {reprogramacionesPendientes}
+              </span>
+            )}
+          </button>
 
-        <button
-          onClick={() => { cambiarPestaña('historial'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'historial' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>📋</span>
-          <span>Historial</span>
-        </button>
+          <button
+            onClick={() => cambiarPestaña('asignaciones-guia')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'asignaciones-guia'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">➡️</span>
+            <span>Asignaciones</span>
+          </button>
 
-        <button
-          onClick={() => { cambiarPestaña('estadisticas'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'estadisticas' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>📊</span>
-          <span>Estadísticas</span>
-        </button>
+          <button
+            onClick={() => cambiarPestaña('cancelaciones')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'cancelaciones'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">✗</span>
+            <span>Cancelaciones</span>
+          </button>
 
-        {/* 👈 NUEVO BOTÓN PARA CARGA DE GUÍAS */}
-        <button
-          onClick={() => { cambiarPestaña('carga-guias'); setMenuAbierto(false); }}
-          className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'carga-guias' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>📊</span>
-          <span>Carga Guías</span>
-        </button>
+          <button
+            onClick={() => cambiarPestaña('historial')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'historial'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">📋</span>
+            <span>Historial</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('estadisticas')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'estadisticas'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">📊</span>
+            <span>Estadísticas</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('carga-guias')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'carga-guias'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">📊</span>
+            <span>Carga Guías</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('entidades')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'entidades'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">🏢</span>
+            <span>Entidades</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('cupones')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'cupones'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">🎫</span>
+            <span>Cupones</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('estadisticas-cobros')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'estadisticas-cobros'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">💰</span>
+            <span>Estadísticas Cobros</span>
+          </button>
+        </div>
       </div>
-    )}
-  </div>
 
-  {/* Versión desktop: pestañas horizontales */}
-  <div className="hidden md:flex flex-wrap gap-2 bg-gray-100/80 p-2 rounded-2xl">
-    <button
-      onClick={() => cambiarPestaña('usuarios')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'usuarios'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">👥</span>
-      <span>Usuarios</span>
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('asignacion')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'asignacion'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">👤</span>
-      <span>Nuevos Usuarios</span>
-      {hayNuevosUsuarios && pestañaActiva !== 'asignacion' && (
-        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-          !
-        </span>
-      )}
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('reprogramaciones')}
-      className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'reprogramaciones'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">🔄</span>
-      <span>Reprogramar</span>
-      {reprogramacionesPendientes > 0 && pestañaActiva !== 'reprogramaciones' && (
-        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-          {reprogramacionesPendientes}
-        </span>
-      )}
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('asignaciones-guia')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'asignaciones-guia'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">➡️</span>
-      <span>Asignaciones</span>
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('cancelaciones')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'cancelaciones'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">✗</span>
-      <span>Cancelaciones</span>
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('historial')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'historial'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">📋</span>
-      <span>Historial</span>
-    </button>
-
-    <button
-      onClick={() => cambiarPestaña('estadisticas')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'estadisticas'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">📊</span>
-      <span>Estadísticas</span>
-    </button>
-
-    {/* 👈 NUEVO BOTÓN PARA CARGA DE GUÍAS */}
-    <button
-      onClick={() => cambiarPestaña('carga-guias')}
-      className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-        pestañaActiva === 'carga-guias'
-          ? 'bg-white text-primario shadow-md' 
-          : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-      }`}
-    >
-      <span className="text-lg">📊</span>
-      <span>Carga Guías</span>
-    </button>
-  </div>
-</div>
-
-      
-
-      {/* Contenido según pestaña con animación */}
+      {/* Contenido */}
       <div 
         className={`transition-all duration-300 ease-in-out ${
           cambiandoPestaña ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
@@ -673,19 +713,35 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-         {pestañaActiva === 'historial' && (
+        {pestañaActiva === 'historial' && (
           <div className="animate-fadeIn">
             <HistorialAdmin />
           </div>
         )}
 
-        {/* 👈 NUEVO CONTENIDO PARA CARGA DE GUÍAS */}
         {pestañaActiva === 'carga-guias' && (
           <div className="animate-fadeIn">
             <CargaGuias />
           </div>
         )}
 
+        {pestañaActiva === 'entidades' && (
+          <div className="animate-fadeIn">
+            <GestionEntidades />
+          </div>
+        )}
+
+        {pestañaActiva === 'cupones' && (
+          <div className="animate-fadeIn">
+            <GestionCupones />
+          </div>
+        )}
+
+        {pestañaActiva === 'estadisticas-cobros' && (
+          <div className="animate-fadeIn">
+            <EstadisticasCobros />
+          </div>
+        )}
       </div>
     </Layout>
   );

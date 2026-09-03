@@ -209,17 +209,20 @@ const getGuiasConUsuarios = async (req, res) => {
         }
         const query = `
       SELECT 
-        g.id as guiaId,
-        g.nombre as guiaNombre,
-        g.email as guiaEmail,
-        json_agg(
-          json_build_object(
-            'usuarioId', u.id,
-            'usuarioNombre', u.nombre,
-            'usuarioEmail', u.email,
-            'ultimoTurno', t.fecha_programada,
-            'totalTurnos', t.total
-          )
+        g.id as "guiaId",
+        g.nombre as "guiaNombre",
+        g.email as "guiaEmail",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'usuarioId', u.id,
+              'usuarioNombre', u.nombre,
+              'usuarioEmail', u.email,
+              'ultimoTurno', t.fecha_programada,
+              'totalTurnos', t.total
+            )
+          ) FILTER (WHERE u.id IS NOT NULL),
+          '[]'
         ) as usuarios
       FROM usuarios g
       LEFT JOIN (
@@ -237,11 +240,11 @@ const getGuiasConUsuarios = async (req, res) => {
       ORDER BY g.nombre ASC
     `;
         const result = await connection_1.pool.query(query);
-        const guias = result.rows.map((row) => ({
-            ...row,
-            usuarios: row.usuarios.filter((u) => u.usuarioId !== null)
-        }));
-        res.json(guias);
+        console.log('📊 Guías con usuarios encontrados:', result.rows.length);
+        result.rows.forEach((row) => {
+            console.log(`👤 Guía ${row.guiaNombre} - ${row.usuarios?.length || 0} usuarios`);
+        });
+        res.json(result.rows);
     }
     catch (error) {
         console.error('Error al obtener guías con usuarios:', error);
@@ -383,14 +386,17 @@ const getCargaGuias = async (req, res) => {
 exports.getCargaGuias = getCargaGuias;
 const getMiCarga = async (req, res) => {
     try {
+        console.log('🔍 getMiCarga - INICIO');
+        console.log('🔍 req.user:', req.user);
         if (req.user?.rol !== 'guia') {
             res.status(403).json({ error: 'Acceso solo para guías' });
             return;
         }
         const guiaId = req.user.id;
+        console.log('🔍 getMiCarga - guiaId:', guiaId);
         const query = `
       SELECT 
-        COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) as turnos_activos,
+        COUNT(t.id) FILTER (WHERE t.estado IN ('aceptado', 'iniciado')) as turnos_activos,
         COUNT(t.id) FILTER (WHERE t.estado = 'pendiente') as turnos_pendientes,
         COUNT(t.id) FILTER (WHERE t.estado = 'aceptado') as turnos_aceptados,
         COUNT(t.id) FILTER (WHERE t.estado = 'iniciado') as turnos_en_curso,
@@ -404,6 +410,7 @@ const getMiCarga = async (req, res) => {
       WHERE t.guia_id = $1
     `;
         const result = await connection_1.pool.query(query, [guiaId]);
+        console.log('📊 getMiCarga - resultado:', result.rows[0]);
         res.json({
             turnos_activos: parseInt(result.rows[0].turnos_activos) || 0,
             turnos_pendientes: parseInt(result.rows[0].turnos_pendientes) || 0,
@@ -414,8 +421,11 @@ const getMiCarga = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error al obtener carga del guía:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('❌ Error al obtener carga del guía:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            message: error instanceof Error ? error.message : 'Error desconocido'
+        });
     }
 };
 exports.getMiCarga = getMiCarga;

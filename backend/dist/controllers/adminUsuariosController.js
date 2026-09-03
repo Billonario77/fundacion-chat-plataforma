@@ -14,7 +14,7 @@ const getUsuarios = async (req, res) => {
         }
         const { page = 1, limit = 20, search = '' } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
-        let whereClause = "WHERE rol = 'usuario'";
+        let whereClause = "WHERE 1=1";
         const params = [];
         let paramIndex = 1;
         if (search) {
@@ -25,7 +25,8 @@ const getUsuarios = async (req, res) => {
         const query = `
       SELECT 
         id, nombre, email, telefono, rol, disponible, 
-        datos_completados, created_at, primer_nombre, primer_apellido
+        datos_completados, created_at, primer_nombre, primer_apellido,
+        foto_perfil, cedula, edad, celular, ciudad
       FROM usuarios
       ${whereClause}
       ORDER BY created_at DESC
@@ -51,8 +52,11 @@ const getUsuarios = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error al obtener usuarios:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('❌ Error al obtener usuarios:', error);
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            details: error instanceof Error ? error.message : 'Error desconocido'
+        });
     }
 };
 exports.getUsuarios = getUsuarios;
