@@ -20,9 +20,17 @@ const DetalleTurno: React.FC = () => {
   const { socket, connected } = useSocket();
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
   const [tiempoRestante, setTiempoRestante] = useState(0);
-  const [duracionTotal] = useState(60);
+  const [duracionTotal] = useState(10);
   const [advertencia5minMostrada, setAdvertencia5minMostrada] = useState(false);
   const [tiempoAgotadoMostrado, setTiempoAgotadoMostrado] = useState(false);
+
+  // ✅ NUEVO: Reiniciar estados SOLO cuando cambia el ID del turno
+  useEffect(() => {
+    if (turno?.id) {
+      setAdvertencia5minMostrada(false);
+      setTiempoAgotadoMostrado(false);
+    }
+  }, [turno?.id]); // Solo depende del ID del turno, no de todo el objeto
 
   useEffect(() => {
     if (id) {
@@ -75,10 +83,6 @@ const DetalleTurno: React.FC = () => {
   // ============================================
   useEffect(() => {
     if (!turno || turno.estado !== 'iniciado') return;
-
-    // Reiniciar estados de advertencia cuando el turno cambia
-      setAdvertencia5minMostrada(false);
-      setTiempoAgotadoMostrado(false);
 
     let intervalo: NodeJS.Timeout;
 
