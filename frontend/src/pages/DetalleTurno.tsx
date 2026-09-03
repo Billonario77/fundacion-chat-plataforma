@@ -20,17 +20,17 @@ const DetalleTurno: React.FC = () => {
   const { socket, connected } = useSocket();
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
   const [tiempoRestante, setTiempoRestante] = useState(0);
-  const [duracionTotal] = useState(60);
+  const [duracionTotal] = useState(6);
   const [advertencia5minMostrada, setAdvertencia5minMostrada] = useState(false);
   const [tiempoAgotadoMostrado, setTiempoAgotadoMostrado] = useState(false);
 
   // ✅ NUEVO: Reiniciar estados SOLO cuando cambia el ID del turno
   useEffect(() => {
-    if (turno?.id) {
-      setAdvertencia5minMostrada(false);
-      setTiempoAgotadoMostrado(false);
-    }
-  }, [turno?.id]); // Solo depende del ID del turno, no de todo el objeto
+  if (id) {
+    setAdvertencia5minMostrada(false);
+    setTiempoAgotadoMostrado(false);
+  }
+}, [id]); // Solo depende del ID del turno, no de todo el objeto
 
   useEffect(() => {
     if (id) {
