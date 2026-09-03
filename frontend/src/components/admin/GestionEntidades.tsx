@@ -6,7 +6,16 @@ const GestionEntidades: React.FC = () => {
   const [entidades, setEntidades] = useState<Entidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    nombre: string;
+    tipo: 'empresa' | 'ong' | 'gobierno';
+    identificador: string;
+    contactoNombre: string;
+    contactoEmail: string;
+    contactoTelefono: string;
+    descuentoPorcentaje: number;
+    bolsaHorasInicial: number;
+  }>({
     nombre: '',
     tipo: 'empresa',
     identificador: '',
