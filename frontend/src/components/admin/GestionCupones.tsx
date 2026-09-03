@@ -6,7 +6,13 @@ const GestionCupones: React.FC = () => {
   const [cupones, setCupones] = useState<Cupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    descripcion: string;
+    tipo: 'porcentaje' | 'fijo' | 'gratis';
+    valor: number;
+    aplicaA: 'nuevos' | 'antiguos' | 'todos';
+    usosMaximos: number;
+  }>({
     descripcion: '',
     tipo: 'porcentaje',
     valor: 0,
@@ -21,8 +27,6 @@ const GestionCupones: React.FC = () => {
   const cargarCupones = async () => {
     try {
       setLoading(true);
-      // Usamos la misma función de obtener entidades pero para cupones
-      // Por ahora, asumimos que tenemos un endpoint para listar cupones
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cobros/cupones`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
