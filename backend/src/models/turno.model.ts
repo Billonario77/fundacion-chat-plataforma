@@ -7,7 +7,7 @@
 
 // Tipos para los valores fijos de la base de datos
 export type TurnoModalidad = 'video' | 'audio' | 'chat';
-export type TurnoEstado = 'pendiente' | 'aceptado' | 'iniciado' | 'completado' | 'cancelado';
+export type TurnoEstado = 'pendiente' | 'pendiente_pago' | 'aceptado' | 'iniciado' | 'completado' | 'cancelado';
 
 // Interfaz principal que representa un turno completo
 export interface Turno {
