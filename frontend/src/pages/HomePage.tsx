@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaHandsHelping, FaLeaf, FaHeart, FaDonate, FaMicrophone, FaArrowRight, FaSignInAlt } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 const HomePage: React.FC = () => {
@@ -35,7 +34,6 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       <section className="container mx-auto px-6 py-12 md:py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* Texto */}
           <div className="flex-1 text-center lg:text-left">
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
@@ -73,8 +71,6 @@ const HomePage: React.FC = () => {
               </Link>
             </motion.div>
           </div>
-
-          {/* Ilustración */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -98,17 +94,17 @@ const HomePage: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              icon: <FaHandsHelping className="text-4xl text-[#2d4a3e]" />,
+              icon: '🤲',
               title: 'Apoyo Personalizado',
               description: 'Espacios de escucha profunda adaptados a tu historia y necesidades.'
             },
             {
-              icon: <FaLeaf className="text-4xl text-[#2d4a3e]" />,
+              icon: '🌿',
               title: 'Crisis Inmediata',
               description: 'Atención rápida y contenedora para momentos de desborde emocional.'
             },
             {
-              icon: <FaHeart className="text-4xl text-[#2d4a3e]" />,
+              icon: '💚',
               title: 'Seguimiento Continuo',
               description: 'Acompañamiento sostenido para construir bienestar a largo plazo.'
             }
@@ -121,7 +117,7 @@ const HomePage: React.FC = () => {
               viewport={{ once: true }}
               className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 text-center shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border border-white/40"
             >
-              <div className="flex justify-center mb-4">{service.icon}</div>
+              <div className="text-5xl mb-4">{service.icon}</div>
               <h3 className="text-xl font-semibold text-[#2d4a3e]">{service.title}</h3>
               <p className="text-[#4a6b5a] mt-2">{service.description}</p>
             </motion.div>
@@ -134,7 +130,7 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       <section className="container mx-auto px-6 py-16">
         <div className="bg-[#2d4a3e] rounded-3xl p-8 md:p-12 text-center text-white">
-          <FaDonate className="text-5xl mx-auto mb-4 opacity-80" />
+          <div className="text-6xl mx-auto mb-4">💝</div>
           <h2 className="text-3xl md:text-4xl font-serif">Apoya nuestro proyecto</h2>
           <p className="text-white/80 mt-4 max-w-xl mx-auto">
             Cada donación nos permite seguir acompañando a más personas que necesitan un espacio de escucha.
@@ -174,7 +170,7 @@ const HomePage: React.FC = () => {
               viewport={{ once: true }}
               className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-sm border border-white/40"
             >
-              <FaMicrophone className="text-[#2d4a3e]/30 text-3xl mb-4" />
+              <div className="text-4xl text-[#2d4a3e]/30 mb-4">🎙️</div>
               <p className="text-[#2d4a3e] text-lg italic">"{testimonial.quote}"</p>
               <p className="text-[#4a6b5a] font-medium mt-4">— {testimonial.name}</p>
             </motion.div>
@@ -185,7 +181,7 @@ const HomePage: React.FC = () => {
             to="/testimonios"
             className="inline-flex items-center gap-2 text-[#2d4a3e] hover:text-[#4a7c5e] transition-colors font-medium"
           >
-            Ver más historias <FaArrowRight />
+            Ver más historias →
           </Link>
         </div>
       </section>
