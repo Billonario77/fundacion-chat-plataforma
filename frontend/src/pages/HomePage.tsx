@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
             to="/login"
             className="flex items-center gap-2 text-sm text-[#2d4a3e] hover:text-[#4a7c5e] transition-colors px-4 py-2 rounded-full border border-[#2d4a3e]/20 hover:border-[#2d4a3e]/40"
           >
-            <FaSignInAlt />
+            <span className="text-lg">🔑</span>
             Ingresar
           </Link>
         </div>
