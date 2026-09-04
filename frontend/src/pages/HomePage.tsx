@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaHandsHelping, FaLeaf, FaHeart, FaDonate, FaMicrophone, FaArrowRight } from 'react-icons/fa';
-import { FiLogIn } from 'react-icons/fi';
+import { FaHandsHelping, FaLeaf, FaHeart, FaDonate, FaMicrophone, FaArrowRight, FaSignInAlt } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 const HomePage: React.FC = () => {
@@ -25,7 +24,7 @@ const HomePage: React.FC = () => {
             to="/login"
             className="flex items-center gap-2 text-sm text-[#2d4a3e] hover:text-[#4a7c5e] transition-colors px-4 py-2 rounded-full border border-[#2d4a3e]/20 hover:border-[#2d4a3e]/40"
           >
-            <FiLogIn />
+            <FaSignInAlt />
             Ingresar
           </Link>
         </div>
