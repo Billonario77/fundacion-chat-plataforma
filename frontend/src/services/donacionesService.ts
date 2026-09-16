@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
+/**const API_URL = process.env.REACT_APP_API_URL || 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';*/
+const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
 
 export interface DonacionResponse {
   referencia: string;
