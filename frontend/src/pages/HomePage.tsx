@@ -14,7 +14,7 @@ const HomePage: React.FC = () => {
         </div>
         <div className="flex items-center gap-4">
           <Link
-            to="/donaciones"
+            to="/donar"
             className="text-[#3D405B] hover:text-[#E07A5F] transition-colors text-sm font-medium"
           >
             Donar
@@ -221,7 +221,7 @@ const HomePage: React.FC = () => {
               Con tu donación, más personas encontrarán un lugar seguro para sanar. Juntos construimos esperanza.
             </p>
             <Link
-              to="/donaciones"
+              to="/donar"
               className="inline-block mt-6 bg-white text-[#E07A5F] px-10 py-4 rounded-full text-lg font-medium hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
             >
               💛 Donar Ahora
