@@ -146,9 +146,9 @@ export const webhookWompi = async (req: Request, res: Response) => {
           // Actualizar cobro
           await pool.query(
             `UPDATE cobros 
-             SET estado = $1, 
+             SET estado = $1,
                  metodo_pago = $2,
-                 pagado_at = CASE WHEN $1 = 'pagado' THEN NOW() ELSE pagado_at END,
+                 pagado_at = CASE WHEN $1::text = 'pagado' THEN NOW() ELSE pagado_at END,
                  updated_at = NOW()
              WHERE id = $3`,
             [estadoCobro, transaccion.payment_method_type || null, cobro.id]
