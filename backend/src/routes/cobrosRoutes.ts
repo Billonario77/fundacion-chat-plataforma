@@ -15,7 +15,8 @@ import {
   obtenerResumenEntidad,
   asignarUsuarioAEntidad,
   marcarUsuarioExento,
-  obtenerCupones
+  obtenerCupones,
+  generarFirmaPagoSesion
 } from '../controllers/cobrosController';
 
 const router = Router();
@@ -41,6 +42,9 @@ router.get('/turnos/:turnoId/cobro', authenticateToken, obtenerCobroPorTurno);
 
 // Estadísticas de cobros (solo admin)
 router.get('/estadisticas', authenticateToken, isAdmin, obtenerEstadisticasCobros);
+
+// Generar firma para pagar una sesión
+router.post('/turnos/:turnoId/generar-pago', authenticateToken, generarFirmaPagoSesion);
 
 // ============================================
 // RUTAS DE ENTIDADES

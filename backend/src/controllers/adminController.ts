@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { pool } from '../database/connection';
 import { notificarUsuario, notificarAAdmins } from '../services/socketService';
+import { PagoService } from '../services/pagoService';
+
+const pagoService = new PagoService(pool);
 
 // ============================================
 // OBTENER GUÍAS DISPONIBLES
@@ -93,7 +96,6 @@ export const getTurnosPendientesAsignacion = async (req: AuthRequest, res: Respo
 // ============================================
 // ASIGNAR GUÍA A TURNO
 // ============================================
-
 export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -143,11 +145,47 @@ export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promis
       [guiaId, turnoId]
     );
 
+    // ============================================
+    // CALCULAR COSTO AUTOMÁTICAMENTE
+    // ============================================
+    let requierePago = false;
+    let estadoFinal = 'pendiente';
+    let mensajeEstado = `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}`;
+
+    try {
+      const calculo = await pagoService.calcularCosto({
+        usuarioId: turno.usuario_id,
+        guiaId,
+        turnoId,
+        duracionMinutos: 60
+      });
+
+      console.log('💰 Resultado cálculo de costo:', calculo);
+
+      if (calculo.esExento) {
+        console.log('✅ Usuario EXENTO - no requiere pago');
+      } else if (calculo.usaBolsa) {
+        console.log('✅ Usa BOLSA de horas - no requiere pago');
+      } else {
+        console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
+        requierePago = true;
+        estadoFinal = 'pendiente_pago';
+        mensajeEstado = `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}. Debes completar el pago para confirmar tu sesión.`;
+
+        await pool.query(
+          `UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`,
+          [turnoId]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error al calcular costo:', error);
+    }
+
     // Notificar al usuario
     notificarUsuario(turno.usuario_id, 'estado-turno-actualizado', {
       turnoId: turnoId,
-      estado: 'pendiente',
-      mensaje: `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}`
+      estado: estadoFinal,
+      mensaje: mensajeEstado
     });
 
     // Notificar al guía
@@ -160,7 +198,8 @@ export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promis
     res.json({
       message: 'Guía asignado exitosamente',
       turnoId: turnoId,
-      guia: guiaQuery.rows[0]
+      guia: guiaQuery.rows[0],
+      requierePago
     });
 
   } catch (error) {

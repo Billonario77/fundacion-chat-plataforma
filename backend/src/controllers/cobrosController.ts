@@ -5,10 +5,12 @@ import { PagoService } from '../services/pagoService';
 import { CuponService } from '../services/cuponService';
 import { EntidadService } from '../services/entidadService';
 import { pool } from '../database/connection';
+import { WompiService } from '../services/wompiService';
 
 const pagoService = new PagoService(pool);
 const cuponService = new CuponService(pool);
 const entidadService = new EntidadService(pool);
+const wompiService = new WompiService();
 
 // ============================================
 // CALCULAR COSTO DE TURNO
@@ -495,5 +497,85 @@ export const obtenerCupones = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Error al obtener cupones:', error);
     res.status(500).json({ error: error.message || 'Error al obtener cupones' });
+  }
+};
+
+// ============================================
+// GENERAR FIRMA DE PAGO DE SESIÓN (Usuario)
+// ============================================
+export const generarFirmaPagoSesion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { turnoId } = req.params;
+    const usuarioId = req.user?.id;
+
+    if (!usuarioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Verificar que el turno existe y pertenece al usuario
+    const turnoQuery = await pool.query(
+      `SELECT t.*, c.id as cobro_id, c.total, c.estado as cobro_estado, c.referencia_wompi
+       FROM turnos t
+       LEFT JOIN cobros c ON c.turno_id = t.id
+       WHERE t.id = $1`,
+      [turnoId]
+    );
+
+    if (turnoQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'Turno no encontrado' });
+    }
+
+    const turno = turnoQuery.rows[0];
+
+    // Verificar que el usuario sea el dueño
+    if (turno.usuario_id !== usuarioId) {
+      return res.status(403).json({ error: 'No tienes permiso para pagar este turno' });
+    }
+
+    // Verificar que el turno esté pendiente de pago
+    if (turno.estado !== 'pendiente_pago') {
+      return res.status(400).json({ error: 'Este turno no requiere pago' });
+    }
+
+    // Verificar que exista el cobro
+    if (!turno.cobro_id) {
+      return res.status(404).json({ error: 'No se encontró el cobro asociado al turno' });
+    }
+
+    if (turno.cobro_estado === 'pagado') {
+      return res.status(400).json({ error: 'Este turno ya fue pagado' });
+    }
+
+    // Si ya tiene referencia, la reutilizamos
+    let referencia = turno.referencia_wompi;
+    if (!referencia) {
+      referencia = wompiService.generarReferencia();
+      // Actualizar la referencia en la BD
+      await pool.query(
+        `UPDATE cobros SET referencia_wompi = $1 WHERE id = $2`,
+        [referencia, turno.cobro_id]
+      );
+    }
+
+    const montoEnCentavos = Math.round(parseFloat(turno.total) * 100);
+    const firmaIntegridad = wompiService.generarFirmaIntegridad(referencia, montoEnCentavos, 'COP');
+
+    res.json({
+      success: true,
+      data: {
+        referencia,
+        montoEnCentavos,
+        firmaIntegridad,
+        publicKey: wompiService.getPublicKey(),
+        moneda: 'COP',
+        monto: parseFloat(turno.total),
+        turnoId: turnoId,
+        cobroId: turno.cobro_id
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error al generar firma de pago de sesión:', error);
+    res.status(500).json({ error: error.message || 'Error al generar firma' });
   }
 };
