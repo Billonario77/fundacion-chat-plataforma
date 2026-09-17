@@ -7,6 +7,7 @@ import Layout from '../components/Layout';
 import toast from 'react-hot-toast';
 import Videollamada from '../components/Videollamada';
 import { useSocket } from '../contexts/SocketContext';
+import { cobrosService } from '../services/cobrosService';
 
 const DetalleTurno: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -196,6 +197,67 @@ const DetalleTurno: React.FC = () => {
     }
   };
 
+    // ============================================
+  // PAGAR SESIÓN CON WOMPI
+  // ============================================
+  const handlePagarSesion = async () => {
+    if (!turno) return;
+
+    try {
+      // 1. Solicitar firma al backend
+      const response = await cobrosService.generarPagoSesion(turno.id);
+
+      if (!response.success) {
+        toast.error('Error al generar el pago');
+        return;
+      }
+
+      const data = response.data;
+      console.log('✅ Firma generada:', data);
+
+      // 2. Abrir el Widget de Wompi
+      // @ts-ignore - WidgetCheckout viene del script externo
+      const checkout = new WidgetCheckout({
+        currency: data.moneda,
+        amountInCents: data.montoEnCentavos,
+        reference: data.referencia,
+        publicKey: data.publicKey,
+        signature: {
+          integrity: data.firmaIntegridad
+        },
+        redirectUrl: `${window.location.origin}/turnos/${turno.id}`,
+        customerData: {
+          email: user?.email || '',
+          fullName: user?.nombre || ''
+        }
+      });
+
+      checkout.open((result: any) => {
+        const { transaction } = result;
+        console.log('📊 Resultado transacción:', transaction);
+
+        if (transaction.status === 'APPROVED') {
+          toast.success('¡Pago exitoso! Tu sesión está confirmada 💛', {
+            duration: 5000,
+            icon: '✅'
+          });
+          setTimeout(() => cargarTurno(), 2000);
+        } else if (transaction.status === 'DECLINED') {
+          toast.error('La transacción fue rechazada. Intenta con otro método de pago.');
+        } else if (transaction.status === 'VOIDED') {
+          toast.error('La transacción fue anulada.');
+        } else {
+          toast.error('Estado de transacción: ' + transaction.status);
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error al procesar pago:', error);
+      toast.error(error.response?.data?.error || 'Error al procesar el pago');
+    }
+  };
+
+
   // ============================================
   // SOLICITAR EXTENSIÓN DE SESIÓN
   // ============================================
@@ -314,6 +376,29 @@ const DetalleTurno: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* 💳 AVISO DE PAGO PENDIENTE */}
+          {turno.estado === 'pendiente_pago' && (
+            <div className="mt-4 p-5 bg-gradient-to-r from-[#F2CC8F]/40 to-[#E07A5F]/20 rounded-2xl border-2 border-[#E07A5F]/30">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <p className="text-lg font-semibold text-[#3D405B] flex items-center gap-2">
+                    💳 Esta sesión requiere pago
+                  </p>
+                  <p className="text-sm text-[#5D6078] mt-1">
+                    Completa el pago para confirmar tu sesión con el guía.
+                  </p>
+                </div>
+                <button
+                  onClick={handlePagarSesion}
+                  className="bg-[#E07A5F] text-white px-6 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30 whitespace-nowrap"
+                >
+                  💛 Pagar Sesión
+                </button>
+              </div>
+            </div>
+          )}
+
 
           {/* 👈 TEMPORIZADOR DE SESIÓN EN DETALLE */}
           {turno.estado === 'iniciado' && (

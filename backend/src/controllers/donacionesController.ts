@@ -93,7 +93,7 @@ export const webhookWompi = async (req: Request, res: Response) => {
 
     console.log('✅ Firma de webhook válida');
 
-    // Procesar según el evento
+        // Procesar según el evento
     if (event === 'transaction.updated') {
       const transaccion = data.transaction;
       const referencia = transaccion.reference;
@@ -101,30 +101,72 @@ export const webhookWompi = async (req: Request, res: Response) => {
 
       console.log(`📌 Transacción ${referencia} - Estado: ${estadoWompi}`);
 
+      // Mapear estados de Wompi a nuestros estados
       let estadoInterno = 'pendiente';
       if (estadoWompi === 'APPROVED') estadoInterno = 'completada';
       else if (estadoWompi === 'DECLINED') estadoInterno = 'fallida';
       else if (estadoWompi === 'VOIDED') estadoInterno = 'cancelada';
       else if (estadoWompi === 'ERROR') estadoInterno = 'error';
 
-      const result = await pool.query(
-        `UPDATE donaciones 
-         SET estado = $1, 
-             metodo_pago = $2,
-             updated_at = NOW()
-         WHERE referencia_wompi = $3
-         RETURNING *`,
-        [
-          estadoInterno,
-          transaccion.payment_method_type || null,
-          referencia
-        ]
+      // ============================================
+      // 1. BUSCAR EN DONACIONES
+      // ============================================
+      const donacionResult = await pool.query(
+        `SELECT id FROM donaciones WHERE referencia_wompi = $1`,
+        [referencia]
       );
 
-      if (result.rows.length > 0) {
-        console.log(`✅ Donación actualizada: ${referencia} → ${estadoInterno}`);
+      if (donacionResult.rows.length > 0) {
+        // Es una donación
+        const estadoDonacion = estadoInterno === 'completada' ? 'completada' : estadoInterno;
+        
+        await pool.query(
+          `UPDATE donaciones 
+           SET estado = $1, 
+               metodo_pago = $2,
+               updated_at = NOW()
+           WHERE referencia_wompi = $3`,
+          [estadoDonacion, transaccion.payment_method_type || null, referencia]
+        );
+
+        console.log(`✅ Donación actualizada: ${referencia} → ${estadoDonacion}`);
       } else {
-        console.warn(`⚠️ Donación no encontrada: ${referencia}`);
+        // ============================================
+        // 2. BUSCAR EN COBROS (PAGOS DE SESIÓN)
+        // ============================================
+        const cobroResult = await pool.query(
+          `SELECT id, turno_id FROM cobros WHERE referencia_wompi = $1`,
+          [referencia]
+        );
+
+        if (cobroResult.rows.length > 0) {
+          const cobro = cobroResult.rows[0];
+          const estadoCobro = estadoInterno === 'completada' ? 'pagado' : estadoInterno;
+          
+          // Actualizar cobro
+          await pool.query(
+            `UPDATE cobros 
+             SET estado = $1, 
+                 metodo_pago = $2,
+                 pagado_at = CASE WHEN $1 = 'pagado' THEN NOW() ELSE pagado_at END,
+                 updated_at = NOW()
+             WHERE id = $3`,
+            [estadoCobro, transaccion.payment_method_type || null, cobro.id]
+          );
+
+          console.log(`✅ Cobro actualizado: ${referencia} → ${estadoCobro}`);
+
+          // Si el pago fue aprobado, actualizar el turno a "pendiente" (listo para que el guía acepte)
+          if (estadoCobro === 'pagado') {
+            await pool.query(
+              `UPDATE turnos SET estado = 'pendiente' WHERE id = $1`,
+              [cobro.turno_id]
+            );
+            console.log(`✅ Turno ${cobro.turno_id} actualizado a "pendiente" (listo para que el guía acepte)`);
+          }
+        } else {
+          console.warn(`⚠️ No se encontró donación ni cobro con referencia: ${referencia}`);
+        }
       }
     }
 

@@ -189,5 +189,15 @@ export const cobrosService = {
   obtenerCobroPorTurno: async (turnoId: string) => {
     const response = await axios.get(`${API_URL}/cobros/turnos/${turnoId}/cobro`, headers());
     return response.data;
+  },
+
+  // Generar firma para pagar sesión
+  generarPagoSesion: async (turnoId: string) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/turnos/${turnoId}/generar-pago`,
+      {},
+      headers()
+    );
+    return response.data;
   }
 };
