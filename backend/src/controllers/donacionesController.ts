@@ -80,14 +80,18 @@ export const webhookWompi = async (req: Request, res: Response) => {
     const { event, data, signature, timestamp } = req.body;
 
     console.log('📩 Webhook Wompi recibido:', event);
+    console.log('📩 Timestamp:', timestamp);
 
-    // Verificar la firma del webhook
+    // Verificar la firma del webhook (pasando el body completo)
     const esValido = wompiService.verificarWebhook(req.body, signature);
 
     if (!esValido) {
       console.error('❌ Firma de webhook inválida');
-      return res.status(400).json({ error: 'Firma inválida' });
+      // ⚠️ Aun si falla, responder 200 para evitar reintentos infinitos
+      return res.status(200).json({ received: true, verified: false });
     }
+
+    console.log('✅ Firma de webhook válida');
 
     // Procesar según el evento
     if (event === 'transaction.updated') {
@@ -97,14 +101,12 @@ export const webhookWompi = async (req: Request, res: Response) => {
 
       console.log(`📌 Transacción ${referencia} - Estado: ${estadoWompi}`);
 
-      // Mapear estados de Wompi a nuestros estados
       let estadoInterno = 'pendiente';
       if (estadoWompi === 'APPROVED') estadoInterno = 'completada';
       else if (estadoWompi === 'DECLINED') estadoInterno = 'fallida';
       else if (estadoWompi === 'VOIDED') estadoInterno = 'cancelada';
       else if (estadoWompi === 'ERROR') estadoInterno = 'error';
 
-      // Actualizar la donación
       const result = await pool.query(
         `UPDATE donaciones 
          SET estado = $1, 
@@ -126,12 +128,10 @@ export const webhookWompi = async (req: Request, res: Response) => {
       }
     }
 
-    // Siempre responder 200 para que Wompi no reintente
     res.status(200).json({ received: true });
 
   } catch (error: any) {
     console.error('Error en webhook Wompi:', error);
-    // Aun con error, responder 200 para no saturar reintentos
     res.status(200).json({ received: true, error: error.message });
   }
 };

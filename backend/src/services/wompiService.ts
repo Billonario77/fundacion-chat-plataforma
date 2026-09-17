@@ -26,26 +26,36 @@ export class WompiService {
     return crypto.createHash('sha256').update(cadena).digest('hex');
   }
 
-  /**
+    /**
    * Verifica la firma de un webhook de Wompi
-   * Fórmula: SHA256(propiedades + timestamp + secreto_eventos)
+   * Las propiedades en signature.properties son rutas relativas a data
    */
   verificarWebhook(payload: any, signature: any): boolean {
     try {
       const { checksum, properties } = signature;
-      
-      // Evaluar las propiedades en orden (soporta notación con punto: "transaction.id")
+
+      if (!checksum || !properties || !Array.isArray(properties)) {
+        console.error('❌ Webhook sin checksum o properties');
+        return false;
+      }
+
+      // Las propiedades son rutas relativas a "data"
       const valores = properties.map((prop: string) => {
         const keys = prop.split('.');
-        let valor: any = payload;
+        let valor: any = payload.data; // ✅ Empezar desde data
         for (const key of keys) {
+          if (valor === undefined || valor === null) return '';
           valor = valor[key];
         }
-        return valor;
+        return valor !== undefined && valor !== null ? String(valor) : '';
       }).join('');
 
       const cadena = `${valores}${payload.timestamp}${this.eventsSecret}`;
       const hashCalculado = crypto.createHash('sha256').update(cadena).digest('hex');
+
+      console.log('🔐 Cadena firma:', cadena.substring(0, 50) + '...');
+      console.log('🔐 Hash calculado:', hashCalculado);
+      console.log('🔐 Checksum recibido:', checksum);
 
       return hashCalculado === checksum;
     } catch (error) {
