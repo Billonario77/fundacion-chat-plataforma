@@ -5,6 +5,9 @@ import { pool } from '../database/connection';
 import { notificarUsuario } from '../services/socketService';
 import { notificarAAdmins } from '../services/socketService';
 import { AsignacionService } from '../services/asignacionService';
+import { PagoService } from '../services/pagoService';
+
+const pagoService = new PagoService(pool);
 
 export const solicitarApoyo = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -164,6 +167,38 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     console.log(`✅ Turno guardado con ID: ${turnoId}`);
 
     // ============================================
+    // CALCULAR COSTO AUTOMÁTICAMENTE
+    // ============================================
+    let requierePago = false;
+    if (guiaAsignado) {
+      try {
+        const calculo = await pagoService.calcularCosto({
+          usuarioId,
+          guiaId: guiaAsignado,
+          turnoId,
+          duracionMinutos: 60
+        });
+
+        console.log('💰 Resultado cálculo de costo:', calculo);
+
+        if (calculo.esExento) {
+          console.log('✅ Usuario EXENTO - no requiere pago');
+        } else if (calculo.usaBolsa) {
+          console.log('✅ Usa BOLSA de horas - no requiere pago');
+        } else {
+          console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
+          requierePago = true;
+          await pool.query(
+            `UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`,
+            [turnoId]
+          );
+        }
+      } catch (error) {
+        console.error('❌ Error al calcular costo:', error);
+      }
+    }
+
+    // ============================================
     // NOTIFICACIONES
     // ============================================
     if (esPrimeraVez) {
@@ -210,7 +245,8 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     res.status(201).json({
       message: 'Solicitud procesada exitosamente',
       turnoId: turnoId,
-      requiereAsignacion: esPrimeraVez || !guiaAsignado
+      requiereAsignacion: esPrimeraVez || !guiaAsignado,
+      requierePago
     });
 
   } catch (error) {
