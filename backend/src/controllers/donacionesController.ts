@@ -144,14 +144,17 @@ export const webhookWompi = async (req: Request, res: Response) => {
           const estadoCobro = estadoInterno === 'completada' ? 'pagado' : estadoInterno;
           
           // Actualizar cobro
+                    // Actualizar cobro
+          const fechaPago = estadoCobro === 'pagado' ? new Date() : null;
+          
           await pool.query(
             `UPDATE cobros 
              SET estado = $1,
                  metodo_pago = $2,
-                 pagado_at = CASE WHEN $1::text = 'pagado' THEN NOW() ELSE pagado_at END,
+                 pagado_at = COALESCE($3, pagado_at),
                  updated_at = NOW()
-             WHERE id = $3`,
-            [estadoCobro, transaccion.payment_method_type || null, cobro.id]
+             WHERE id = $4`,
+            [estadoCobro, transaccion.payment_method_type || null, fechaPago, cobro.id]
           );
 
           console.log(`✅ Cobro actualizado: ${referencia} → ${estadoCobro}`);
