@@ -234,7 +234,8 @@ export const obtenerEstadisticasCobros = async (req: AuthRequest, res: Response)
         SUM(CASE WHEN estado = 'exento' THEN 1 ELSE 0 END) as exentos,
         SUM(CASE WHEN estado = 'consumido_bolsa' THEN 1 ELSE 0 END) as consumidos_bolsa,
         COALESCE(SUM(total), 0) as total_recaudado
-      FROM cobros
+      FROM cobros c
+      INNER JOIN usuarios u ON u.id = c.usuario_id AND u.rol = 'usuario'
     `;
     const result = await pool.query(query);
 
@@ -269,7 +270,7 @@ export const obtenerCobros = async (req: AuthRequest, res: Response) => {
         t.fecha_programada,
         t.estado as turno_estado
       FROM cobros c
-      LEFT JOIN usuarios u ON u.id = c.usuario_id
+      INNER JOIN usuarios u ON u.id = c.usuario_id AND u.rol = 'usuario'
       LEFT JOIN usuarios g ON g.id = c.guia_id
       LEFT JOIN turnos t ON t.id = c.turno_id
       WHERE 1=1
