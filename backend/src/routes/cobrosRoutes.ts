@@ -16,7 +16,8 @@ import {
   asignarUsuarioAEntidad,
   marcarUsuarioExento,
   obtenerCupones,
-  generarFirmaPagoSesion
+  generarFirmaPagoSesion,
+  obtenerCobros
 } from '../controllers/cobrosController';
 
 const router = Router();
@@ -39,6 +40,9 @@ router.post('/registrar-pago-manual', authenticateToken, isAdmin, registrarPagoM
 
 // Obtener cobro por turno
 router.get('/turnos/:turnoId/cobro', authenticateToken, obtenerCobroPorTurno);
+
+// Obtener todos los cobros (solo admin - historial)
+router.get('/historial', authenticateToken, isAdmin, obtenerCobros);
 
 // Estadísticas de cobros (solo admin)
 router.get('/estadisticas', authenticateToken, isAdmin, obtenerEstadisticasCobros);

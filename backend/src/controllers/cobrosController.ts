@@ -250,6 +250,79 @@ export const obtenerEstadisticasCobros = async (req: AuthRequest, res: Response)
 };
 
 // ============================================
+// OBTENER TODOS LOS COBROS (Admin - Historial)
+// ============================================
+export const obtenerCobros = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden ver cobros' });
+    }
+
+    const { estado, fecha_desde, fecha_hasta, guia_id, usuario_id } = req.query;
+
+    let query = `
+      SELECT 
+        c.*,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.nombre as guia_nombre,
+        t.fecha_programada,
+        t.estado as turno_estado
+      FROM cobros c
+      LEFT JOIN usuarios u ON u.id = c.usuario_id
+      LEFT JOIN usuarios g ON g.id = c.guia_id
+      LEFT JOIN turnos t ON t.id = c.turno_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (estado) {
+      query += ` AND c.estado = $${paramIndex}`;
+      params.push(estado);
+      paramIndex++;
+    }
+
+    if (fecha_desde) {
+      query += ` AND c.created_at >= $${paramIndex}`;
+      params.push(fecha_desde);
+      paramIndex++;
+    }
+
+    if (fecha_hasta) {
+      query += ` AND c.created_at <= $${paramIndex}`;
+      params.push(fecha_hasta);
+      paramIndex++;
+    }
+
+    if (guia_id) {
+      query += ` AND c.guia_id = $${paramIndex}`;
+      params.push(guia_id);
+      paramIndex++;
+    }
+
+    if (usuario_id) {
+      query += ` AND c.usuario_id = $${paramIndex}`;
+      params.push(usuario_id);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY c.created_at DESC LIMIT 500`;
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener cobros:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener cobros' });
+  }
+};
+
+// ============================================
 // CREAR ENTIDAD (Admin)
 // ============================================
 export const crearEntidad = async (req: AuthRequest, res: Response) => {

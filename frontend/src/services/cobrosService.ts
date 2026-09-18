@@ -199,5 +199,19 @@ export const cobrosService = {
       headers()
     );
     return response.data;
+  },
+    // Obtener historial de cobros (admin)
+  obtenerCobros: async (filtros?: {
+    estado?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
+    guia_id?: string;
+    usuario_id?: string;
+  }) => {
+    const response = await axios.get(`${API_URL}/cobros/historial`, {
+      params: filtros,
+      ...headers()
+    });
+    return response.data;
   }
 };

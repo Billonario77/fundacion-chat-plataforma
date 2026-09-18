@@ -33,5 +33,36 @@ export const donacionesService = {
   obtenerPorReferencia: async (referencia: string) => {
     const response = await axios.get(`${API_URL}/donaciones/${referencia}`);
     return response.data.data;
+  },
+
+    /**
+   * Obtener todas las donaciones (admin)
+   */
+  obtenerDonaciones: async (filtros?: {
+    estado?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
+  }) => {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/donaciones`, {
+      params: filtros,
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  },
+
+  /**
+   * Obtener estadísticas de donaciones (admin)
+   */
+  obtenerEstadisticasDonaciones: async () => {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/donaciones/admin/estadisticas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
   }
 };

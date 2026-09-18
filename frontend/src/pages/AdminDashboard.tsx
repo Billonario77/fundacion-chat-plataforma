@@ -18,9 +18,12 @@ import CargaGuias from '../components/CargaGuias';
 import GestionEntidades from '../components/admin/GestionEntidades';
 import GestionCupones from '../components/admin/GestionCupones';
 import EstadisticasCobros from '../components/admin/EstadisticasCobros';
+import GestionDonaciones from '../components/admin/GestionDonaciones';
+import GestionCobros from '../components/admin/GestionCobros';
 import axios from 'axios';
 import Avatar from '../components/Avatar';
 import { perfilService } from '../services/turnosService';
+
 
 // Función para exportar a CSV
 const exportToCSV = (data: any[], filename: string) => {
@@ -80,7 +83,8 @@ const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { socket, connected } = useSocket();
   const navigate = useNavigate();
-  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias' | 'entidades' | 'cupones' | 'estadisticas-cobros'>('usuarios');
+  const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias' | 
+         'entidades' | 'cupones' | 'estadisticas-cobros' | 'donaciones' | 'cobros'>('usuarios');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [pestañaAnterior, setPestañaAnterior] = useState(pestañaActiva);
   const [cambiandoPestaña, setCambiandoPestaña] = useState(false);
@@ -471,6 +475,26 @@ const AdminDashboard: React.FC = () => {
                 <span>💰</span>
                 <span>Estadísticas Cobros</span>
               </button>
+
+              <button
+                onClick={() => { cambiarPestaña('donaciones'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'donaciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>💝</span>
+                <span>Donaciones</span>
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('cobros'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'cobros' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>💵</span>
+                <span>Cobros de Sesiones</span>
+              </button>
             </div>
           )}
         </div>
@@ -618,6 +642,30 @@ const AdminDashboard: React.FC = () => {
             <span className="text-lg">💰</span>
             <span>Estadísticas Cobros</span>
           </button>
+
+          <button
+            onClick={() => cambiarPestaña('donaciones')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'donaciones'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">💝</span>
+            <span>Donaciones</span>
+          </button>
+
+          <button
+            onClick={() => cambiarPestaña('cobros')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'cobros'
+                ? 'bg-white text-primario shadow-md' 
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">💵</span>
+            <span>Cobros de Sesiones</span>
+          </button>
         </div>
       </div>
 
@@ -740,6 +788,18 @@ const AdminDashboard: React.FC = () => {
         {pestañaActiva === 'estadisticas-cobros' && (
           <div className="animate-fadeIn">
             <EstadisticasCobros />
+          </div>
+        )}
+
+        {pestañaActiva === 'donaciones' && (
+          <div className="animate-fadeIn">
+            <GestionDonaciones />
+          </div>
+        )}
+
+        {pestañaActiva === 'cobros' && (
+          <div className="animate-fadeIn">
+            <GestionCobros />
           </div>
         )}
       </div>
