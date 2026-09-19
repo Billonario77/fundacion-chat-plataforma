@@ -158,9 +158,9 @@ const [modalCerrado, setModalCerrado] = useState(false);
     s.estado === 'cancelado' && s.cancelado_por === 'usuario'
   );
   
-  // Solicitudes activas
+  // Solicitudes activas (incluye todos los estados no finales)
   const solicitudesActivas = solicitudes.filter(s => 
-    ['aceptado', 'iniciado'].includes(s.estado)
+    ['pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado'].includes(s.estado)
   );
   
   
@@ -400,7 +400,7 @@ const [modalCerrado, setModalCerrado] = useState(false);
     let interval: NodeJS.Timeout;
     
     if (pestañaActiva === 'activas') {
-      const solicitudesActivasTemp = solicitudes.filter(s => ['pendiente', 'aceptado', 'iniciado'].includes(s.estado));
+      const solicitudesActivasTemp = solicitudes.filter(s => ['pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado'].includes(s.estado));
       const hayActivos = solicitudesActivasTemp.length > 0;
       
       if (hayActivos) {
@@ -648,6 +648,8 @@ const [modalCerrado, setModalCerrado] = useState(false);
 
   const getColorEstado = (estado: string) => {
     switch (estado) {
+      case 'pendiente_admin': return 'bg-orange-500 text-white';
+      case 'pendiente_pago': return 'bg-purple-500 text-white';
       case 'pendiente': return 'bg-yellow-500 text-white';
       case 'aceptado': return 'bg-blue-500 text-white';
       case 'iniciado': return 'bg-green-500 text-white';
@@ -994,12 +996,11 @@ const [modalCerrado, setModalCerrado] = useState(false);
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getColorEstado(solicitud.estado)}`}>
+                            {solicitud.estado === 'pendiente_admin' && '👤 Esperando asignación'}
+                            {solicitud.estado === 'pendiente_pago' && '💳 Pendiente de pago'}
                             {solicitud.estado === 'pendiente' && '⏳ Pendiente'}
                             {solicitud.estado === 'aceptado' && '✅ Aceptado'}
                             {solicitud.estado === 'iniciado' && '🔄 En curso'}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {formatFecha(solicitud.fecha_programada)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1014,12 +1015,27 @@ const [modalCerrado, setModalCerrado] = useState(false);
                       </div>
                       
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => navigate(`/turnos/${solicitud.id}`)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600"
-                        >
-                          Chatear
-                        </button>
+                        {['pendiente', 'aceptado', 'iniciado'].includes(solicitud.estado) && (
+                          <button
+                            onClick={() => navigate(`/turnos/${solicitud.id}`)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600"
+                          >
+                            {solicitud.estado === 'pendiente_pago' ? 'Ver y pagar' : 'Chatear'}
+                          </button>
+                        )}
+                        {solicitud.estado === 'pendiente_pago' && (
+                          <button
+                            onClick={() => navigate(`/turnos/${solicitud.id}`)}
+                            className="bg-[#E07A5F] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#d16a4f]"
+                          >
+                            💳 Pagar
+                          </button>
+                        )}
+                        {solicitud.estado === 'pendiente_admin' && (
+                          <span className="text-sm text-gray-500 italic px-2">
+                            Esperando asignación del admin
+                          </span>
+                        )}
                         
                         {solicitud.estado !== 'cancelado' && solicitud.estado !== 'completado' && (
                           <button
