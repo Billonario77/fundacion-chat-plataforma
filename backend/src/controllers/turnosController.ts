@@ -11,7 +11,7 @@ const pagoService = new PagoService(pool);
 
 export const solicitarApoyo = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { rol, mensajeInicial, fechaPreferida } = req.body;
+    const { rol, mensajeInicial, fechaPreferida, quiereOtroGuia } = req.body;
     const usuarioId = (req as AuthRequest).user?.id;
 
     console.log('📥 solicitarApoyo - body recibido:', req.body);
@@ -84,10 +84,21 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     let guiaAsignado = null;
     let estado = 'pendiente';
 
+        // ✅ Si el usuario pide otro guía, limpiar el asignado
+    if (quiereOtroGuia) {
+      await pool.query(
+        `UPDATE usuarios SET guia_asignado_id = NULL WHERE id = $1`,
+        [usuarioId]
+      );
+      console.log(`🔄 Usuario ${usuarioId} solicitó cambio de guía - limpiando asignación`);
+    }
+
     const asignacion = await AsignacionService.asignarGuia(
       usuarioId,
       esPrimeraVez,
-      fechaPreferida ? new Date(fechaPreferida) : undefined
+      fechaPreferida ? new Date(fechaPreferida) : undefined,
+      rol,
+      quiereOtroGuia ? 'otro_guia' : undefined
     );
 
     console.log(`📋 Resultado asignación:`, {
@@ -165,6 +176,15 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     
     const turnoId = result.rows[0].id;
     console.log(`✅ Turno guardado con ID: ${turnoId}`);
+
+    // ✅ SI SE ASIGNÓ GUÍA AUTOMÁTICAMENTE, GUARDARLO EN EL PERFIL DEL USUARIO
+    if (guiaAsignado && !esPrimeraVez) {
+      await pool.query(
+        `UPDATE usuarios SET guia_asignado_id = $1 WHERE id = $2 AND guia_asignado_id IS NULL`,
+        [guiaAsignado, usuarioId]
+      );
+      console.log(`✅ Guía ${guiaAsignado} guardado como guía del usuario ${usuarioId}`);
+    }
 
     // ============================================
     // CALCULAR COSTO AUTOMÁTICAMENTE

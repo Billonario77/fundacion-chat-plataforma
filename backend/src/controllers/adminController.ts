@@ -145,6 +145,15 @@ export const asignarGuiaATurno = async (req: AuthRequest, res: Response): Promis
       [guiaId, turnoId]
     );
 
+    // ✅ GUARDAR EL GUÍA EN EL PERFIL DEL USUARIO
+    // Así en próximas solicitudes se asignará automáticamente el mismo guía
+    await pool.query(
+      `UPDATE usuarios SET guia_asignado_id = $1 WHERE id = $2`,
+      [guiaId, turno.usuario_id]
+    );
+
+    console.log(`✅ Guía ${guiaId} guardado como guía asignado del usuario ${turno.usuario_id}`);
+
     // ============================================
     // CALCULAR COSTO AUTOMÁTICAMENTE
     // ============================================

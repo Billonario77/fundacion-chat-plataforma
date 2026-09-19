@@ -56,15 +56,41 @@ export class AsignacionService {
       }
     }
 
-    // CASO 3: Último guía con quien tuvo turno activo
-    const ultimoGuia = await this.obtenerUltimoGuiaActivo(usuarioId);
-    if (ultimoGuia && await this.verificarDisponibilidad(ultimoGuia, fechaProgramada)) {
-      const carga = await this.obtenerCargaGuia(ultimoGuia);
-      if (carga.turnos_activos < 6) {
+        // CASO 2.5: Usuario pidió explícitamente OTRO guía
+    if (preferenciaUsuario === 'otro_guia') {
+      return {
+        guiaId: null,
+        requiereAdmin: true,
+        razon: 'El usuario solicitó cambio de guía - requiere asignación del admin'
+      };
+    }
+
+    // CASO 3: Guía asignado previamente al usuario (guardado en su perfil)
+    const guiaAsignado = await this.obtenerGuiaAsignado(usuarioId);
+    if (guiaAsignado) {
+      const estaDisponible = await this.verificarDisponibilidad(guiaAsignado, fechaProgramada);
+      if (estaDisponible) {
+        const carga = await this.obtenerCargaGuia(guiaAsignado);
+        if (carga.turnos_activos < 6) {
+          return {
+            guiaId: guiaAsignado,
+            requiereAdmin: false,
+            razon: 'Guía asignado previamente al usuario'
+          };
+        } else {
+          // El guía está sobrecargado → requiere admin
+          return {
+            guiaId: null,
+            requiereAdmin: true,
+            razon: 'El guía asignado está sobrecargado - requiere revisión del admin'
+          };
+        }
+      } else {
+        // El guía no tiene disponibilidad en ese horario → requiere admin
         return {
-          guiaId: ultimoGuia,
-          requiereAdmin: false,
-          razon: 'Último guía con turno activo'
+          guiaId: null,
+          requiereAdmin: true,
+          razon: 'El guía asignado no tiene disponibilidad en ese horario - requiere revisión del admin'
         };
       }
     }
@@ -115,18 +141,14 @@ export class AsignacionService {
   }
 
   /**
-   * Obtiene el último guía con turno activo
+   * Obtiene el guía asignado al usuario (guardado en la tabla usuarios)
    */
-  private static async obtenerUltimoGuiaActivo(usuarioId: string): Promise<string | null> {
+  private static async obtenerGuiaAsignado(usuarioId: string): Promise<string | null> {
     const result = await pool.query(
-      `SELECT guia_id FROM turnos 
-       WHERE usuario_id = $1 
-       AND guia_id IS NOT NULL
-       AND estado IN ('pendiente', 'aceptado', 'iniciado')
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT guia_asignado_id FROM usuarios WHERE id = $1`,
       [usuarioId]
     );
-    return result.rows[0]?.guia_id || null;
+    return result.rows[0]?.guia_asignado_id || null;
   }
 
   /**
