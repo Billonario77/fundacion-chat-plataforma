@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Pool } from 'pg';
 import { WompiService } from '../services/wompiService';
 import { AuthRequest } from '../middleware/auth';
+import { enviarConfirmacionPago, enviarAgradecimientoDonacion } from '../services/emailService';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -116,10 +117,17 @@ export const webhookWompi = async (req: Request, res: Response) => {
         [referencia]
       );
 
-      if (donacionResult.rows.length > 0) {
+            if (donacionResult.rows.length > 0) {
         // Es una donación
         const estadoDonacion = estadoInterno === 'completada' ? 'completada' : estadoInterno;
         
+        // Obtener datos completos de la donación para el email
+        const donacionData = await pool.query(
+          `SELECT id, nombre_donante, email_donante, monto, mensaje, es_anonima, estado
+           FROM donaciones WHERE referencia_wompi = $1`,
+          [referencia]
+        );
+
         await pool.query(
           `UPDATE donaciones 
            SET estado = $1, 
@@ -130,6 +138,26 @@ export const webhookWompi = async (req: Request, res: Response) => {
         );
 
         console.log(`✅ Donación actualizada: ${referencia} → ${estadoDonacion}`);
+
+        // 📧 Enviar email de agradecimiento si fue aprobada y NO es anónima
+        if (estadoDonacion === 'completada') {
+          const donacion = donacionData.rows[0];
+          
+          if (donacion && donacion.email_donante && !donacion.es_anonima) {
+            try {
+              await enviarAgradecimientoDonacion({
+                email: donacion.email_donante,
+                nombre: donacion.nombre_donante || 'Amig@',
+                monto: parseFloat(donacion.monto),
+                mensaje: donacion.mensaje || undefined
+              });
+              console.log(`📧 Email de agradecimiento enviado a: ${donacion.email_donante}`);
+            } catch (emailError) {
+              console.error('⚠️ Error al enviar email de donación:', emailError);
+              // No detener el webhook por error de email
+            }
+          }
+        }
       } else {
         // ============================================
         // 2. BUSCAR EN COBROS (PAGOS DE SESIÓN)
@@ -139,12 +167,27 @@ export const webhookWompi = async (req: Request, res: Response) => {
           [referencia]
         );
 
-        if (cobroResult.rows.length > 0) {
+                if (cobroResult.rows.length > 0) {
           const cobro = cobroResult.rows[0];
           const estadoCobro = estadoInterno === 'completada' ? 'pagado' : estadoInterno;
           
+          // Obtener datos completos para el email
+          const datosEmailQuery = await pool.query(
+            `SELECT 
+              t.fecha_programada,
+              u.nombre as usuario_nombre,
+              u.email as usuario_email,
+              g.nombre as guia_nombre,
+              c.total
+             FROM cobros c
+             INNER JOIN usuarios u ON u.id = c.usuario_id
+             INNER JOIN usuarios g ON g.id = c.guia_id
+             INNER JOIN turnos t ON t.id = c.turno_id
+             WHERE c.id = $1`,
+            [cobro.id]
+          );
+
           // Actualizar cobro
-                    // Actualizar cobro
           const fechaPago = estadoCobro === 'pagado' ? new Date() : null;
           
           await pool.query(
@@ -166,6 +209,33 @@ export const webhookWompi = async (req: Request, res: Response) => {
               [cobro.turno_id]
             );
             console.log(`✅ Turno ${cobro.turno_id} actualizado a "pendiente" (listo para que el guía acepte)`);
+
+            // 📧 Enviar email de confirmación de pago
+            const datosEmail = datosEmailQuery.rows[0];
+            if (datosEmail && datosEmail.usuario_email) {
+              try {
+                const fechaFormateada = new Date(datosEmail.fecha_programada).toLocaleString('es-CO', {
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'America/Bogota'
+                });
+
+                await enviarConfirmacionPago({
+                  email: datosEmail.usuario_email,
+                  nombre: datosEmail.usuario_nombre || 'Usuario',
+                  fechaSesion: fechaFormateada,
+                  guiaNombre: datosEmail.guia_nombre || 'tu guía',
+                  monto: parseFloat(datosEmail.total),
+                  metodoPago: transaccion.payment_method_type || 'Tarjeta'
+                });
+                console.log(`📧 Email de confirmación enviado a: ${datosEmail.usuario_email}`);
+              } catch (emailError) {
+                console.error('⚠️ Error al enviar email de confirmación:', emailError);
+              }
+            }
           }
         } else {
           console.warn(`⚠️ No se encontró donación ni cobro con referencia: ${referencia}`);
