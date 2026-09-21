@@ -6,7 +6,8 @@ import {
   webhookWompi,
   obtenerDonaciones,
   obtenerEstadisticasDonaciones,
-  obtenerDonacionPorReferencia
+  obtenerDonacionPorReferencia,
+  obtenerProgresoMeta
 } from '../controllers/donacionesController';
 
 const router = Router();
@@ -20,6 +21,9 @@ router.post('/generar-firma', generarFirmaDonacion);
 
 // Webhook de Wompi (público - no requiere autenticación, validamos con firma)
 router.post('/webhook', webhookWompi);
+
+// Obtener progreso de la meta mensual (público)
+router.get('/progreso-meta', obtenerProgresoMeta);
 
 // Obtener donación por referencia (público)
 router.get('/:referencia', obtenerDonacionPorReferencia);

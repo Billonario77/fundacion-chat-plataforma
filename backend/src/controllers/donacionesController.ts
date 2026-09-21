@@ -376,3 +376,59 @@ export const obtenerDonacionPorReferencia = async (req: Request, res: Response) 
     res.status(500).json({ error: error.message || 'Error al obtener donación' });
   }
 };
+
+// ============================================
+// OBTENER PROGRESO DE LA META MENSUAL (Público)
+// ============================================
+export const obtenerProgresoMeta = async (req: Request, res: Response) => {
+  try {
+    // Obtener meta desde configuración
+    const metaQuery = await pool.query(
+      `SELECT valor FROM configuracion WHERE clave = 'meta_mensual_donaciones'`
+    );
+    const meta = parseFloat(metaQuery.rows[0]?.valor || '5000000');
+
+    // Obtener total recaudado en el mes actual (donaciones completadas)
+    const totalQuery = await pool.query(
+      `SELECT COALESCE(SUM(monto), 0) as total
+       FROM donaciones
+       WHERE estado = 'completada'
+       AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+       AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)`
+    );
+    const totalRecaudado = parseFloat(totalQuery.rows[0].total);
+
+    // Calcular porcentaje
+    const porcentaje = meta > 0 ? Math.min(100, Math.round((totalRecaudado / meta) * 100)) : 0;
+
+    // Contar donaciones del mes
+    const countQuery = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM donaciones
+       WHERE estado = 'completada'
+       AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+       AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)`
+    );
+    const totalDonaciones = parseInt(countQuery.rows[0].total);
+
+    // Nombre del mes actual en español
+    const mesActual = new Date().toLocaleString('es-CO', { month: 'long' });
+    const mesCapitalizado = mesActual.charAt(0).toUpperCase() + mesActual.slice(1);
+
+    res.json({
+      success: true,
+      data: {
+        meta,
+        totalRecaudado,
+        porcentaje,
+        totalDonaciones,
+        mesActual: mesCapitalizado,
+        falta: Math.max(0, meta - totalRecaudado)
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener progreso de meta:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener progreso' });
+  }
+};
