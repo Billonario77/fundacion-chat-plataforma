@@ -64,5 +64,53 @@ export const configuracionService = {
   limpiarCache: () => {
     configCache = null;
     cacheTimestamp = 0;
+  },
+
+    /**
+   * Actualizar un valor de configuración (solo admin)
+   */
+  actualizarValor: async (clave: string, valor: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API_URL}/configuracion`,
+        { clave, valor },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Limpiar cache para forzar recarga
+      configuracionService.limpiarCache();
+      
+      return response.data.success;
+    } catch (error: any) {
+      console.error('Error al actualizar configuración:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener toda la configuración con descripciones (admin)
+   */
+  obtenerConfiguracionCompleta: async (): Promise<any[]> => {
+    const response = await axios.get(`${API_URL}/configuracion`);
+    const config = response.data.data;
+    
+    // Convertir a array con descripciones
+    const descripciones: Record<string, string> = {
+      precio_sesion: 'Precio de una sesión de 1 hora en COP',
+      meta_mensual_donaciones: 'Meta mensual de donaciones en COP',
+      duracion_sesion_minutos: 'Duración de una sesión en minutos'
+    };
+
+    return Object.entries(config).map(([clave, valor]) => ({
+      clave,
+      valor,
+      descripcion: descripciones[clave] || ''
+    }));
   }
 };
