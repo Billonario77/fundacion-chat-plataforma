@@ -1,0 +1,68 @@
+import axios from 'axios';
+
+const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api';
+
+export interface Configuracion {
+  precio_sesion: string;
+  meta_mensual_donaciones: string;
+  duracion_sesion_minutos: string;
+  [key: string]: string;
+}
+
+// Cache en memoria para no pedir la config en cada render
+let configCache: Configuracion | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+export const configuracionService = {
+  /**
+   * Obtener toda la configuración (con cache de 5 min)
+   */
+  obtenerConfiguracion: async (forzarRecarga = false): Promise<Configuracion> => {
+    const ahora = Date.now();
+    
+    // Si hay cache y no ha expirado, devolver cache
+    if (!forzarRecarga && configCache && (ahora - cacheTimestamp) < CACHE_DURATION) {
+      return configCache;
+    }
+
+    try {
+      const response = await axios.get(`${API_URL}/configuracion`);
+      configCache = response.data.data;
+      cacheTimestamp = ahora;
+      return configCache!;
+    } catch (error) {
+      console.error('Error al obtener configuración:', error);
+      // Fallback con valores por defecto si falla la API
+      return {
+        precio_sesion: '100000',
+        meta_mensual_donaciones: '5000000',
+        duracion_sesion_minutos: '60'
+      };
+    }
+  },
+
+  /**
+   * Obtener un valor específico de la configuración
+   */
+  obtenerValor: async (clave: string, defaultValue: string = ''): Promise<string> => {
+    const config = await configuracionService.obtenerConfiguracion();
+    return config[clave] || defaultValue;
+  },
+
+  /**
+   * Obtener el precio de la sesión como número
+   */
+  obtenerPrecioSesion: async (): Promise<number> => {
+    const valor = await configuracionService.obtenerValor('precio_sesion', '100000');
+    return parseInt(valor) || 100000;
+  },
+
+  /**
+   * Limpiar el cache (útil cuando el admin cambia un valor)
+   */
+  limpiarCache: () => {
+    configCache = null;
+    cacheTimestamp = 0;
+  }
+};

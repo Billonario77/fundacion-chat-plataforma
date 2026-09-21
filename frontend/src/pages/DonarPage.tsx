@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { donacionesService } from '../services/donacionesService';
 import toast from 'react-hot-toast';
+import { configuracionService } from '../services/configuracionService';
 
-const PRECIO_SESION = 100000; // COP por sesión (1 hora)
-
-const MONTOS_RAPIDOS = [
-  { valor: 10000, impacto: '10% de una sesión', emoji: '🌱' },
-  { valor: 25000, impacto: '25% de una sesión', emoji: '💛' },
-  { valor: 50000, impacto: '50% de una sesión', emoji: '✨' },
-  { valor: 100000, impacto: '1 sesión completa', emoji: '🌟' },
-  { valor: 200000, impacto: '2 sesiones completas', emoji: '💝' },
-  { valor: 500000, impacto: '5 sesiones completas', emoji: '🏆' },
+// Montos rápidos basados en el precio de la sesión
+const getMontosRapidos = (precio: number) => [
+  { valor: Math.round(precio * 0.1), impacto: '10% de una sesión', emoji: '🌱' },
+  { valor: Math.round(precio * 0.25), impacto: '25% de una sesión', emoji: '💛' },
+  { valor: Math.round(precio * 0.5), impacto: '50% de una sesión', emoji: '✨' },
+  { valor: precio, impacto: '1 sesión completa', emoji: '🌟' },
+  { valor: precio * 2, impacto: '2 sesiones completas', emoji: '💝' },
+  { valor: precio * 5, impacto: '5 sesiones completas', emoji: '🏆' },
 ];
 
 const DonarPage: React.FC = () => {
@@ -24,6 +24,24 @@ const DonarPage: React.FC = () => {
   const [mensaje, setMensaje] = useState('');
   const [esAnonima, setEsAnonima] = useState(false);
   const [loading, setLoading] = useState(false);
+
+    const [precioSesion, setPrecioSesion] = useState<number>(100000);
+  const [cargandoConfig, setCargandoConfig] = useState(true);
+
+  // Cargar precio desde la configuración
+  useEffect(() => {
+    const cargarPrecio = async () => {
+      try {
+        const precio = await configuracionService.obtenerPrecioSesion();
+        setPrecioSesion(precio);
+      } catch (error) {
+        console.error('Error al cargar precio:', error);
+      } finally {
+        setCargandoConfig(false);
+      }
+    };
+    cargarPrecio();
+  }, []);
 
   const handleMontoRapido = (valor: number) => {
     setMonto(valor);
@@ -39,15 +57,17 @@ const DonarPage: React.FC = () => {
   };
 
   // Calcular impacto del monto personalizado
-    const calcularImpacto = (m: number) => {
+  const calcularImpacto = (m: number) => {
+    if (!precioSesion || precioSesion === 0) return 'Tu ayuda cuenta';
+    
     // Si es menos de una sesión, mostrar porcentaje
-    if (m < PRECIO_SESION) {
-      const porcentaje = Math.round((m / PRECIO_SESION) * 100);
+    if (m < precioSesion) {
+      const porcentaje = Math.round((m / precioSesion) * 100);
       return `${porcentaje}% de una sesión`;
     }
     
     // Si es 1 o más sesiones
-    const sesiones = m / PRECIO_SESION;
+    const sesiones = m / precioSesion;
     
     // Si es entero
     if (Number.isInteger(sesiones)) {
@@ -180,7 +200,7 @@ const DonarPage: React.FC = () => {
               🎯 Elige el impacto que quieres generar
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {MONTOS_RAPIDOS.map((item) => (
+              {getMontosRapidos(precioSesion).map((item) => (
                 <motion.button
                   key={item.valor}
                   whileHover={{ scale: 1.03 }}
