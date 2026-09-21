@@ -26,6 +26,28 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+
+    // ============================================
+    // VALIDAR MÁXIMO 5 TURNOS ACTIVOS POR USUARIO
+    // ============================================
+    const turnosActivosQuery = await pool.query(
+      `SELECT COUNT(*) as total FROM turnos 
+       WHERE usuario_id = $1 
+       AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')`,
+      [usuarioId]
+    );
+    const totalTurnosActivos = parseInt(turnosActivosQuery.rows[0].total);
+
+    if (totalTurnosActivos >= 5) {
+      res.status(400).json({ 
+        error: 'Has alcanzado el límite de 5 sesiones activas. Espera a completar algunas o cancela las que no vayas a usar.' 
+      });
+      return;
+    }
+
+    console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
+
+
     // ============================================
     // VALIDACIONES DE DISPONIBILIDAD DEL USUARIO
     // ============================================

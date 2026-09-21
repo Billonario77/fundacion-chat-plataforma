@@ -58,9 +58,18 @@ export class PagoService {
       guiaId, 
       turnoId, 
       duracionMinutos, 
-      costoPorHora = 100000, 
       codigoCupon 
     } = params;
+
+    // ✅ Obtener el precio de la sesión desde la configuración
+    let costoPorHora = params.costoPorHora;
+    if (!costoPorHora) {
+      const configQuery = await this.pool.query(
+        `SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`
+      );
+      costoPorHora = parseFloat(configQuery.rows[0]?.valor || '100000');
+      console.log(`💵 Precio de sesión obtenido de configuración: $${costoPorHora}`);
+    }
 
     // 1. Obtener usuario
     const usuarioQuery = await this.pool.query(

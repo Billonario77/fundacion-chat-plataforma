@@ -44,19 +44,15 @@ export class AsignacionService {
     if (preferenciaUsuario === 'mismo_guia' || await this.tienePreferenciaMismoGuia(usuarioId)) {
       const guiaOriginal = await this.obtenerGuiaOriginal(usuarioId);
       if (guiaOriginal && await this.verificarDisponibilidad(guiaOriginal, fechaProgramada)) {
-        // Verificar que el guía no esté sobrecargado
-        const carga = await this.obtenerCargaGuia(guiaOriginal);
-        if (carga.turnos_activos < 5) { // Máximo 5 turnos activos
-          return {
-            guiaId: guiaOriginal,
-            requiereAdmin: false,
-            razon: 'Mismo guía (preferencia del usuario)'
-          };
-        }
+        return {
+          guiaId: guiaOriginal,
+          requiereAdmin: false,
+          razon: 'Mismo guía (preferencia del usuario)'
+        };
       }
     }
 
-        // CASO 2.5: Usuario pidió explícitamente OTRO guía
+    // CASO 2.5: Usuario pidió explícitamente OTRO guía
     if (preferenciaUsuario === 'otro_guia') {
       return {
         guiaId: null,
@@ -70,21 +66,11 @@ export class AsignacionService {
     if (guiaAsignado) {
       const estaDisponible = await this.verificarDisponibilidad(guiaAsignado, fechaProgramada);
       if (estaDisponible) {
-        const carga = await this.obtenerCargaGuia(guiaAsignado);
-        if (carga.turnos_activos < 6) {
-          return {
-            guiaId: guiaAsignado,
-            requiereAdmin: false,
-            razon: 'Guía asignado previamente al usuario'
-          };
-        } else {
-          // El guía está sobrecargado → requiere admin
-          return {
-            guiaId: null,
-            requiereAdmin: true,
-            razon: 'El guía asignado está sobrecargado - requiere revisión del admin'
-          };
-        }
+        return {
+          guiaId: guiaAsignado,
+          requiereAdmin: false,
+          razon: 'Guía asignado previamente al usuario'
+        };
       } else {
         // El guía no tiene disponibilidad en ese horario → requiere admin
         return {
@@ -207,7 +193,7 @@ export class AsignacionService {
     // Ordenar por score (mayor a menor) y tomar el mejor
     const mejorGuia = guiasConScore
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .filter(g => g.score && g.score > 20) // Solo guías con score mínimo 20
+      .filter(g => g.score && g.score >= 0) // Solo guías con score mínimo 20
       .slice(0, 1)[0];
 
     // Si el mejor guía tiene score bajo, preferir admin
@@ -234,7 +220,6 @@ export class AsignacionService {
       LEFT JOIN turnos t ON t.guia_id = g.id
       WHERE g.rol = 'guia'
       GROUP BY g.id, g.nombre, g.email, g.disponible
-      HAVING COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) < 6
     `);
     
     return result.rows.map((row: any) => ({
