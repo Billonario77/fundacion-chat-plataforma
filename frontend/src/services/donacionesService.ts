@@ -64,5 +64,13 @@ export const donacionesService = {
       }
     });
     return response.data;
+  },
+
+    /**
+   * Obtener progreso de la meta mensual de donaciones
+   */
+  obtenerProgresoMeta: async () => {
+    const response = await axios.get(`${API_URL}/donaciones/progreso-meta`);
+    return response.data.data;
   }
 };

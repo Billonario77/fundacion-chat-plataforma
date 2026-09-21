@@ -25,22 +25,35 @@ const DonarPage: React.FC = () => {
   const [esAnonima, setEsAnonima] = useState(false);
   const [loading, setLoading] = useState(false);
 
-    const [precioSesion, setPrecioSesion] = useState<number>(100000);
+  const [precioSesion, setPrecioSesion] = useState<number>(100000);
   const [cargandoConfig, setCargandoConfig] = useState(true);
 
-  // Cargar precio desde la configuración
+    const [progresoMeta, setProgresoMeta] = useState<{
+    meta: number;
+    totalRecaudado: number;
+    porcentaje: number;
+    totalDonaciones: number;
+    mesActual: string;
+    falta: number;
+  } | null>(null);
+
+  // Cargar precio y progreso de meta
   useEffect(() => {
-    const cargarPrecio = async () => {
+    const cargarDatos = async () => {
       try {
-        const precio = await configuracionService.obtenerPrecioSesion();
+        const [precio, progreso] = await Promise.all([
+          configuracionService.obtenerPrecioSesion(),
+          donacionesService.obtenerProgresoMeta()
+        ]);
         setPrecioSesion(precio);
+        setProgresoMeta(progreso);
       } catch (error) {
-        console.error('Error al cargar precio:', error);
+        console.error('Error al cargar datos:', error);
       } finally {
         setCargandoConfig(false);
       }
     };
-    cargarPrecio();
+    cargarDatos();
   }, []);
 
   const handleMontoRapido = (valor: number) => {
@@ -55,6 +68,15 @@ const DonarPage: React.FC = () => {
       setMonto(num);
     }
   };
+
+  const formatCurrency = (v: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0
+    }).format(v);
+  };
+
 
   // Calcular impacto del monto personalizado
   const calcularImpacto = (m: number) => {
@@ -185,6 +207,66 @@ const DonarPage: React.FC = () => {
           <p className="text-lg text-[#5D6078] max-w-xl mx-auto leading-relaxed">
             Cada aporte nos permite seguir acompañando a personas que necesitan un espacio seguro para sanar. Tu generosidad crea esperanza.
           </p>
+         
+                   {/* Barra de progreso de la meta mensual */}
+          {progresoMeta && progresoMeta.meta > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-[#F2CC8F]/40 shadow-sm max-w-xl mx-auto"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🎯</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#3D405B]">
+                      Meta de {progresoMeta.mesActual}
+                    </p>
+                    <p className="text-xs text-[#5D6078]">
+                      {progresoMeta.totalDonaciones} {progresoMeta.totalDonaciones === 1 ? 'donación' : 'donaciones'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-[#E07A5F]">
+                    {progresoMeta.porcentaje}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Barra de progreso */}
+              <div className="w-full bg-[#F2CC8F]/30 rounded-full h-4 overflow-hidden mb-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progresoMeta.porcentaje}%` }}
+                  transition={{ duration: 1, delay: 0.5 }}
+                  className="h-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] rounded-full"
+                />
+              </div>
+
+              <div className="flex justify-between text-xs text-[#5D6078]">
+                <span className="font-semibold text-[#3D405B]">
+                  {formatCurrency(progresoMeta.totalRecaudado)}
+                </span>
+                <span>
+                  Meta: {formatCurrency(progresoMeta.meta)}
+                </span>
+              </div>
+
+              {progresoMeta.falta > 0 && (
+                <p className="text-xs text-center text-[#5D6078] mt-3">
+                  Faltan <strong className="text-[#E07A5F]">{formatCurrency(progresoMeta.falta)}</strong> para alcanzar la meta
+                </p>
+              )}
+
+              {progresoMeta.porcentaje >= 100 && (
+                <p className="text-xs text-center text-green-600 font-semibold mt-3">
+                  🎉 ¡Meta alcanzada! Gracias a todos los donantes
+                </p>
+              )}
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Tarjeta principal */}
