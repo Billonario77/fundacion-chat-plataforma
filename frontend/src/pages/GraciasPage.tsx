@@ -49,10 +49,9 @@ const GraciasPage: React.FC = () => {
         <p className="text-[#5D6078] italic mb-8">
           "Cada acto de bondad, por pequeño que sea, transforma el mundo."
         </p>
-
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            to="/"
+            to="/inicio"
             className="bg-[#E07A5F] text-white px-8 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105"
           >
             Volver al inicio

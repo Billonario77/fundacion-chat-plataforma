@@ -10,21 +10,15 @@ const Login: React.FC = () => {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
     try {
-      const user = await login(email, password);  // ← login retorna el usuario directamente
+      await login(email, password);
       
-      // Redirigir según el rol que viene del backend
-      if (user.rol === 'admin') {
-        navigate('/admin');
-      } else if (user.rol === 'guia') {
-        navigate('/guia');
-      } else {
-        navigate('/usuario');
-      }
+      // Redirigir siempre al inicio (que detecta el rol)
+      navigate('/inicio');
     } catch (err: any) {
       if (err.response?.status === 429) {
         setError('Demasiados intentos. Espera un momento y vuelve a intentar.');

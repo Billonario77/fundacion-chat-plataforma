@@ -615,4 +615,30 @@ export const getMiCarga = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+// ============================================
+// CONTAR TURNOS DE HOY (Admin)
+// ============================================
+export const countTurnosHoy = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      res.status(403).json({ error: 'Acceso solo para administradores' });
+      return;
+    }
+
+    const result = await pool.query(`
+      SELECT COUNT(*) as total
+      FROM turnos
+      WHERE fecha_programada::date = CURRENT_DATE
+    `);
+
+    res.json({
+      count: parseInt(result.rows[0].total) || 0
+    });
+
+  } catch (error) {
+    console.error('Error al contar turnos de hoy:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 

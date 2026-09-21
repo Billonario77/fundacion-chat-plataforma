@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Logo con efecto hover */}
             <div 
               className="flex items-center space-x-3 cursor-pointer group"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(isAuthenticated ? '/inicio' : '/')}
             >
               <div className="bg-primario/10 p-2 rounded-xl group-hover:bg-primario/20 transition-all duration-300">
                 <span className="text-2xl">🤝</span>
@@ -51,9 +51,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <>
                   {/* Botón Inicio - siempre visible */}
                   <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/inicio')}
                     className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
-                      isActiveRoute('/') 
+                      isActiveRoute('/inicio')
                         ? 'bg-primario text-white shadow-md' 
                         : 'text-texto hover:bg-primario/10 hover:text-primario'
                     }`}

@@ -106,11 +106,11 @@ const DonarPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* Navegación */}
       <nav className="container mx-auto px-6 py-5 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-serif font-bold text-[#3D405B]">
+        <Link to="/inicio" className="text-2xl font-serif font-bold text-[#3D405B]">
           Fundación Apoyo
         </Link>
         <Link
-          to="/"
+          to="/inicio"
           className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors"
         >
           ← Volver al inicio

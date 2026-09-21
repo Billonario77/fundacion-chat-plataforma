@@ -15,6 +15,7 @@ import { MensajesNoLeidosProvider } from './contexts/MensajesNoLeidosContext';
 import RecuperarContrasena from './pages/RecuperarContrasena';
 import DonarPage from './pages/DonarPage';
 import GraciasPage from './pages/GraciasPage';
+import Inicio from './pages/Inicio';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -68,8 +69,7 @@ function AppContent() {
       <Route path="/donar" element={<DonarPage />} />
       <Route path="/gracias" element={<GraciasPage />} />
       
-      {/* 👇 NUEVA RUTA */}
-      <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
+            <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
       
       <Route
         path="/dashboard"
@@ -103,6 +103,15 @@ function AppContent() {
         element={
           <PrivateRoute>
             <UsuarioDashboard />
+          </PrivateRoute>
+        }
+      />
+
+            <Route
+        path="/inicio"
+        element={
+          <PrivateRoute>
+            <Inicio />
           </PrivateRoute>
         }
       />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useMensajesNoLeidos } from '../contexts/MensajesNoLeidosContext';
@@ -20,13 +20,18 @@ const UsuarioDashboard: React.FC = () => {
   const { noLeidos, recargarNoLeidos } = useMensajesNoLeidos();
   console.log('👤 Usuario ID en dashboard:', user?.id);
   const navigate = useNavigate();
+  const location = useLocation();
   const [solicitudes, setSolicitudes] = useState<Turno[]>([]);
   const [reprogramaciones, setReprogramaciones] = useState<Reprogramacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingRepro, setLoadingRepro] = useState(true);
   const [error, setError] = useState('');
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados'>('activas');
+  const [mostrarFormulario, setMostrarFormulario] = useState(
+    (location.state as any)?.abrirFormulario || false
+  );
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados'>(
+    (location.state as any)?.pestañaInicial || 'activas'
+  );
   const [ultimoEvento, setUltimoEvento] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
     
@@ -187,6 +192,13 @@ const [modalCerrado, setModalCerrado] = useState(false);
     console.log('🔄 FORZANDO RENDER - noLeidos:', JSON.stringify(noLeidos));
     setSolicitudes(prev => [...prev]);
   }, [noLeidos]);
+
+   // Limpiar el estado de navegación después de usarlo
+  useEffect(() => {
+    if (location.state) {
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   // Marcar cancelaciones como vistas al entrar a la pestaña
   useEffect(() => {

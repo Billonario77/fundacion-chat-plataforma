@@ -49,6 +49,9 @@ router.get('/mi-carga', adminController.getMiCarga);
 // Obtener turnos pendientes de asignación
 router.get('/turnos-pendientes-asignacion', adminController.getTurnosPendientesAsignacion);
 
+// Contar turnos de hoy
+router.get('/turnos-hoy/count', adminController.countTurnosHoy);
+
 // Asignar guía a turno
 router.post('/turnos/:turnoId/asignar-guia', adminController.asignarGuiaATurno);
 
