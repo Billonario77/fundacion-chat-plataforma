@@ -4,8 +4,16 @@ import { motion } from 'framer-motion';
 import { donacionesService } from '../services/donacionesService';
 import toast from 'react-hot-toast';
 
-// Montos predefinidos
-const MONTOS_RAPIDOS = [10000, 20000, 50000, 100000, 200000, 500000];
+const PRECIO_SESION = 100000; // COP por sesión (1 hora)
+
+const MONTOS_RAPIDOS = [
+  { valor: 10000, impacto: '10% de una sesión', emoji: '🌱' },
+  { valor: 25000, impacto: '25% de una sesión', emoji: '💛' },
+  { valor: 50000, impacto: '50% de una sesión', emoji: '✨' },
+  { valor: 100000, impacto: '1 sesión completa', emoji: '🌟' },
+  { valor: 200000, impacto: '2 sesiones completas', emoji: '💝' },
+  { valor: 500000, impacto: '5 sesiones completas', emoji: '🏆' },
+];
 
 const DonarPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,8 +38,28 @@ const DonarPage: React.FC = () => {
     }
   };
 
+  // Calcular impacto del monto personalizado
+    const calcularImpacto = (m: number) => {
+    // Si es menos de una sesión, mostrar porcentaje
+    if (m < PRECIO_SESION) {
+      const porcentaje = Math.round((m / PRECIO_SESION) * 100);
+      return `${porcentaje}% de una sesión`;
+    }
+    
+    // Si es 1 o más sesiones
+    const sesiones = m / PRECIO_SESION;
+    
+    // Si es entero
+    if (Number.isInteger(sesiones)) {
+      if (sesiones === 1) return '1 sesión completa';
+      return `${sesiones} sesiones completas`;
+    }
+    
+    // Si tiene decimales (ej: 1.5 sesiones)
+    return `${sesiones.toFixed(1)} sesiones`;
+  };
+
   const handleDonar = async () => {
-    // Validaciones
     if (!monto || monto < 5000) {
       toast.error('El monto mínimo de donación es $5.000 COP');
       return;
@@ -50,7 +78,6 @@ const DonarPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Solicitar firma al backend
       const data = await donacionesService.generarFirma({
         monto,
         nombreDonante: esAnonima ? undefined : nombre,
@@ -61,7 +88,6 @@ const DonarPage: React.FC = () => {
 
       console.log('✅ Firma generada:', data);
 
-      // 2. Abrir el Widget de Wompi
       // @ts-ignore - WidgetCheckout viene del script externo
       const checkout = new WidgetCheckout({
         currency: data.moneda,
@@ -106,69 +132,91 @@ const DonarPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* Navegación */}
       <nav className="container mx-auto px-6 py-5 flex justify-between items-center">
-        <Link to="/inicio" className="text-2xl font-serif font-bold text-[#3D405B]">
+        <Link to="/" className="text-2xl font-serif font-bold text-[#3D405B]">
           Fundación Apoyo
         </Link>
         <Link
           to="/inicio"
-          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors"
+          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2"
         >
-          ← Volver al inicio
+          ← Volver
         </Link>
       </nav>
 
       {/* Contenido */}
-      <div className="container mx-auto px-6 py-12 max-w-3xl">
+      <div className="container mx-auto px-6 py-8 max-w-3xl">
+        {/* Hero section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="text-center mb-10"
         >
-          <div className="text-6xl mb-4">💛</div>
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="text-7xl mb-4"
+          >
+            💛
+          </motion.div>
           <h1 className="text-4xl md:text-5xl font-serif text-[#3D405B] mb-4">
             Tu donación transforma vidas
           </h1>
-          <p className="text-lg text-[#5D6078] max-w-xl mx-auto">
-            Cada aporte nos permite seguir acompañando a personas que necesitan un espacio seguro para sanar.
+          <p className="text-lg text-[#5D6078] max-w-xl mx-auto leading-relaxed">
+            Cada aporte nos permite seguir acompañando a personas que necesitan un espacio seguro para sanar. Tu generosidad crea esperanza.
           </p>
         </motion.div>
 
+        {/* Tarjeta principal */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-[#F2CC8F]/40"
+          className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-[#F2CC8F]/40"
         >
-          {/* Montos rápidos */}
+          {/* Montos rápidos con impacto */}
           <div className="mb-8">
-            <label className="block text-sm font-semibold text-[#3D405B] mb-3">
-              Elige un monto
+            <label className="block text-lg font-semibold text-[#3D405B] mb-4">
+              🎯 Elige el impacto que quieres generar
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {MONTOS_RAPIDOS.map((valor) => (
-                <button
-                  key={valor}
-                  onClick={() => handleMontoRapido(valor)}
-                  className={`py-4 rounded-2xl font-medium transition-all ${
-                    monto === valor && !montoPersonalizado
-                      ? 'bg-[#E07A5F] text-white shadow-lg scale-105'
-                      : 'bg-[#F2CC8F]/30 text-[#3D405B] hover:bg-[#F2CC8F]/50'
+              {MONTOS_RAPIDOS.map((item) => (
+                <motion.button
+                  key={item.valor}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleMontoRapido(item.valor)}
+                  className={`p-4 rounded-2xl font-medium transition-all text-left ${
+                    monto === item.valor && !montoPersonalizado
+                      ? 'bg-gradient-to-br from-[#E07A5F] to-[#d16a4f] text-white shadow-lg shadow-[#E07A5F]/30'
+                      : 'bg-[#F2CC8F]/20 text-[#3D405B] hover:bg-[#F2CC8F]/40 border border-[#F2CC8F]/40'
                   }`}
                 >
-                  ${valor.toLocaleString('es-CO')}
-                </button>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{item.emoji}</span>
+                    <span className="text-lg font-bold">
+                      ${item.valor.toLocaleString('es-CO')}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${
+                    monto === item.valor && !montoPersonalizado 
+                      ? 'text-white/90' 
+                      : 'text-[#5D6078]'
+                  }`}>
+                    {item.impacto}
+                  </p>
+                </motion.button>
               ))}
             </div>
           </div>
 
           {/* Monto personalizado */}
-          <div className="mb-8">
+          <div className="mb-6">
             <label className="block text-sm font-semibold text-[#3D405B] mb-3">
-              O ingresa un monto personalizado
+              O ingresa otro monto
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3D405B] font-bold">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3D405B] font-bold text-lg">
                 $
               </span>
               <input
@@ -178,7 +226,7 @@ const DonarPage: React.FC = () => {
                 placeholder="5000"
                 value={montoPersonalizado}
                 onChange={(e) => handleMontoPersonalizado(e.target.value)}
-                className="w-full pl-10 pr-4 py-4 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-lg text-[#3D405B] bg-white/80"
+                className="w-full pl-10 pr-4 py-4 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-lg text-[#3D405B] bg-white/80 font-medium"
               />
             </div>
             <p className="text-xs text-[#5D6078] mt-2">
@@ -186,31 +234,45 @@ const DonarPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Monto seleccionado */}
-          <div className="mb-8 p-4 bg-[#F2CC8F]/20 rounded-2xl text-center">
-            <p className="text-sm text-[#5D6078]">Vas a donar</p>
-            <p className="text-3xl font-bold text-[#E07A5F]">
+          {/* Resumen del impacto */}
+          <motion.div
+            key={monto}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mb-8 p-6 bg-gradient-to-br from-[#F2CC8F]/40 to-[#E07A5F]/20 rounded-2xl text-center border border-[#F2CC8F]/50"
+          >
+            <p className="text-sm text-[#5D6078] mb-1">Vas a donar</p>
+            <p className="text-4xl font-bold text-[#E07A5F] mb-2">
               ${monto.toLocaleString('es-CO')} COP
             </p>
-          </div>
+            <p className="text-sm text-[#3D405B] font-medium">
+              ✨ {calcularImpacto(monto)}
+            </p>
+          </motion.div>
 
           {/* Datos del donante */}
           <div className="mb-6">
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-[#F2CC8F]/10 transition-colors">
               <input
                 type="checkbox"
                 checked={esAnonima}
                 onChange={(e) => setEsAnonima(e.target.checked)}
-                className="w-5 h-5 accent-[#E07A5F]"
+                className="w-5 h-5 accent-[#E07A5F] cursor-pointer"
               />
-              <span className="text-sm text-[#3D405B]">
-                Quiero que mi donación sea anónima
+              <span className="text-sm text-[#3D405B] font-medium">
+                🤫 Quiero que mi donación sea anónima
               </span>
             </label>
           </div>
 
           {!esAnonima && (
-            <div className="space-y-4 mb-6">
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-4 mb-6"
+            >
               <input
                 type="text"
                 placeholder="Tu nombre completo"
@@ -220,18 +282,21 @@ const DonarPage: React.FC = () => {
               />
               <input
                 type="email"
-                placeholder="Tu correo electrónico"
+                placeholder="Tu correo electrónico (para enviarte el comprobante)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-[#3D405B] bg-white/80"
               />
-            </div>
+            </motion.div>
           )}
 
           {/* Mensaje opcional */}
           <div className="mb-8">
+            <label className="block text-sm font-semibold text-[#3D405B] mb-2">
+              💬 Mensaje (opcional)
+            </label>
             <textarea
-              placeholder="Mensaje opcional (nos encantaría leerte)"
+              placeholder="Comparte una palabra de aliento o dedica tu donación a alguien especial..."
               value={mensaje}
               onChange={(e) => setMensaje(e.target.value)}
               rows={3}
@@ -240,14 +305,16 @@ const DonarPage: React.FC = () => {
           </div>
 
           {/* Botón de donar */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleDonar}
             disabled={loading}
-            className="w-full bg-[#E07A5F] text-white py-5 rounded-full text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-[1.02] shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+            className="w-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] text-white py-5 rounded-full text-lg font-semibold hover:shadow-xl transition-all shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
             {loading ? (
               <>
-                <span className="animate-spin">⏳</span>
+                <span className="animate-spin text-xl">⏳</span>
                 Procesando...
               </>
             ) : (
@@ -255,32 +322,82 @@ const DonarPage: React.FC = () => {
                 💛 Donar ${monto.toLocaleString('es-CO')} COP
               </>
             )}
-          </button>
+          </motion.button>
 
           {/* Métodos de pago */}
           <div className="mt-6 text-center">
             <p className="text-xs text-[#5D6078] mb-3">
-              Aceptamos los siguientes métodos de pago seguros:
+              Paga seguro con los métodos que prefieras:
             </p>
-            <div className="flex flex-wrap justify-center gap-3 text-sm text-[#5D6078]">
-              <span className="px-3 py-1 bg-white/60 rounded-full">💳 Tarjetas</span>
-              <span className="px-3 py-1 bg-white/60 rounded-full">🏦 PSE</span>
-              <span className="px-3 py-1 bg-white/60 rounded-full">💜 Nequi</span>
-              <span className="px-3 py-1 bg-white/60 rounded-full">🏪 Efecty</span>
+            <div className="flex flex-wrap justify-center gap-2 text-xs text-[#3D405B]">
+              <span className="px-3 py-1.5 bg-white/80 rounded-full border border-[#F2CC8F]/40 font-medium">
+                💳 Tarjetas
+              </span>
+              <span className="px-3 py-1.5 bg-white/80 rounded-full border border-[#F2CC8F]/40 font-medium">
+                🏦 PSE
+              </span>
+              <span className="px-3 py-1.5 bg-white/80 rounded-full border border-[#F2CC8F]/40 font-medium">
+                💜 Nequi
+              </span>
+              <span className="px-3 py-1.5 bg-white/80 rounded-full border border-[#F2CC8F]/40 font-medium">
+                🏪 Efecty
+              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* Nota de seguridad */}
-        <div className="mt-8 text-center text-sm text-[#5D6078]">
-          <p>🔒 Transacción 100% segura procesada por Wompi</p>
-          <p className="mt-2">
+        {/* Sección de confianza */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-8 grid md:grid-cols-3 gap-4"
+        >
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 text-center border border-[#F2CC8F]/40">
+            <div className="text-3xl mb-2">🔒</div>
+            <p className="font-semibold text-[#3D405B] mb-1">100% Seguro</p>
+            <p className="text-xs text-[#5D6078]">
+              Transacción protegida por Wompi
+            </p>
+          </div>
+
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 text-center border border-[#F2CC8F]/40">
+            <div className="text-3xl mb-2">💛</div>
+            <p className="font-semibold text-[#3D405B] mb-1">+500 personas</p>
+            <p className="text-xs text-[#5D6078]">
+              Ya han confiado en nosotros
+            </p>
+          </div>
+
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 text-center border border-[#F2CC8F]/40">
+            <div className="text-3xl mb-2">🎯</div>
+            <p className="font-semibold text-[#3D405B] mb-1">100% de impacto</p>
+            <p className="text-xs text-[#5D6078]">
+              Tu donación se destina a las sesiones
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Frase final */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="mt-8 text-center max-w-2xl mx-auto"
+        >
+          <p className="text-xl md:text-2xl font-serif text-[#3D405B] italic leading-relaxed">
+            "Un pequeño gesto puede cambiar una vida entera."
+          </p>
+          <p className="text-sm text-[#5D6078] mt-4">
             ¿Tienes preguntas? Escríbenos a{' '}
-            <a href="mailto:contacto@fundacionapoyo.com" className="text-[#E07A5F] hover:underline">
+            <a 
+              href="mailto:contacto@fundacionapoyo.com" 
+              className="text-[#E07A5F] hover:underline font-medium"
+            >
               contacto@fundacionapoyo.com
             </a>
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
