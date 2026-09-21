@@ -355,7 +355,8 @@ export const obtenerDonacionPorReferencia = async (req: Request, res: Response) 
     const { referencia } = req.params;
 
     const result = await pool.query(
-      `SELECT id, referencia_wompi, monto, moneda, estado, metodo_pago, created_at 
+      `SELECT id, referencia_wompi, nombre_donante, email_donante, monto, moneda, 
+              estado, metodo_pago, mensaje, es_anonima, created_at 
        FROM donaciones 
        WHERE referencia_wompi = $1`,
       [referencia]
