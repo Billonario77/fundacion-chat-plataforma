@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { donacionesService } from '../services/donacionesService';
 import toast from 'react-hot-toast';
 import { configuracionService } from '../services/configuracionService';
+import Footer from '../components/Footer';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 // Montos rápidos basados en el precio de la sesión
 const getMontosRapidos = (precio: number) => [
@@ -177,8 +179,9 @@ const DonarPage: React.FC = () => {
         <Link to="/" className="text-2xl font-serif font-bold text-[#3D405B]">
           Fundación Apoyo
         </Link>
+        
         <Link
-          to="/inicio"
+          to="/"
           className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2"
         >
           ← Volver
@@ -501,6 +504,10 @@ const DonarPage: React.FC = () => {
           </p>
         </motion.div>
       </div>
+
+      {/* Footer */}
+      <Footer />
+      <WhatsAppButton />
     </div>
   );
 };

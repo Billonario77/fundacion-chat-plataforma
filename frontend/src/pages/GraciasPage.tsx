@@ -257,10 +257,10 @@ const GraciasPage: React.FC = () => {
           className="flex flex-col sm:flex-row gap-3 justify-center"
         >
           <Link
-            to="/inicio"
+            to="/"
             className="bg-[#E07A5F] text-white px-8 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 text-center"
           >
-            🏠 Volver al inicio
+            🏠 Volver
           </Link>
           <Link
             to="/donar"

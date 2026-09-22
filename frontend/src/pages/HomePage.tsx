@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import Footer from '../components/Footer';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const HomePage: React.FC = () => {
   return (
@@ -75,7 +77,7 @@ const HomePage: React.FC = () => {
               className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
             >
               <Link
-                to="/solicitar-turno"
+                to="/login"
                 className="bg-[#E07A5F] text-white px-10 py-4 rounded-full text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg hover:shadow-xl shadow-[#E07A5F]/30"
               >
                 🌱 Agendar una Sesión
@@ -299,7 +301,7 @@ const HomePage: React.FC = () => {
             Da el primer paso. Estamos aquí para acompañarte.
           </p>
           <Link
-            to="/solicitar-turno"
+            to="/login"
             className="inline-block bg-[#E07A5F] text-white px-12 py-4 rounded-full text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30"
           >
             Comenzar Ahora →
@@ -310,11 +312,9 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       {/* FOOTER */}
       {/* ============================================ */}
-      <footer className="border-t border-[#3D405B]/10 py-8 mt-8">
-        <div className="container mx-auto px-6 text-center text-[#5D6078] text-sm">
-          <p>© 2026 Fundación Apoyo. Un espacio para respirar y sanar. 💛</p>
-        </div>
-      </footer>
+      <footer />
+      <WhatsAppButton />
+
     </div>
   );
 };

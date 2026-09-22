@@ -16,6 +16,8 @@ import RecuperarContrasena from './pages/RecuperarContrasena';
 import DonarPage from './pages/DonarPage';
 import GraciasPage from './pages/GraciasPage';
 import Inicio from './pages/Inicio';
+import TestimoniosPage from './pages/TestimoniosPage';
+import ScrollToTop from './components/ScrollToTop';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -67,6 +69,7 @@ function AppContent() {
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
       <Route path="/donar" element={<DonarPage />} />
+      <Route path="/testimonios" element={<TestimoniosPage />} />
       <Route path="/gracias" element={<GraciasPage />} />
       
             <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
@@ -136,6 +139,7 @@ function App() {
           <MensajesNoLeidosProvider>
             <Toaster position="top-right" />
             <AppContent />
+            <ScrollToTop />
           </MensajesNoLeidosProvider>
         </SocketProvider>
       </AuthProvider>
