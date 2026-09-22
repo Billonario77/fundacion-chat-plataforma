@@ -11,7 +11,9 @@ export const validateRegistro = [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres'),
     body('nombre').optional().isString().trim(),
-    body('telefono').optional().isString()
+    body('telefono').optional().isString(),
+    body('es_anonimo').optional().isBoolean(),
+    body('nickname').optional().isString().trim()
 ];
 
 export const registro = async (req: Request, res: Response): Promise<void> => {
@@ -22,7 +24,7 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const { email, password, nombre, telefono } = req.body;
+        const { email, password, nombre, telefono, es_anonimo, nickname } = req.body;
 
         const existingUser = await pool.query(
             'SELECT id FROM usuarios WHERE email = $1',
@@ -37,6 +39,79 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
+        // ============================================
+        // CASO 1: REGISTRO ANÓNIMO
+        // ============================================
+        if (es_anonimo) {
+            if (!nickname || nickname.trim() === '') {
+                res.status(400).json({ error: 'Debes ingresar un NickName si eliges el modo anónimo' });
+                return;
+            }
+
+            const result = await pool.query(
+                `INSERT INTO usuarios (
+                    email, password_hash, nombre, telefono,
+                    primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                    rol, activo, es_anonimo, nickname
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, true, $9)
+                RETURNING id, email, nombre, rol, es_anonimo, nickname`,
+                [
+                    email,
+                    passwordHash,
+                    nickname.trim(),      // nombre = nickname
+                    telefono || null,
+                    nickname.trim(),      // primer_nombre = nickname
+                    null,
+                    '',                    // primer_apellido vacío
+                    null,
+                    nickname.trim()        // nickname
+                ]
+            );
+
+            const newUser = result.rows[0];
+
+            const token = jwt.sign(
+                { 
+                    id: newUser.id, 
+                    email: newUser.email,
+                    rol: newUser.rol
+                },
+                process.env.JWT_SECRET || 'secret',
+                { expiresIn: '30d' }
+            );
+
+            await pool.query(
+                `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles)
+                 VALUES ($1, $2, $3)`,
+                [newUser.id, 'registro_anonimo', JSON.stringify({ email, nickname })]
+            );
+
+            console.log(`✅ Usuario anónimo registrado: ${nickname} (${email})`);
+
+            res.status(201).json({
+                message: 'Usuario anónimo registrado exitosamente',
+                token,
+                user: {
+                    id: newUser.id,
+                    email: newUser.email,
+                    nombre: newUser.nickname,  // usar nickname como nombre
+                    nickname: newUser.nickname,
+                    rol: newUser.rol,
+                    es_anonimo: true
+                }
+            });
+            return;
+        }
+
+        // ============================================
+        // CASO 2: REGISTRO NORMAL
+        // ============================================
+        if (!nombre || nombre.trim() === '') {
+            res.status(400).json({ error: 'El nombre es obligatorio' });
+            return;
+        }
+
         const partes = nombre.trim().split(' ');
         const primer_nombre = partes[0] || '';
         const segundo_nombre = partes[1] || null;
@@ -44,9 +119,13 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
         const segundo_apellido = partes[3] || null;
 
         const result = await pool.query(
-            `INSERT INTO usuarios (email, password_hash, nombre, telefono, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, rol, activo)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true)
-            RETURNING id, email, nombre, rol`,
+            `INSERT INTO usuarios (
+                email, password_hash, nombre, telefono,
+                primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                rol, activo, es_anonimo
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, false)
+            RETURNING id, email, nombre, rol, es_anonimo, nickname`,
             [email, passwordHash, nombre, telefono, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido]
         );
 
@@ -75,7 +154,8 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
                 id: newUser.id,
                 email: newUser.email,
                 nombre: newUser.nombre,
-                rol: newUser.rol
+                rol: newUser.rol,
+                es_anonimo: false
             }
         });
 
@@ -101,7 +181,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         const { email, password } = req.body;
 
         const userResult = await pool.query(
-            `SELECT id, email, password_hash, nombre, rol, es_admin 
+            `SELECT id, email, password_hash, nombre, rol, es_admin, es_anonimo, nickname 
              FROM usuarios 
              WHERE email = $1`,
             [email]
@@ -136,14 +216,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             [user.id, 'login', JSON.stringify({ email, rol: rolFinal, ip: req.ip })]
         );
 
+        // Si es anónimo, usar nickname como nombre
+        const nombreMostrar = user.es_anonimo && user.nickname 
+            ? user.nickname 
+            : user.nombre;
+
         res.json({
             message: 'Login exitoso',
             token,
             user: {
                 id: user.id,
                 email: user.email,
-                nombre: user.nombre,
-                rol: rolFinal
+                nombre: nombreMostrar,
+                nickname: user.nickname || null,
+                rol: rolFinal,
+                es_anonimo: user.es_anonimo || false
             }
         });
 
@@ -163,7 +250,7 @@ export const perfil = async (req: AuthRequest, res: Response): Promise<void> => 
         const { id } = req.user;
 
         const result = await pool.query(
-            `SELECT id, email, nombre, telefono, rol, es_admin, activo, created_at
+            `SELECT id, email, nombre, telefono, rol, es_admin, activo, created_at, es_anonimo, nickname
              FROM usuarios WHERE id = $1`,
             [id]
         );
@@ -176,9 +263,15 @@ export const perfil = async (req: AuthRequest, res: Response): Promise<void> => 
         const userData = result.rows[0];
         const rolFinal = userData.es_admin ? 'admin' : userData.rol;
 
+        // Si es anónimo, usar nickname como nombre para mostrar
+        const nombreMostrar = userData.es_anonimo && userData.nickname 
+            ? userData.nickname 
+            : userData.nombre;
+
         res.json({
             user: {
                 ...userData,
+                nombre: nombreMostrar,
                 rol: rolFinal
             }
         });

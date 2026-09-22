@@ -6,7 +6,9 @@ interface User {
   id: string;
   email: string;
   nombre: string;
+  nickname?: string | null;
   rol: 'usuario' | 'guia' | 'admin';
+  es_anonimo?: boolean;
 }
 
 interface AuthContextType {
@@ -14,11 +16,18 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (email: string, password: string, nombre: string) => Promise<User>;
+  register: (
+    email: string, 
+    password: string, 
+    nombre: string,
+    esAnonimo?: boolean,
+    nickname?: string
+  ) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
   isGuia: boolean;
   isAdmin: boolean;
+  esAnonimo: boolean;
 }
 
 // Crear el contexto
@@ -95,14 +104,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (email: string, password: string, nombre: string): Promise<User> => {
+    const register = async (
+    email: string, 
+    password: string, 
+    nombre: string,
+    esAnonimo: boolean = false,
+    nickname?: string
+  ): Promise<User> => {
     setLoading(true);
     try {
-      const response = await axios.post('https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/registro', {
+      const payload: any = {
         email,
         password,
-        nombre
-      });
+        es_anonimo: esAnonimo
+      };
+
+      if (esAnonimo) {
+        // Si es anónimo, enviamos el nickname
+        payload.nickname = nickname;
+      } else {
+        // Si no es anónimo, enviamos el nombre
+        payload.nombre = nombre;
+      }
+
+      const response = await axios.post(
+        'https://fundacion-chat-plataforma-backend-api.onrender.com/api/auth/registro',
+        payload
+      );
 
       const { token, user } = response.data;
       
@@ -137,7 +165,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     isAuthenticated: !!user,
     isGuia: user?.rol === 'guia',
-    isAdmin: user?.rol === 'admin'
+    isAdmin: user?.rol === 'admin',
+    esAnonimo: user?.es_anonimo || false
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
