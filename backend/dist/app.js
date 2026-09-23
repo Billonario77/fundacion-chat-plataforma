@@ -25,6 +25,9 @@ const emergenciaRoutes_1 = __importDefault(require("./routes/emergenciaRoutes"))
 const grabacionRoutes_1 = __importDefault(require("./routes/grabacionRoutes"));
 const recuperacionRoutes_1 = __importDefault(require("./routes/recuperacionRoutes"));
 const cobrosRoutes_1 = __importDefault(require("./routes/cobrosRoutes"));
+const donacionesRoutes_1 = __importDefault(require("./routes/donacionesRoutes"));
+const configuracionRoutes_1 = __importDefault(require("./routes/configuracionRoutes"));
+const testimonioRoutes_1 = __importDefault(require("./routes/testimonioRoutes"));
 process.env.TZ = 'America/Bogota';
 console.log('🕐 Zona horaria configurada:', process.env.TZ);
 console.log('🕐 Hora en backend:', new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
@@ -166,6 +169,9 @@ app.use('/api/emergencia', emergenciaRoutes_1.default);
 app.use('/api/grabacion', grabacionRoutes_1.default);
 app.use('/api/recuperacion', recuperacionRoutes_1.default);
 app.use('/api/cobros', cobrosRoutes_1.default);
+app.use('/api/donaciones', donacionesRoutes_1.default);
+app.use('/api/configuracion', configuracionRoutes_1.default);
+app.use('/api/testimonios', testimonioRoutes_1.default);
 app.get('/health', (req, res) => {
     const currentAllowedOrigins = allowedOrigins;
     res.status(200).json({

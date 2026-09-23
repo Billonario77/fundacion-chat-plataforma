@@ -6,10 +6,18 @@ class PagoService {
         this.pool = pool;
     }
     async calcularCosto(params) {
-        const { usuarioId, guiaId, turnoId, duracionMinutos, costoPorHora = 100000, codigoCupon } = params;
+        const { usuarioId, guiaId, turnoId, duracionMinutos, codigoCupon } = params;
+        let costoPorHora = params.costoPorHora;
+        if (!costoPorHora) {
+            const configQuery = await this.pool.query(`SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`);
+            costoPorHora = parseFloat(configQuery.rows[0]?.valor || '100000');
+            console.log(`💵 Precio de sesión obtenido de configuración: $${costoPorHora}`);
+        }
         const usuarioQuery = await this.pool.query(`SELECT id, entidad_id, es_exento, descuento_personalizado 
        FROM usuarios WHERE id = $1`, [usuarioId]);
         const usuario = usuarioQuery.rows[0];
+        console.log('📌 Usuario:', usuario);
+        console.log('📌 es_exento:', usuario.es_exento);
         if (!usuario) {
             throw new Error('Usuario no encontrado');
         }
@@ -76,9 +84,10 @@ class PagoService {
          AND (fecha_expiracion IS NULL OR fecha_expiracion > NOW())
          AND usos_actuales < usos_maximos`, [codigoCupon]);
             const cupon = cuponQuery.rows[0];
+            console.log('📌 Cupón encontrado:', cupon);
             if (cupon) {
                 if (cupon.tipo === 'porcentaje') {
-                    descuentoPorcentaje = Math.min(100, descuentoPorcentaje + cupon.valor);
+                    descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
                 }
                 else if (cupon.tipo === 'gratis') {
                     descuentoPorcentaje = 100;

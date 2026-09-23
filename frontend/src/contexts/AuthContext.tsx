@@ -150,6 +150,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    // ✅ Limpiar sessionStorage para que el modal vuelva a aparecer en el próximo login
+    sessionStorage.clear();
+    
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);

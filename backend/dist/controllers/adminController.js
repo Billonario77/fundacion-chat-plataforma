@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMiCarga = exports.getCargaGuias = exports.getReprogramacionesPendientes = exports.countReprogramacionesPendientes = exports.getUsuariosConGuia = exports.getGuiasConUsuarios = exports.crearTurnoReprogramado = exports.asignarGuiaATurno = exports.getTurnosPendientesAsignacion = exports.getGuiasDisponibles = void 0;
+exports.countTurnosHoy = exports.getMiCarga = exports.getCargaGuias = exports.getReprogramacionesPendientes = exports.countReprogramacionesPendientes = exports.getUsuariosConGuia = exports.getGuiasConUsuarios = exports.crearTurnoReprogramado = exports.asignarGuiaATurno = exports.getTurnosPendientesAsignacion = exports.getGuiasDisponibles = void 0;
 const connection_1 = require("../database/connection");
 const socketService_1 = require("../services/socketService");
+const pagoService_1 = require("../services/pagoService");
+const pagoService = new pagoService_1.PagoService(connection_1.pool);
 const getGuiasDisponibles = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {
@@ -96,10 +98,40 @@ const asignarGuiaATurno = async (req, res) => {
         await connection_1.pool.query(`UPDATE turnos 
        SET guia_id = $1, estado = 'pendiente', requiere_asignacion_admin = false
        WHERE id = $2`, [guiaId, turnoId]);
+        await connection_1.pool.query(`UPDATE usuarios SET guia_asignado_id = $1 WHERE id = $2`, [guiaId, turno.usuario_id]);
+        console.log(`✅ Guía ${guiaId} guardado como guía asignado del usuario ${turno.usuario_id}`);
+        let requierePago = false;
+        let estadoFinal = 'pendiente';
+        let mensajeEstado = `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}`;
+        try {
+            const calculo = await pagoService.calcularCosto({
+                usuarioId: turno.usuario_id,
+                guiaId,
+                turnoId,
+                duracionMinutos: 60
+            });
+            console.log('💰 Resultado cálculo de costo:', calculo);
+            if (calculo.esExento) {
+                console.log('✅ Usuario EXENTO - no requiere pago');
+            }
+            else if (calculo.usaBolsa) {
+                console.log('✅ Usa BOLSA de horas - no requiere pago');
+            }
+            else {
+                console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
+                requierePago = true;
+                estadoFinal = 'pendiente_pago';
+                mensajeEstado = `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}. Debes completar el pago para confirmar tu sesión.`;
+                await connection_1.pool.query(`UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`, [turnoId]);
+            }
+        }
+        catch (error) {
+            console.error('❌ Error al calcular costo:', error);
+        }
         (0, socketService_1.notificarUsuario)(turno.usuario_id, 'estado-turno-actualizado', {
             turnoId: turnoId,
-            estado: 'pendiente',
-            mensaje: `Un guía ha sido asignado a tu turno: ${guiaQuery.rows[0].nombre}`
+            estado: estadoFinal,
+            mensaje: mensajeEstado
         });
         (0, socketService_1.notificarUsuario)(guiaId, 'nuevo-turno-disponible', {
             turnoId: turnoId,
@@ -109,7 +141,8 @@ const asignarGuiaATurno = async (req, res) => {
         res.json({
             message: 'Guía asignado exitosamente',
             turnoId: turnoId,
-            guia: guiaQuery.rows[0]
+            guia: guiaQuery.rows[0],
+            requierePago
         });
     }
     catch (error) {
@@ -429,4 +462,25 @@ const getMiCarga = async (req, res) => {
     }
 };
 exports.getMiCarga = getMiCarga;
+const countTurnosHoy = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            res.status(403).json({ error: 'Acceso solo para administradores' });
+            return;
+        }
+        const result = await connection_1.pool.query(`
+      SELECT COUNT(*) as total
+      FROM turnos
+      WHERE fecha_programada::date = CURRENT_DATE
+    `);
+        res.json({
+            count: parseInt(result.rows[0].total) || 0
+        });
+    }
+    catch (error) {
+        console.error('Error al contar turnos de hoy:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+exports.countTurnosHoy = countTurnosHoy;
 //# sourceMappingURL=adminController.js.map

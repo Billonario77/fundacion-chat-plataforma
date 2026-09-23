@@ -5,9 +5,11 @@ const connection_1 = require("../database/connection");
 const socketService_1 = require("../services/socketService");
 const socketService_2 = require("../services/socketService");
 const asignacionService_1 = require("../services/asignacionService");
+const pagoService_1 = require("../services/pagoService");
+const pagoService = new pagoService_1.PagoService(connection_1.pool);
 const solicitarApoyo = async (req, res) => {
     try {
-        const { rol, mensajeInicial, fechaPreferida } = req.body;
+        const { rol, mensajeInicial, fechaPreferida, quiereOtroGuia } = req.body;
         const usuarioId = req.user?.id;
         console.log('📥 solicitarApoyo - body recibido:', req.body);
         if (!usuarioId) {
@@ -18,6 +20,17 @@ const solicitarApoyo = async (req, res) => {
             res.status(400).json({ error: 'rol de apoyo inválido' });
             return;
         }
+        const turnosActivosQuery = await connection_1.pool.query(`SELECT COUNT(*) as total FROM turnos 
+       WHERE usuario_id = $1 
+       AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')`, [usuarioId]);
+        const totalTurnosActivos = parseInt(turnosActivosQuery.rows[0].total);
+        if (totalTurnosActivos >= 5) {
+            res.status(400).json({
+                error: 'Has alcanzado el límite de 5 sesiones activas. Espera a completar algunas o cancela las que no vayas a usar.'
+            });
+            return;
+        }
+        console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
         let fechaProgramada;
         if (fechaPreferida) {
             fechaProgramada = new Date(fechaPreferida);
@@ -54,7 +67,11 @@ const solicitarApoyo = async (req, res) => {
         console.log(`🎯 Es primera vez: ${esPrimeraVez ? 'SÍ' : 'NO'}`);
         let guiaAsignado = null;
         let estado = 'pendiente';
-        const asignacion = await asignacionService_1.AsignacionService.asignarGuia(usuarioId, esPrimeraVez, fechaPreferida ? new Date(fechaPreferida) : undefined);
+        if (quiereOtroGuia) {
+            await connection_1.pool.query(`UPDATE usuarios SET guia_asignado_id = NULL WHERE id = $1`, [usuarioId]);
+            console.log(`🔄 Usuario ${usuarioId} solicitó cambio de guía - limpiando asignación`);
+        }
+        const asignacion = await asignacionService_1.AsignacionService.asignarGuia(usuarioId, esPrimeraVez, fechaPreferida ? new Date(fechaPreferida) : undefined, rol, quiereOtroGuia ? 'otro_guia' : undefined);
         console.log(`📋 Resultado asignación:`, {
             guiaId: asignacion.guiaId,
             requiereAdmin: asignacion.requiereAdmin,
@@ -114,6 +131,36 @@ const solicitarApoyo = async (req, res) => {
         ]);
         const turnoId = result.rows[0].id;
         console.log(`✅ Turno guardado con ID: ${turnoId}`);
+        if (guiaAsignado && !esPrimeraVez) {
+            await connection_1.pool.query(`UPDATE usuarios SET guia_asignado_id = $1 WHERE id = $2 AND guia_asignado_id IS NULL`, [guiaAsignado, usuarioId]);
+            console.log(`✅ Guía ${guiaAsignado} guardado como guía del usuario ${usuarioId}`);
+        }
+        let requierePago = false;
+        if (guiaAsignado) {
+            try {
+                const calculo = await pagoService.calcularCosto({
+                    usuarioId,
+                    guiaId: guiaAsignado,
+                    turnoId,
+                    duracionMinutos: 60
+                });
+                console.log('💰 Resultado cálculo de costo:', calculo);
+                if (calculo.esExento) {
+                    console.log('✅ Usuario EXENTO - no requiere pago');
+                }
+                else if (calculo.usaBolsa) {
+                    console.log('✅ Usa BOLSA de horas - no requiere pago');
+                }
+                else {
+                    console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
+                    requierePago = true;
+                    await connection_1.pool.query(`UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`, [turnoId]);
+                }
+            }
+            catch (error) {
+                console.error('❌ Error al calcular costo:', error);
+            }
+        }
         if (esPrimeraVez) {
             (0, socketService_1.notificarUsuario)(usuarioId, 'nuevo-turno-creado', {
                 turnoId: turnoId,
@@ -151,7 +198,8 @@ const solicitarApoyo = async (req, res) => {
         res.status(201).json({
             message: 'Solicitud procesada exitosamente',
             turnoId: turnoId,
-            requiereAsignacion: esPrimeraVez || !guiaAsignado
+            requiereAsignacion: esPrimeraVez || !guiaAsignado,
+            requierePago
         });
     }
     catch (error) {

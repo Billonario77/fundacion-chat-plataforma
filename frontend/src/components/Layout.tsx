@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,7 +14,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleLogout = () => {
     logout();
-    // Pequeño delay para asegurar que el estado se limpie antes de navegar
     setTimeout(() => {
       navigate('/', { replace: true });
     }, 100);
@@ -24,80 +24,80 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-fondo flex flex-col">
-      {/* Header con diseño mejorado */}
-      <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0] flex flex-col">
+      {/* Header con estilo del HomePage */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-[#F2CC8F]/30 sticky top-0 z-40">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            {/* Logo con efecto hover */}
+            {/* Logo */}
             <div 
-              className="flex items-center space-x-3 cursor-pointer group"
+              className="flex items-center gap-3 cursor-pointer group"
               onClick={() => navigate(isAuthenticated ? '/inicio' : '/')}
             >
-              <div className="bg-primario/10 p-2 rounded-xl group-hover:bg-primario/20 transition-all duration-300">
-                <span className="text-2xl">🤝</span>
-              </div>
+              <span className="text-3xl group-hover:scale-110 transition-transform">💛</span>
               <div>
-                <h1 className="text-xl font-bold text-primario group-hover:text-primario-dark transition-colors">
-                  Fundación Apoyo
+                <h1 className="text-xl md:text-2xl font-serif font-bold text-[#3D405B] group-hover:text-[#E07A5F] transition-colors">
+                  Fundación Voces del Alma
                 </h1>
-                <p className="text-xs text-texto-claro">Espacio de rehabilitación</p>
+                <p className="text-xs text-[#5D6078] hidden md:block">
+                  Un espacio para respirar y sanar
+                </p>
               </div>
             </div>
 
-            {/* Menú de navegación mejorado */}
-            <nav className="flex items-center space-x-2">
+            {/* Menú de navegación */}
+            <nav className="flex items-center gap-2">
               {isAuthenticated ? (
                 <>
-                  {/* Botón Inicio - siempre visible */}
+                  {/* Botón Inicio */}
                   <button
                     onClick={() => navigate('/inicio')}
-                    className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute('/inicio')
-                        ? 'bg-primario text-white shadow-md' 
-                        : 'text-texto hover:bg-primario/10 hover:text-primario'
+                        ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30' 
+                        : 'text-[#3D405B] hover:bg-[#F2CC8F]/20'
                     }`}
                   >
                     <span className="text-lg">🏠</span>
                     <span className="hidden md:inline">Inicio</span>
                   </button>
 
-                  {/* Botón Mi Espacio - según rol */}
+                  {/* Botón Mi Espacio */}
                   <button
                     onClick={() => navigate(
                       user?.rol === 'guia' ? '/guia' : 
                       user?.rol === 'admin' ? '/admin' : '/usuario'
                     )}
-                    className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute(
                         user?.rol === 'guia' ? '/guia' : 
                         user?.rol === 'admin' ? '/admin' : '/usuario'
                       )
-                        ? 'bg-primario text-white shadow-md' 
-                        : 'text-texto hover:bg-primario/10 hover:text-primario'
+                        ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30' 
+                        : 'text-[#3D405B] hover:bg-[#F2CC8F]/20'
                     }`}
                   >
                     <span className="text-lg">📋</span>
                     <span className="hidden md:inline">Mi espacio</span>
                   </button>
 
-                  {/* Botón Salir - con estilo diferenciado */}
+                  {/* Botón Salir */}
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 bg-alerta/10 text-alerta hover:bg-alerta/20 hover:shadow-md"
+                    className="px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 text-[#E07A5F] hover:bg-[#E07A5F]/10 border border-[#E07A5F]/30"
                   >
                     <span className="text-lg">🚪</span>
                     <span className="hidden md:inline">Salir</span>
                   </button>
                 </>
               ) : (
-                /* Botón Ingresar para no autenticados */
+                /* Botón Ingresar */
                 <button
                   onClick={() => navigate('/login')}
-                  className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+                  className={`px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                     isActiveRoute('/login') || isActiveRoute('/registro')
-                      ? 'bg-primario text-white shadow-md'
-                      : 'bg-primario/10 text-primario hover:bg-primario/20 hover:shadow-md'
+                      ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30'
+                      : 'bg-[#E07A5F] text-white hover:bg-[#d16a4f] shadow-md shadow-[#E07A5F]/20'
                   }`}
                 >
                   <span className="text-lg">🔑</span>
@@ -110,18 +110,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Contenido principal */}
-      <main className="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-grow w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-texto-claro text-sm">
-            © 2026 Fundación Apoyo - Todos los derechos reservados
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

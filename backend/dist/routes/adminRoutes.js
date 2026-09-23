@@ -50,6 +50,7 @@ router.get('/asignaciones/guias-con-usuarios', adminController.getGuiasConUsuari
 router.get('/carga-guias', adminController.getCargaGuias);
 router.get('/mi-carga', adminController.getMiCarga);
 router.get('/turnos-pendientes-asignacion', adminController.getTurnosPendientesAsignacion);
+router.get('/turnos-hoy/count', adminController.countTurnosHoy);
 router.post('/turnos/:turnoId/asignar-guia', adminController.asignarGuiaATurno);
 router.post('/reprogramaciones/:solicitudId/completar', adminController.crearTurnoReprogramado);
 router.get('/reprogramaciones/pendientes/count', adminController.countReprogramacionesPendientes);

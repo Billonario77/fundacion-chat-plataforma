@@ -1,16 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
-const pg_1 = require("pg");
+exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
-const pool = new pg_1.Pool({
-    connectionString: process.env.DATABASE_URL,
-});
-const pagoService = new pagoService_1.PagoService(pool);
-const cuponService = new cuponService_1.CuponService(pool);
-const entidadService = new entidadService_1.EntidadService(pool);
+const connection_1 = require("../database/connection");
+const wompiService_1 = require("../services/wompiService");
+const pagoService = new pagoService_1.PagoService(connection_1.pool);
+const cuponService = new cuponService_1.CuponService(connection_1.pool);
+const entidadService = new entidadService_1.EntidadService(connection_1.pool);
+const wompiService = new wompiService_1.WompiService();
 const calcularCostoTurno = async (req, res) => {
     try {
         const { turnoId } = req.params;
@@ -19,12 +18,12 @@ const calcularCostoTurno = async (req, res) => {
         if (!usuarioId) {
             return res.status(401).json({ error: 'Usuario no autenticado' });
         }
-        const turnoQuery = await pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
+        const turnoQuery = await connection_1.pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
         const turno = turnoQuery.rows[0];
         if (!turno) {
             return res.status(404).json({ error: 'Turno no encontrado' });
         }
-        if (turno.usuario_id !== usuarioId) {
+        if (turno.usuario_id !== usuarioId && req.user?.rol !== 'admin') {
             return res.status(403).json({ error: 'No tienes permiso para ver este turno' });
         }
         if (!turno.guia_id) {
@@ -38,6 +37,7 @@ const calcularCostoTurno = async (req, res) => {
             duracionMinutos: duracion,
             codigoCupon
         });
+        console.log('📌 Resultado del cálculo:', resultado);
         res.json({
             success: true,
             data: resultado
@@ -56,7 +56,7 @@ const verificarPagoTurno = async (req, res) => {
         if (!usuarioId) {
             return res.status(401).json({ error: 'Usuario no autenticado' });
         }
-        const turnoQuery = await pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
+        const turnoQuery = await connection_1.pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
         const turno = turnoQuery.rows[0];
         if (!turno) {
             return res.status(404).json({ error: 'Turno no encontrado' });
@@ -136,7 +136,7 @@ const obtenerCobroPorTurno = async (req, res) => {
         if (!usuarioId) {
             return res.status(401).json({ error: 'Usuario no autenticado' });
         }
-        const turnoQuery = await pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
+        const turnoQuery = await connection_1.pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
         const turno = turnoQuery.rows[0];
         if (!turno) {
             return res.status(404).json({ error: 'Turno no encontrado' });
@@ -173,9 +173,10 @@ const obtenerEstadisticasCobros = async (req, res) => {
         SUM(CASE WHEN estado = 'exento' THEN 1 ELSE 0 END) as exentos,
         SUM(CASE WHEN estado = 'consumido_bolsa' THEN 1 ELSE 0 END) as consumidos_bolsa,
         COALESCE(SUM(total), 0) as total_recaudado
-      FROM cobros
+      FROM cobros c
+      INNER JOIN usuarios u ON u.id = c.usuario_id AND u.rol = 'usuario'
     `;
-        const result = await pool.query(query);
+        const result = await connection_1.pool.query(query);
         res.json({
             success: true,
             data: result.rows[0]
@@ -187,6 +188,66 @@ const obtenerEstadisticasCobros = async (req, res) => {
     }
 };
 exports.obtenerEstadisticasCobros = obtenerEstadisticasCobros;
+const obtenerCobros = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden ver cobros' });
+        }
+        const { estado, fecha_desde, fecha_hasta, guia_id, usuario_id } = req.query;
+        let query = `
+      SELECT 
+        c.*,
+        u.nombre as usuario_nombre,
+        u.email as usuario_email,
+        g.nombre as guia_nombre,
+        t.fecha_programada,
+        t.estado as turno_estado
+      FROM cobros c
+      INNER JOIN usuarios u ON u.id = c.usuario_id AND u.rol = 'usuario'
+      LEFT JOIN usuarios g ON g.id = c.guia_id
+      LEFT JOIN turnos t ON t.id = c.turno_id
+      WHERE 1=1
+    `;
+        const params = [];
+        let paramIndex = 1;
+        if (estado) {
+            query += ` AND c.estado = $${paramIndex}`;
+            params.push(estado);
+            paramIndex++;
+        }
+        if (fecha_desde) {
+            query += ` AND c.created_at >= $${paramIndex}`;
+            params.push(fecha_desde);
+            paramIndex++;
+        }
+        if (fecha_hasta) {
+            query += ` AND c.created_at <= $${paramIndex}`;
+            params.push(fecha_hasta);
+            paramIndex++;
+        }
+        if (guia_id) {
+            query += ` AND c.guia_id = $${paramIndex}`;
+            params.push(guia_id);
+            paramIndex++;
+        }
+        if (usuario_id) {
+            query += ` AND c.usuario_id = $${paramIndex}`;
+            params.push(usuario_id);
+            paramIndex++;
+        }
+        query += ` ORDER BY c.created_at DESC LIMIT 500`;
+        const result = await connection_1.pool.query(query, params);
+        res.json({
+            success: true,
+            data: result.rows
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener cobros:', error);
+        res.status(500).json({ error: error.message || 'Error al obtener cobros' });
+    }
+};
+exports.obtenerCobros = obtenerCobros;
 const crearEntidad = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {
@@ -348,4 +409,79 @@ const marcarUsuarioExento = async (req, res) => {
     }
 };
 exports.marcarUsuarioExento = marcarUsuarioExento;
+const obtenerCupones = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden ver cupones' });
+        }
+        const query = `
+      SELECT * FROM cupones 
+      ORDER BY created_at DESC
+    `;
+        const result = await connection_1.pool.query(query);
+        res.json({
+            success: true,
+            data: result.rows
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener cupones:', error);
+        res.status(500).json({ error: error.message || 'Error al obtener cupones' });
+    }
+};
+exports.obtenerCupones = obtenerCupones;
+const generarFirmaPagoSesion = async (req, res) => {
+    try {
+        const { turnoId } = req.params;
+        const usuarioId = req.user?.id;
+        if (!usuarioId) {
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+        const turnoQuery = await connection_1.pool.query(`SELECT t.*, c.id as cobro_id, c.total, c.estado as cobro_estado, c.referencia_wompi
+       FROM turnos t
+       LEFT JOIN cobros c ON c.turno_id = t.id
+       WHERE t.id = $1`, [turnoId]);
+        if (turnoQuery.rows.length === 0) {
+            return res.status(404).json({ error: 'Turno no encontrado' });
+        }
+        const turno = turnoQuery.rows[0];
+        if (turno.usuario_id !== usuarioId) {
+            return res.status(403).json({ error: 'No tienes permiso para pagar este turno' });
+        }
+        if (turno.estado !== 'pendiente_pago') {
+            return res.status(400).json({ error: 'Este turno no requiere pago' });
+        }
+        if (!turno.cobro_id) {
+            return res.status(404).json({ error: 'No se encontró el cobro asociado al turno' });
+        }
+        if (turno.cobro_estado === 'pagado') {
+            return res.status(400).json({ error: 'Este turno ya fue pagado' });
+        }
+        let referencia = turno.referencia_wompi;
+        if (!referencia) {
+            referencia = wompiService.generarReferencia();
+            await connection_1.pool.query(`UPDATE cobros SET referencia_wompi = $1 WHERE id = $2`, [referencia, turno.cobro_id]);
+        }
+        const montoEnCentavos = Math.round(parseFloat(turno.total) * 100);
+        const firmaIntegridad = wompiService.generarFirmaIntegridad(referencia, montoEnCentavos, 'COP');
+        res.json({
+            success: true,
+            data: {
+                referencia,
+                montoEnCentavos,
+                firmaIntegridad,
+                publicKey: wompiService.getPublicKey(),
+                moneda: 'COP',
+                monto: parseFloat(turno.total),
+                turnoId: turnoId,
+                cobroId: turno.cobro_id
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al generar firma de pago de sesión:', error);
+        res.status(500).json({ error: error.message || 'Error al generar firma' });
+    }
+};
+exports.generarFirmaPagoSesion = generarFirmaPagoSesion;
 //# sourceMappingURL=cobrosController.js.map

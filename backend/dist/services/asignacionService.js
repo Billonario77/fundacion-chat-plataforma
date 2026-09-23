@@ -14,24 +14,35 @@ class AsignacionService {
         if (preferenciaUsuario === 'mismo_guia' || await this.tienePreferenciaMismoGuia(usuarioId)) {
             const guiaOriginal = await this.obtenerGuiaOriginal(usuarioId);
             if (guiaOriginal && await this.verificarDisponibilidad(guiaOriginal, fechaProgramada)) {
-                const carga = await this.obtenerCargaGuia(guiaOriginal);
-                if (carga.turnos_activos < 5) {
-                    return {
-                        guiaId: guiaOriginal,
-                        requiereAdmin: false,
-                        razon: 'Mismo guía (preferencia del usuario)'
-                    };
-                }
+                return {
+                    guiaId: guiaOriginal,
+                    requiereAdmin: false,
+                    razon: 'Mismo guía (preferencia del usuario)'
+                };
             }
         }
-        const ultimoGuia = await this.obtenerUltimoGuiaActivo(usuarioId);
-        if (ultimoGuia && await this.verificarDisponibilidad(ultimoGuia, fechaProgramada)) {
-            const carga = await this.obtenerCargaGuia(ultimoGuia);
-            if (carga.turnos_activos < 6) {
+        if (preferenciaUsuario === 'otro_guia') {
+            return {
+                guiaId: null,
+                requiereAdmin: true,
+                razon: 'El usuario solicitó cambio de guía - requiere asignación del admin'
+            };
+        }
+        const guiaAsignado = await this.obtenerGuiaAsignado(usuarioId);
+        if (guiaAsignado) {
+            const estaDisponible = await this.verificarDisponibilidad(guiaAsignado, fechaProgramada);
+            if (estaDisponible) {
                 return {
-                    guiaId: ultimoGuia,
+                    guiaId: guiaAsignado,
                     requiereAdmin: false,
-                    razon: 'Último guía con turno activo'
+                    razon: 'Guía asignado previamente al usuario'
+                };
+            }
+            else {
+                return {
+                    guiaId: null,
+                    requiereAdmin: true,
+                    razon: 'El guía asignado no tiene disponibilidad en ese horario - requiere revisión del admin'
                 };
             }
         }
@@ -62,13 +73,9 @@ class AsignacionService {
        ORDER BY created_at ASC LIMIT 1`, [usuarioId]);
         return result.rows[0]?.guia_id || null;
     }
-    static async obtenerUltimoGuiaActivo(usuarioId) {
-        const result = await connection_1.pool.query(`SELECT guia_id FROM turnos 
-       WHERE usuario_id = $1 
-       AND guia_id IS NOT NULL
-       AND estado IN ('pendiente', 'aceptado', 'iniciado')
-       ORDER BY created_at DESC LIMIT 1`, [usuarioId]);
-        return result.rows[0]?.guia_id || null;
+    static async obtenerGuiaAsignado(usuarioId) {
+        const result = await connection_1.pool.query(`SELECT guia_asignado_id FROM usuarios WHERE id = $1`, [usuarioId]);
+        return result.rows[0]?.guia_asignado_id || null;
     }
     static async obtenerCargaGuia(guiaId) {
         const result = await connection_1.pool.query(`
@@ -101,7 +108,7 @@ class AsignacionService {
         });
         const mejorGuia = guiasConScore
             .sort((a, b) => (b.score || 0) - (a.score || 0))
-            .filter(g => g.score && g.score > 20)
+            .filter(g => g.score && g.score >= 0)
             .slice(0, 1)[0];
         if (mejorGuia && mejorGuia.score && mejorGuia.score < 30) {
             return null;
@@ -121,7 +128,6 @@ class AsignacionService {
       LEFT JOIN turnos t ON t.guia_id = g.id
       WHERE g.rol = 'guia'
       GROUP BY g.id, g.nombre, g.email, g.disponible
-      HAVING COUNT(t.id) FILTER (WHERE t.estado IN ('pendiente', 'aceptado', 'iniciado')) < 6
     `);
         return result.rows.map((row) => ({
             id: row.id,

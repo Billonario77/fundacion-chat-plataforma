@@ -274,14 +274,22 @@ const [modalCerrado, setModalCerrado] = useState(false);
 
 
   // Verificar si el usuario debe completar sus datos
-  // Verificar si el usuario debe completar sus datos
+
+    // Verificar si el usuario debe completar sus datos
   useEffect(() => {
     const verificarDatos = async () => {
       try {
         const data = await usuarioService.getMiPerfil();
         setDatosCompletados(data.datos_completados);
-        // Solo mostrar modal si NO tiene datos completados Y NO ha sido cerrado antes
-        if (!data.datos_completados && !modalCerrado) {
+        
+        // ✅ Verificar si ya cerró el modal en esta sesión
+        const modalCerradoEnSesion = sessionStorage.getItem(`modalDatosCerrado_${user?.id}`);
+        
+        // ✅ SOLO mostrar modal si:
+        // - NO tiene datos completados
+        // - NO ha cerrado el modal antes EN ESTA SESIÓN
+        // - NO es usuario anónimo
+        if (!data.datos_completados && !modalCerradoEnSesion && !user?.es_anonimo) {
           setMostrarCompletarDatos(true);
         }
       } catch (err) {
@@ -289,14 +297,20 @@ const [modalCerrado, setModalCerrado] = useState(false);
       }
     };
     verificarDatos();
-  }, [modalCerrado]);
+  }, [user?.es_anonimo, user?.id]);
 
 
-  const handleDatosCompletados = (cerradoPermanente?: boolean) => {
+    const handleDatosCompletados = (cerradoPermanente?: boolean) => {
     setMostrarCompletarDatos(false);
+    
     if (cerradoPermanente) {
-      setModalCerrado(true);  // Usuario cerró voluntariamente
+      // ✅ Guardar en sessionStorage que ya cerró el modal en esta sesión
+      if (user?.id) {
+        sessionStorage.setItem(`modalDatosCerrado_${user.id}`, 'true');
+      }
+      setModalCerrado(true);
     } else {
+      // Datos completados → recargar
       setDatosCompletados(true);
       window.location.reload();
     }

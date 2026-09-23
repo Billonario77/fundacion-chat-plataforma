@@ -10,13 +10,16 @@ router.get('/turnos/:turnoId/verificar-pago', auth_1.authenticateToken, cobrosCo
 router.post('/confirmar-pago', auth_1.authenticateToken, cobrosController_1.confirmarPago);
 router.post('/registrar-pago-manual', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.registrarPagoManual);
 router.get('/turnos/:turnoId/cobro', auth_1.authenticateToken, cobrosController_1.obtenerCobroPorTurno);
+router.get('/historial', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerCobros);
 router.get('/estadisticas', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerEstadisticasCobros);
+router.post('/turnos/:turnoId/generar-pago', auth_1.authenticateToken, cobrosController_1.generarFirmaPagoSesion);
 router.post('/entidades', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.crearEntidad);
 router.get('/entidades', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerEntidades);
 router.get('/entidades/:entidadId/resumen', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerResumenEntidad);
 router.post('/usuarios/asignar-entidad', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.asignarUsuarioAEntidad);
 router.post('/usuarios/marcar-exento', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.marcarUsuarioExento);
 router.post('/cupones', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.crearCupon);
+router.get('/cupones', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerCupones);
 router.get('/cupones/validar/:codigo', auth_1.authenticateToken, cobrosController_1.validarCupon);
 exports.default = router;
 //# sourceMappingURL=cobrosRoutes.js.map
