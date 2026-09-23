@@ -39,6 +39,18 @@ export default function MisTestimonios({ testimonios, onEditar, onEliminar }: Pr
             </span>
           </div>
 
+          <h4 className="font-serif text-lg text-[#3D405B] mb-1">
+            "{t.titulo}"
+          </h4>
+
+          {(t.edad || t.ciudad) && (
+            <p className="text-xs text-[#3D405B]/60 mb-3">
+              {t.edad && <span>{t.edad} años</span>}
+              {t.edad && t.ciudad && <span> • </span>}
+              {t.ciudad && <span>📍 {t.ciudad}</span>}
+            </p>
+          )}
+
           <p className="text-[#3D405B] whitespace-pre-line">{t.contenido}</p>
 
           {t.estado === 'rechazado' && t.motivo_rechazo && (

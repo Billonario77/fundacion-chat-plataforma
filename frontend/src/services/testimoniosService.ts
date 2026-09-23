@@ -11,8 +11,11 @@ export type EstadoTestimonio = 'pendiente' | 'aprobado' | 'rechazado';
 
 export interface Testimonio {
   id: number;
+  titulo: string;
   contenido: string;
   calificacion: number;
+  edad: number | null;
+  ciudad: string | null;
   estado: EstadoTestimonio;
   motivo_rechazo: string | null;
   destacado: boolean;
@@ -22,8 +25,11 @@ export interface Testimonio {
 
 export interface TestimonioPublico {
   id: number;
+  titulo: string;
   contenido: string;
   calificacion: number;
+  edad: number | null;
+  ciudad: string | null;
   destacado: boolean;
   creado_en: string;
   autor: string;
@@ -67,8 +73,11 @@ export const testimoniosService = {
   /* ---------- Usuario autenticado ---------- */
 
   crear: async (data: {
+    titulo: string;
     contenido: string;
     calificacion: number;
+    edad?: number | null;
+    ciudad?: string | null;
   }): Promise<{ mensaje: string; testimonio: Testimonio }> => {
     const response = await axios.post(`${API_URL}/testimonios`, data, {
       headers: { Authorization: `Bearer ${token()}` },
@@ -85,7 +94,13 @@ export const testimoniosService = {
 
   editar: async (
     id: number,
-    data: { contenido: string; calificacion: number }
+    data: {
+      titulo: string;
+      contenido: string;
+      calificacion: number;
+      edad?: number | null;
+      ciudad?: string | null;
+    }
   ): Promise<{ mensaje: string; testimonio: Testimonio }> => {
     const response = await axios.put(`${API_URL}/testimonios/${id}`, data, {
       headers: { Authorization: `Bearer ${token()}` },
