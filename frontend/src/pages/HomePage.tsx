@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
+import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
 
 const HomePage: React.FC = () => {
+  const [testimoniosHome, setTestimoniosHome] = useState<TestimonioPublico[]>([]);
+
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const data = await testimoniosService.listarPublicos({ limit: 2 });
+        if (activo) setTestimoniosHome(data.testimonios);
+      } catch (err) {
+        console.error('Error al cargar testimonios del home:', err);
+      }
+    })();
+    return () => { activo = false; };
+  }, []);
+
+    const EMOJIS = ['🕊️', '🌙', '☀️', '✨', '🍃', '💫', '🕯️', '🌟'];
+    const getAvatar = (t: TestimonioPublico) =>
+      t.es_anonimo ? '🍀' : EMOJIS[t.id % EMOJIS.length];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* ============================================ */}
@@ -242,37 +262,48 @@ const HomePage: React.FC = () => {
         <p className="text-center text-[#5D6078] mb-12 max-w-2xl mx-auto">
           Historias reales de personas que dieron el primer paso.
         </p>
-        <div className="grid md:grid-cols-2 gap-8">
-          {[
-            {
-              name: 'María Elena',
-              quote: 'Encontré un espacio donde pude hablar sin miedo. Me sentí escuchada por primera vez.',
-              avatar: '🌸'
-            },
-            {
-              name: 'Carlos Andrés',
-              quote: 'La guía que recibí me ayudó a ver mis problemas desde otra perspectiva. Hoy tengo esperanza.',
-              avatar: '🌱'
-            }
-          ].map((testimonial, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-sm hover:shadow-lg transition-all border border-[#F2CC8F]/40"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#F2CC8F]/40 flex items-center justify-center text-2xl">
-                  {testimonial.avatar}
+
+        {testimoniosHome.length === 0 ? (
+          <p className="text-center text-[#5D6078] italic py-8">
+            Aún no hay historias publicadas. ¡Sé la primera persona en compartir la tuya!
+          </p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-8">
+            {testimoniosHome.map((t, index) => (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-sm hover:shadow-lg transition-all border border-[#F2CC8F]/40"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-[#F2CC8F]/40 flex items-center justify-center text-2xl flex-shrink-0">
+                    {getAvatar(t)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#3D405B] truncate">{t.autor}</p>
+                    {(t.edad || t.ciudad) && (
+                      <p className="text-xs text-[#5D6078]">
+                        {t.edad && <span>{t.edad} años</span>}
+                        {t.edad && t.ciudad && <span> • </span>}
+                        {t.ciudad && <span>📍 {t.ciudad}</span>}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="font-semibold text-[#3D405B]">{testimonial.name}</p>
-              </div>
-              <p className="text-[#3D405B] text-lg italic leading-relaxed">"{testimonial.quote}"</p>
-            </motion.div>
-          ))}
-        </div>
+                <h3 className="text-lg font-serif text-[#3D405B] mb-2">
+                  "{t.titulo}"
+                </h3>
+                <p className="text-[#3D405B] italic leading-relaxed line-clamp-4">
+                  {t.contenido}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
         <div className="text-center mt-8">
           <Link
             to="/testimonios"

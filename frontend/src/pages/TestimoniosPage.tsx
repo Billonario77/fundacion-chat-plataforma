@@ -65,6 +65,10 @@ const TestimoniosPage: React.FC = () => {
     }
   };
 
+  const EMOJIS = ['🕊️', '🌙', '☀️', '✨', '🍃', '💫', '🕯️', '🌟'];
+  const getAvatar = (t: TestimonioPublico) =>
+    t.es_anonimo ? '🍀' : EMOJIS[t.id % EMOJIS.length];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* Navegación */}
@@ -142,7 +146,7 @@ const TestimoniosPage: React.FC = () => {
                   {/* Encabezado */}
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#F2CC8F] to-[#E07A5F]/40 flex items-center justify-center text-2xl flex-shrink-0">
-                      {t.es_anonimo ? '✨' : '🌸'}
+                      {getAvatar(t)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#3D405B] truncate">

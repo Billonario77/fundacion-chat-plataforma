@@ -54,8 +54,10 @@ const InicioUsuario: React.FC = () => {
     .filter(s => new Date(s.fecha_programada) > new Date())
     .sort((a, b) => new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime())[0];
 
-  // Pago pendiente
-  const pagoPendiente = turnosActivos.find(s => s.estado === 'pendiente_pago');
+  // Pagos pendientes
+  const pagosPendientes = turnosActivos.filter(s => s.estado === 'pendiente_pago');
+  const totalPagosPendientes = pagosPendientes.length;
+  const primerPagoPendiente = pagosPendientes[0];
 
   // Guía asignado (último turno con guía)
   const ultimoTurnoConGuia = solicitudes
@@ -145,17 +147,19 @@ const InicioUsuario: React.FC = () => {
 
         {/* Pagos */}
         <div className={`rounded-2xl p-5 shadow-sm border ${
-          pagoPendiente ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'
+          totalPagosPendientes > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'
         }`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">💳</span>
             <p className="text-sm font-medium text-gray-500">Pagos</p>
           </div>
-          {pagoPendiente ? (
+          {totalPagosPendientes > 0 ? (
             <>
-              <p className="font-semibold text-red-700">Tienes un pago pendiente</p>
+              <p className="font-semibold text-red-700">
+                Tienes {totalPagosPendientes} {totalPagosPendientes === 1 ? 'pago pendiente' : 'pagos pendientes'}
+              </p>
               <button
-                onClick={() => navigate(`/turnos/${pagoPendiente.id}`)}
+                onClick={() => navigate(`/turnos/${primerPagoPendiente.id}`)}
                 className="mt-2 text-sm text-red-700 underline hover:text-red-900"
               >
                 Ir a pagar →
@@ -165,6 +169,7 @@ const InicioUsuario: React.FC = () => {
             <p className="text-sm text-green-600">Sin pagos pendientes</p>
           )}
         </div>
+
       </div>
 
       {/* Acciones rápidas */}
