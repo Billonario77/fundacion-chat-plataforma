@@ -28,14 +28,15 @@ export const getTestimoniosPublicos = async (req: Request, res: Response): Promi
 
         const { rows } = await pool.query(
             `SELECT
-                t.id, t.contenido, t.calificacion, t.destacado, t.creado_en,
+                t.id, t.titulo, t.contenido, t.calificacion, t.edad, t.ciudad,
+                t.destacado, t.creado_en,
                 u.es_anonimo,
                 CASE WHEN u.es_anonimo THEN COALESCE(u.nickname, 'Anónimo')
                      ELSE COALESCE(u.nombre, 'Usuario') END AS autor
              FROM testimonios t
              JOIN usuarios u ON u.id = t.usuario_id
              ${where}
-             ORDER BY t.destacado DESC, t.creado_en DESC
+             ORDER BY t.creado_en DESC
              LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
             [...params, limit, offset]
         );
@@ -71,11 +72,22 @@ export const crearTestimonio = async (req: AuthRequest, res: Response): Promise<
             return;
         }
         const usuarioId = req.user.id;
-        const { contenido, calificacion } = req.body;
+        const { titulo, contenido, calificacion, edad, ciudad } = req.body;
 
+        const tituloTexto = (titulo ?? '').toString().trim();
         const texto = (contenido ?? '').toString().trim();
         const cal = Number(calificacion);
+        const edadNum = edad === null || edad === undefined || edad === '' ? null : Number(edad);
+        const ciudadTexto = (ciudad ?? '').toString().trim() || null;
 
+        if (tituloTexto.length < 5) {
+            res.status(400).json({ error: 'El título debe tener al menos 5 caracteres' });
+            return;
+        }
+        if (tituloTexto.length > 150) {
+            res.status(400).json({ error: 'El título no puede superar 150 caracteres' });
+            return;
+        }
         if (texto.length < 20) {
             res.status(400).json({ error: 'El testimonio debe tener al menos 20 caracteres' });
             return;
@@ -88,6 +100,15 @@ export const crearTestimonio = async (req: AuthRequest, res: Response): Promise<
             res.status(400).json({ error: 'Calificación entre 1 y 5' });
             return;
         }
+        if (edadNum !== null && (isNaN(edadNum) || edadNum < 13 || edadNum > 120)) {
+            res.status(400).json({ error: 'La edad debe estar entre 13 y 120' });
+            return;
+        }
+        if (ciudadTexto && ciudadTexto.length > 100) {
+            res.status(400).json({ error: 'La ciudad no puede superar 100 caracteres' });
+            return;
+        }
+
 
         const pend = await pool.query(
             `SELECT 1 FROM testimonios WHERE usuario_id = $1 AND estado = 'pendiente'`,
@@ -99,10 +120,10 @@ export const crearTestimonio = async (req: AuthRequest, res: Response): Promise<
         }
 
         const { rows } = await pool.query(
-            `INSERT INTO testimonios (usuario_id, contenido, calificacion, estado)
-             VALUES ($1, $2, $3, 'pendiente')
+            `INSERT INTO testimonios (usuario_id, titulo, contenido, calificacion, edad, ciudad, estado)
+             VALUES ($1, $2, $3, $4, $5, $6, 'pendiente')
              RETURNING *`,
-            [usuarioId, texto, cal]
+            [usuarioId, tituloTexto, texto, cal, edadNum, ciudadTexto]
         );
 
         res.status(201).json({
@@ -128,8 +149,8 @@ export const getMisTestimonios = async (req: AuthRequest, res: Response): Promis
         }
 
         const { rows } = await pool.query(
-            `SELECT id, contenido, calificacion, estado, motivo_rechazo, destacado,
-                    creado_en, actualizado_en
+            `SELECT id, titulo, contenido, calificacion, edad, ciudad, estado,
+                    motivo_rechazo, destacado, creado_en, actualizado_en
              FROM testimonios
              WHERE usuario_id = $1
              ORDER BY creado_en DESC`,
@@ -153,7 +174,7 @@ export const editarTestimonio = async (req: AuthRequest, res: Response): Promise
 
         const { id } = req.params;
         const usuarioId = req.user.id;
-        const { contenido, calificacion } = req.body;
+                const { titulo, contenido, calificacion, edad, ciudad } = req.body;
 
         const actual = await pool.query(
             `SELECT * FROM testimonios WHERE id = $1 AND usuario_id = $2`,
@@ -168,8 +189,16 @@ export const editarTestimonio = async (req: AuthRequest, res: Response): Promise
             return;
         }
 
+        const tituloTexto = (titulo ?? '').toString().trim();
         const texto = (contenido ?? '').toString().trim();
         const cal = Number(calificacion);
+        const edadNum = edad === null || edad === undefined || edad === '' ? null : Number(edad);
+        const ciudadTexto = (ciudad ?? '').toString().trim() || null;
+
+        if (tituloTexto.length < 5 || tituloTexto.length > 150) {
+            res.status(400).json({ error: 'Título inválido (5-150 caracteres)' });
+            return;
+        }
         if (texto.length < 20 || texto.length > 1000) {
             res.status(400).json({ error: 'Contenido inválido (20-1000 caracteres)' });
             return;
@@ -178,18 +207,29 @@ export const editarTestimonio = async (req: AuthRequest, res: Response): Promise
             res.status(400).json({ error: 'Calificación entre 1 y 5' });
             return;
         }
+        if (edadNum !== null && (isNaN(edadNum) || edadNum < 13 || edadNum > 120)) {
+            res.status(400).json({ error: 'La edad debe estar entre 13 y 120' });
+            return;
+        }
+        if (ciudadTexto && ciudadTexto.length > 100) {
+            res.status(400).json({ error: 'La ciudad no puede superar 100 caracteres' });
+            return;
+        }
 
         const { rows } = await pool.query(
             `UPDATE testimonios
-                SET contenido = $1,
-                    calificacion = $2,
+                SET titulo = $1,
+                    contenido = $2,
+                    calificacion = $3,
+                    edad = $4,
+                    ciudad = $5,
                     estado = 'pendiente',
                     motivo_rechazo = NULL,
                     moderado_por = NULL,
                     moderado_en = NULL
-              WHERE id = $3 AND usuario_id = $4
+              WHERE id = $6 AND usuario_id = $7
               RETURNING *`,
-            [texto, cal, id, usuarioId]
+            [tituloTexto, texto, cal, edadNum, ciudadTexto, id, usuarioId]
         );
 
         res.json({ mensaje: 'Testimonio actualizado y reenviado a revisión', testimonio: rows[0] });

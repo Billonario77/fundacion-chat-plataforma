@@ -5,8 +5,11 @@ export type EstadoTestimonio = 'pendiente' | 'aprobado' | 'rechazado';
 export interface Testimonio {
   id: number;
   usuario_id: string;          // UUID
+  titulo: string;
   contenido: string;
   calificacion: number;
+  edad: number | null;
+  ciudad: string | null;
   estado: EstadoTestimonio;
   motivo_rechazo: string | null;
   destacado: boolean;
@@ -18,8 +21,11 @@ export interface Testimonio {
 
 export interface TestimonioPublico {
   id: number;
+  titulo: string;
   contenido: string;
   calificacion: number;
+  edad: number | null;
+  ciudad: string | null;
   destacado: boolean;
   creado_en: Date;
   autor: string;
