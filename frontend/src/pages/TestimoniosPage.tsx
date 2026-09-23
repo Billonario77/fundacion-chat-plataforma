@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
+import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
 
 // ============================================
-// TESTIMONIOS (editable - agrega más aquí)
+// TESTIMONIOS DE LA FUNDACIÓN (curados)
 // ============================================
 interface Testimonio {
   id: number;
@@ -88,6 +89,25 @@ const TESTIMONIOS: Testimonio[] = [
 const TestimoniosPage: React.FC = () => {
   const [filtro, setFiltro] = useState<'todos' | 'apoyo' | 'crisis' | 'seguimiento'>('todos');
 
+  // Testimonios de la comunidad (vienen de la API)
+  const [comunidad, setComunidad] = useState<TestimonioPublico[]>([]);
+  const [cargandoComunidad, setCargandoComunidad] = useState(true);
+
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const data = await testimoniosService.listarPublicos({ limit: 24 });
+        if (activo) setComunidad(data.testimonios);
+      } catch (err) {
+        console.error('Error al cargar testimonios de la comunidad:', err);
+      } finally {
+        if (activo) setCargandoComunidad(false);
+      }
+    })();
+    return () => { activo = false; };
+  }, []);
+
   const testimoniosFiltrados = filtro === 'todos'
     ? TESTIMONIOS
     : TESTIMONIOS.filter(t => t.categoria === filtro);
@@ -107,6 +127,19 @@ const TestimoniosPage: React.FC = () => {
       case 'crisis': return 'bg-[#E07A5F]/20 text-[#3D405B]';
       case 'seguimiento': return 'bg-[#F2CC8F]/40 text-[#3D405B]';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Formatear fecha de los testimonios de la comunidad
+  const formatFecha = (fecha: string) => {
+    try {
+      return new Date(fecha).toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        timeZone: 'America/Bogota'
+      });
+    } catch {
+      return '';
     }
   };
 
@@ -153,7 +186,7 @@ const TestimoniosPage: React.FC = () => {
         </motion.p>
       </section>
 
-      {/* Filtros */}
+      {/* Filtros (solo aplican a los testimonios de la Fundación) */}
       <section className="container mx-auto px-6 mb-8">
         <div className="flex flex-wrap justify-center gap-2">
           {[
@@ -177,7 +210,7 @@ const TestimoniosPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonios */}
+      {/* Testimonios de la Fundación */}
       <section className="container mx-auto px-6 pb-16">
         <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {testimoniosFiltrados.map((testimonio, index) => (
@@ -188,8 +221,8 @@ const TestimoniosPage: React.FC = () => {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
               className={`bg-white/80 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border ${
-                testimonio.destacado 
-                  ? 'border-[#E07A5F]/40' 
+                testimonio.destacado
+                  ? 'border-[#E07A5F]/40'
                   : 'border-[#F2CC8F]/40'
               }`}
             >
@@ -235,6 +268,81 @@ const TestimoniosPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Voces de la comunidad (desde la API) */}
+      <section className="container mx-auto px-6 pb-16">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-2xl md:text-3xl font-serif text-[#3D405B] mb-3">
+              Voces de la comunidad
+            </h2>
+            <p className="text-[#5D6078] max-w-2xl mx-auto">
+              Mensajes que nos han llegado de personas que han vivido el acompañamiento
+              de la Fundación.
+            </p>
+          </motion.div>
+
+          {cargandoComunidad ? (
+            <p className="text-center text-[#5D6078] italic py-8">Cargando voces…</p>
+          ) : comunidad.length === 0 ? (
+            <p className="text-center text-[#5D6078] italic py-8">
+              Aún no hay voces nuevas de la comunidad. ¡Sé la primera persona en compartir la tuya!
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {comunidad.map((t, index) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  viewport={{ once: true }}
+                  className={`bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border ${
+                    t.destacado ? 'border-[#E07A5F]/40' : 'border-[#F2CC8F]/40'
+                  }`}
+                >
+                  {/* Encabezado */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#81B29A] to-[#F2CC8F]/60 flex items-center justify-center text-2xl flex-shrink-0">
+                      {t.es_anonimo ? '✨' : '🌸'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[#3D405B] truncate">{t.autor}</p>
+                      <p className="text-xs text-[#5D6078]">{formatFecha(t.creado_en)}</p>
+                    </div>
+                    {t.destacado && (
+                      <span className="text-xl flex-shrink-0" title="Destacado">⭐</span>
+                    )}
+                  </div>
+
+                  {/* Estrellas */}
+                  <div className="flex gap-0.5 text-lg mb-3">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <span
+                        key={n}
+                        className={n <= t.calificacion ? 'text-[#F2CC8F]' : 'text-[#3D405B]/15'}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Contenido */}
+                  <p className="text-[#5D6078] leading-relaxed text-sm whitespace-pre-line">
+                    {t.contenido}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* CTA final */}
       <section className="container mx-auto px-6 pb-20">
         <motion.div
@@ -271,7 +379,7 @@ const TestimoniosPage: React.FC = () => {
       {/* Footer */}
       <Footer />
       <WhatsAppButton />
-      
+
     </div>
   );
 };

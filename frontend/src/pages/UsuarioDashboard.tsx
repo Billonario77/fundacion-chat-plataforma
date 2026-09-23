@@ -12,6 +12,9 @@ import ModalCancelarTurno from '../components/ModalCancelarTurno';
 import CompletarDatos from '../components/CompletarDatos';
 import Avatar from '../components/Avatar';
 import CalendarioHorarios from '../components/CalendarioHorarios';
+import TestimonioForm from '../components/TestimonioForm';
+import MisTestimonios from '../components/MisTestimonios';
+import { testimoniosService, Testimonio } from '../services/testimoniosService';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -29,11 +32,15 @@ const UsuarioDashboard: React.FC = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(
     (location.state as any)?.abrirFormulario || false
   );
-  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados'>(
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio'>(
     (location.state as any)?.pestañaInicial || 'activas'
   );
   const [ultimoEvento, setUltimoEvento] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
+
+  // Estados para testimonios
+  const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
+  const [editandoTestimonio, setEditandoTestimonio] = useState<Testimonio | null>(null);
     
   // ============================================
   // Estado para modal de cancelación
@@ -394,16 +401,18 @@ const [modalCerrado, setModalCerrado] = useState(false);
     };
   }, [socket, connected, ultimoEvento]);
 
-  // Cargar datos al cambiar de pestaña
-  useEffect(() => {
-    if (pestañaActiva === 'activas') {
-      cargarSolicitudes();
-    } else if (pestañaActiva === 'reprogramaciones') {
-      cargarReprogramaciones();
-    } else if (pestañaActiva === 'cancelados') {
-      cargarSolicitudes();
-    }
-  }, [pestañaActiva]);
+// Cargar datos al cambiar de pestaña
+useEffect(() => {
+  if (pestañaActiva === 'activas') {
+    cargarSolicitudes();
+  } else if (pestañaActiva === 'reprogramaciones') {
+    cargarReprogramaciones();
+  } else if (pestañaActiva === 'cancelados') {
+    cargarSolicitudes();
+  } else if (pestañaActiva === 'testimonio') {
+    cargarTestimonios();
+  }
+}, [pestañaActiva]);
 
   // Auto-refresh CADA 5 SEGUNDOS
   useEffect(() => {
@@ -557,6 +566,28 @@ const [modalCerrado, setModalCerrado] = useState(false);
       if (!silencioso) setLoading(false);
     }
   };
+
+const cargarTestimonios = async () => {
+  try {
+    const data = await testimoniosService.misTestimonios();
+    setTestimonios(data.testimonios);
+  } catch (err) {
+    console.error('Error al cargar testimonios:', err);
+  }
+};
+
+const eliminarTestimonio = async (id: number) => {
+  if (!window.confirm('¿Eliminar este testimonio?')) return;
+  try {
+    await testimoniosService.eliminar(id);
+    await cargarTestimonios();
+    toast.success('Testimonio eliminado');
+  } catch (err) {
+    console.error('Error al eliminar testimonio:', err);
+    toast.error('Error al eliminar el testimonio');
+  }
+};
+
 
   const cargarReprogramaciones = async () => {
     try {
@@ -843,6 +874,16 @@ const [modalCerrado, setModalCerrado] = useState(false);
         </button>
 
         <button
+          onClick={() => { setPestañaActiva('testimonio'); setMenuAbierto(false); }}
+          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+            pestañaActiva === 'testimonio' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+          }`}
+        >
+          <span>💬</span>
+          <span>Mi testimonio</span>
+        </button>
+
+        <button
           onClick={() => { setPestañaActiva('historial'); setMenuAbierto(false); }}
           className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
             pestañaActiva === 'historial' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
@@ -906,6 +947,18 @@ const [modalCerrado, setModalCerrado] = useState(false);
             {nuevasCancelacionesCount}
           </span>
         )}
+      </button>
+
+      <button
+        onClick={() => setPestañaActiva('testimonio')}
+        className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+          pestañaActiva === 'testimonio'
+            ? 'bg-white text-primario shadow-md' 
+            : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+        }`}
+      >
+        <span className="text-lg">💬</span>
+        <span>Mi testimonio</span>
       </button>
 
       <button
@@ -1079,6 +1132,38 @@ const [modalCerrado, setModalCerrado] = useState(false);
             )}
           </div>
         </>
+      )}
+
+      {pestañaActiva === 'testimonio' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-primario mb-4">Mi testimonio</h2>
+          <p className="text-gray-600 mb-6">
+            Comparte tu experiencia con la fundación. Tu voz ayuda a otras personas
+            a dar el primer paso.
+          </p>
+
+          <div className="space-y-6">
+            <TestimonioForm
+              key={editandoTestimonio?.id ?? 'nuevo'}
+              testimonioExistente={editandoTestimonio}
+              onCreated={() => {
+                setEditandoTestimonio(null);
+                cargarTestimonios();
+              }}
+            />
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                Mis testimonios enviados
+              </h3>
+              <MisTestimonios
+                testimonios={testimonios}
+                onEditar={(t) => setEditandoTestimonio(t)}
+                onEliminar={eliminarTestimonio}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {pestañaActiva === 'historial' && <HistorialTurnos rol="usuario" />}

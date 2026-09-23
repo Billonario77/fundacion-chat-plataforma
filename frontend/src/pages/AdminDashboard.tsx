@@ -24,6 +24,7 @@ import GestionConfiguracion from '../components/admin/GestionConfiguracion';
 import axios from 'axios';
 import Avatar from '../components/Avatar';
 import { perfilService } from '../services/turnosService';
+import GestionTestimonios from '../components/admin/GestionTestimonios';
 
 
 
@@ -86,7 +87,7 @@ const AdminDashboard: React.FC = () => {
   const { socket, connected } = useSocket();
   const navigate = useNavigate();
   const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias' | 
-         'entidades' | 'cupones' | 'estadisticas-cobros' | 'donaciones' | 'cobros' | 'configuracion'>('usuarios');
+       'entidades' | 'cupones' | 'estadisticas-cobros' | 'donaciones' | 'cobros' | 'configuracion' | 'testimonios'>('usuarios');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [pestañaAnterior, setPestañaAnterior] = useState(pestañaActiva);
   const [cambiandoPestaña, setCambiandoPestaña] = useState(false);
@@ -507,6 +508,16 @@ const AdminDashboard: React.FC = () => {
                 <span>⚙️</span>
                 <span>Configuración</span>
               </button>
+
+              <button
+                onClick={() => { cambiarPestaña('testimonios'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'testimonios' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>💬</span>
+                <span>Testimonios</span>
+              </button>
             </div>
           )}
         </div>
@@ -691,6 +702,18 @@ const AdminDashboard: React.FC = () => {
             <span>Configuración</span>
           </button>
 
+          <button
+            onClick={() => cambiarPestaña('testimonios')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'testimonios'
+                ? 'bg-white text-primario shadow-md'
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">💬</span>
+            <span>Testimonios</span>
+          </button>
+
         </div>
       </div>
 
@@ -831,6 +854,12 @@ const AdminDashboard: React.FC = () => {
         {pestañaActiva === 'configuracion' && (
           <div className="animate-fadeIn">
             <GestionConfiguracion />
+          </div>
+        )}
+
+        {pestañaActiva === 'testimonios' && (
+          <div className="animate-fadeIn">
+            <GestionTestimonios />
           </div>
         )}  
 
