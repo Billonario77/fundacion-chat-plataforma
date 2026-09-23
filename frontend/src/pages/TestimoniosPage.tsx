@@ -5,138 +5,60 @@ import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
 
-// ============================================
-// TESTIMONIOS DE LA FUNDACIÓN (curados)
-// ============================================
-interface Testimonio {
-  id: number;
-  nombre: string;
-  edad?: number;
-  ciudad?: string;
-  avatar: string;
-  categoria: 'apoyo' | 'crisis' | 'seguimiento';
-  titulo: string;
-  historia: string;
-  destacado?: boolean;
-}
-
-const TESTIMONIOS: Testimonio[] = [
-  {
-    id: 1,
-    nombre: 'María Elena',
-    edad: 34,
-    ciudad: 'Bogotá',
-    avatar: '🌸',
-    categoria: 'apoyo',
-    titulo: 'Encontré un lugar donde no me sentí juzgada',
-    historia: 'Después de meses sintiéndome sola y sin saber a quién acudir, decidí agendar una sesión. Encontré un espacio donde pude hablar sin miedo, sin sentirme juzgada. Me sentí escuchada por primera vez en mucho tiempo. Hoy puedo decir que estoy aprendiendo a sanar a mi ritmo.',
-    destacado: true
-  },
-  {
-    id: 2,
-    nombre: 'Carlos Andrés',
-    edad: 28,
-    ciudad: 'Medellín',
-    avatar: '🌱',
-    categoria: 'seguimiento',
-    titulo: 'La guía que me ayudó a ver con otros ojos',
-    historia: 'Estaba pasando por un momento muy difícil en mi trabajo y en mi familia. La guía que recibí me ayudó a ver mis problemas desde otra perspectiva. No me dieron soluciones mágicas, pero me acompañaron a encontrarlas yo mismo. Hoy tengo esperanza.',
-    destacado: true
-  },
-  {
-    id: 3,
-    nombre: 'Anónima',
-    edad: 45,
-    avatar: '🕊️',
-    categoria: 'crisis',
-    titulo: 'En mi momento más oscuro, alguien me escuchó',
-    historia: 'Llamé en un momento de crisis. No sabía ni por dónde empezar. Pero la persona que me atendió me dio un espacio seguro, sin apuros, sin juicios. Solo me dejó hablar. Esa conversación me recordó que aún hay razones para seguir. Gracias por estar ahí.'
-  },
-  {
-    id: 4,
-    nombre: 'Laura Sofía',
-    edad: 22,
-    ciudad: 'Cali',
-    avatar: '💛',
-    categoria: 'apoyo',
-    titulo: 'Aprendí que pedir ayuda no es debilidad',
-    historia: 'Siempre pensé que debía poder con todo yo sola. Cuando finalmente decidí pedir ayuda, me di cuenta de que era el acto más valiente que podía hacer. Aquí encontré personas que me acompañaron sin hacerme sentir menos. Estoy muy agradecida.'
-  },
-  {
-    id: 5,
-    nombre: 'Diego',
-    edad: 52,
-    ciudad: 'Barranquilla',
-    avatar: '🌿',
-    categoria: 'seguimiento',
-    titulo: 'Un acompañamiento que me cambió la vida',
-    historia: 'Después de perder a mi esposa, no sabía cómo seguir. El acompañamiento que recibí, sesión tras sesión, me ayudó a reconstruirme. No fue rápido, pero cada conversación me daba un poco más de fuerza. Hoy puedo recordarla con amor, sin tanto dolor.'
-  },
-  {
-    id: 6,
-    nombre: 'Anónima',
-    edad: 19,
-    avatar: '✨',
-    categoria: 'crisis',
-    titulo: 'Escuchar historias me ayudó a sentirme menos sola',
-    historia: 'Leer los testimonios de otras personas me hizo entender que no estaba sola en lo que sentía. Ver que otros habían pasado por lo mismo y habían salido adelante me dio esperanza. Por eso quiero compartir mi historia también, por si alguien la necesita.'
-  }
-];
+const POR_PAGINA = 9;
 
 // ============================================
 // PÁGINA
 // ============================================
 const TestimoniosPage: React.FC = () => {
-  const [filtro, setFiltro] = useState<'todos' | 'apoyo' | 'crisis' | 'seguimiento'>('todos');
-
-  // Testimonios de la comunidad (vienen de la API)
-  const [comunidad, setComunidad] = useState<TestimonioPublico[]>([]);
-  const [cargandoComunidad, setCargandoComunidad] = useState(true);
+  const [testimonios, setTestimonios] = useState<TestimonioPublico[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(0);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     let activo = true;
+    setCargando(true);
     (async () => {
       try {
-        const data = await testimoniosService.listarPublicos({ limit: 24 });
-        if (activo) setComunidad(data.testimonios);
+        const data = await testimoniosService.listarPublicos({
+          page: pagina,
+          limit: POR_PAGINA,
+        });
+        if (!activo) return;
+        setTestimonios(data.testimonios);
+        setTotalPaginas(data.totalPages);
+        setTotal(data.total);
       } catch (err) {
-        console.error('Error al cargar testimonios de la comunidad:', err);
+        console.error('Error al cargar testimonios:', err);
+        if (activo) {
+          setTestimonios([]);
+          setTotalPaginas(0);
+          setTotal(0);
+        }
       } finally {
-        if (activo) setCargandoComunidad(false);
+        if (activo) setCargando(false);
       }
     })();
-    return () => { activo = false; };
-  }, []);
+    return () => {
+      activo = false;
+    };
+  }, [pagina]);
 
-  const testimoniosFiltrados = filtro === 'todos'
-    ? TESTIMONIOS
-    : TESTIMONIOS.filter(t => t.categoria === filtro);
-
-  const getCategoriaLabel = (cat: string) => {
-    switch (cat) {
-      case 'apoyo': return '🌱 Apoyo';
-      case 'crisis': return '🆘 Crisis';
-      case 'seguimiento': return '📋 Seguimiento';
-      default: return cat;
+  // Al cambiar de página, subir al inicio de la sección
+  useEffect(() => {
+    if (pagina > 1) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, [pagina]);
 
-  const getCategoriaColor = (cat: string) => {
-    switch (cat) {
-      case 'apoyo': return 'bg-[#81B29A]/20 text-[#3D405B]';
-      case 'crisis': return 'bg-[#E07A5F]/20 text-[#3D405B]';
-      case 'seguimiento': return 'bg-[#F2CC8F]/40 text-[#3D405B]';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  // Formatear fecha de los testimonios de la comunidad
   const formatFecha = (fecha: string) => {
     try {
       return new Date(fecha).toLocaleDateString('es-CO', {
         year: 'numeric',
         month: 'long',
-        timeZone: 'America/Bogota'
+        timeZone: 'America/Bogota',
       });
     } catch {
       return '';
@@ -182,125 +104,36 @@ const TestimoniosPage: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-lg text-[#5D6078] leading-relaxed"
         >
-          Historias reales de personas que dieron el primer paso y encontraron un espacio seguro para sanar. Si ellos pudieron, tú también.
+          Historias reales de personas que dieron el primer paso y encontraron un
+          espacio seguro para sanar. Si ellos pudieron, tú también.
         </motion.p>
       </section>
 
-      {/* Filtros (solo aplican a los testimonios de la Fundación) */}
-      <section className="container mx-auto px-6 mb-8">
-        <div className="flex flex-wrap justify-center gap-2">
-          {[
-            { key: 'todos', label: '✨ Todos' },
-            { key: 'apoyo', label: '🌱 Apoyo' },
-            { key: 'crisis', label: '🆘 Crisis' },
-            { key: 'seguimiento', label: '📋 Seguimiento' }
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setFiltro(item.key as any)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                filtro === item.key
-                  ? 'bg-[#E07A5F] text-white shadow-md scale-105'
-                  : 'bg-white/70 text-[#3D405B] hover:bg-white border border-[#F2CC8F]/40'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Testimonios de la Fundación */}
+      {/* Testimonios */}
       <section className="container mx-auto px-6 pb-16">
-        <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          {testimoniosFiltrados.map((testimonio, index) => (
-            <motion.div
-              key={testimonio.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className={`bg-white/80 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border ${
-                testimonio.destacado
-                  ? 'border-[#E07A5F]/40'
-                  : 'border-[#F2CC8F]/40'
-              }`}
-            >
-              {/* Encabezado */}
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#F2CC8F] to-[#E07A5F]/40 flex items-center justify-center text-3xl flex-shrink-0">
-                  {testimonio.avatar}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-[#3D405B]">{testimonio.nombre}</p>
-                    {testimonio.edad && (
-                      <span className="text-xs text-[#5D6078]">• {testimonio.edad} años</span>
-                    )}
-                  </div>
-                  {testimonio.ciudad && (
-                    <p className="text-xs text-[#5D6078]">📍 {testimonio.ciudad}</p>
-                  )}
-                </div>
-                {testimonio.destacado && (
-                  <span className="text-xl" title="Historia destacada">⭐</span>
-                )}
-              </div>
-
-              {/* Categoría */}
-              <div className="mb-3">
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ${getCategoriaColor(testimonio.categoria)}`}>
-                  {getCategoriaLabel(testimonio.categoria)}
-                </span>
-              </div>
-
-              {/* Título */}
-              <h3 className="text-lg md:text-xl font-serif text-[#3D405B] mb-3">
-                "{testimonio.titulo}"
-              </h3>
-
-              {/* Historia */}
-              <p className="text-[#5D6078] leading-relaxed text-sm md:text-base">
-                {testimonio.historia}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Voces de la comunidad (desde la API) */}
-      <section className="container mx-auto px-6 pb-16">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-2xl md:text-3xl font-serif text-[#3D405B] mb-3">
-              Voces de la comunidad
-            </h2>
-            <p className="text-[#5D6078] max-w-2xl mx-auto">
-              Mensajes que nos han llegado de personas que han vivido el acompañamiento
-              de la Fundación.
+        {cargando ? (
+          <p className="text-center text-[#5D6078] italic py-12">
+            Cargando testimonios…
+          </p>
+        ) : testimonios.length === 0 ? (
+          <div className="text-center py-16 max-w-xl mx-auto">
+            <div className="text-5xl mb-4">🌱</div>
+            <p className="text-[#5D6078] italic mb-2">
+              Aún no hay testimonios publicados.
             </p>
-          </motion.div>
-
-          {cargandoComunidad ? (
-            <p className="text-center text-[#5D6078] italic py-8">Cargando voces…</p>
-          ) : comunidad.length === 0 ? (
-            <p className="text-center text-[#5D6078] italic py-8">
-              Aún no hay voces nuevas de la comunidad. ¡Sé la primera persona en compartir la tuya!
+            <p className="text-sm text-[#5D6078]/70">
+              Sé la primera persona en compartir tu historia.
             </p>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {comunidad.map((t, index) => (
+          </div>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {testimonios.map((t, index) => (
                 <motion.div
                   key={t.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.05 }}
+                  transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.4) }}
                   viewport={{ once: true }}
                   className={`bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border ${
                     t.destacado ? 'border-[#E07A5F]/40' : 'border-[#F2CC8F]/40'
@@ -308,15 +141,24 @@ const TestimoniosPage: React.FC = () => {
                 >
                   {/* Encabezado */}
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#81B29A] to-[#F2CC8F]/60 flex items-center justify-center text-2xl flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#F2CC8F] to-[#E07A5F]/40 flex items-center justify-center text-2xl flex-shrink-0">
                       {t.es_anonimo ? '✨' : '🌸'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[#3D405B] truncate">{t.autor}</p>
-                      <p className="text-xs text-[#5D6078]">{formatFecha(t.creado_en)}</p>
+                      <p className="font-semibold text-[#3D405B] truncate">
+                        {t.autor}
+                      </p>
+                      <p className="text-xs text-[#5D6078]">
+                        {t.edad && <span>{t.edad} años</span>}
+                        {t.edad && t.ciudad && <span> • </span>}
+                        {t.ciudad && <span>📍 {t.ciudad}</span>}
+                        {!t.edad && !t.ciudad && <span>{formatFecha(t.creado_en)}</span>}
+                      </p>
                     </div>
                     {t.destacado && (
-                      <span className="text-xl flex-shrink-0" title="Destacado">⭐</span>
+                      <span className="text-xl flex-shrink-0" title="Destacado">
+                        ⭐
+                      </span>
                     )}
                   </div>
 
@@ -325,22 +167,62 @@ const TestimoniosPage: React.FC = () => {
                     {[1, 2, 3, 4, 5].map((n) => (
                       <span
                         key={n}
-                        className={n <= t.calificacion ? 'text-[#F2CC8F]' : 'text-[#3D405B]/15'}
+                        className={
+                          n <= t.calificacion
+                            ? 'text-[#F2CC8F]'
+                            : 'text-[#3D405B]/15'
+                        }
                       >
                         ★
                       </span>
                     ))}
                   </div>
 
+                  {/* Título */}
+                  <h3 className="text-lg font-serif text-[#3D405B] mb-3">
+                    "{t.titulo}"
+                  </h3>
+
                   {/* Contenido */}
                   <p className="text-[#5D6078] leading-relaxed text-sm whitespace-pre-line">
                     {t.contenido}
                   </p>
+
+                  {/* Fecha al pie */}
+                  <p className="text-xs text-[#5D6078]/60 mt-4">
+                    {formatFecha(t.creado_en)}
+                  </p>
                 </motion.div>
               ))}
             </div>
-          )}
-        </div>
+
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div className="flex justify-center items-center gap-3 mt-10">
+                <button
+                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                  disabled={pagina === 1}
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-white/80 border border-[#F2CC8F]/40 text-[#3D405B] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  ← Anterior
+                </button>
+
+                <span className="text-sm text-[#3D405B]">
+                  Página <strong>{pagina}</strong> de <strong>{totalPaginas}</strong>
+                  <span className="text-[#5D6078]/70"> · {total} testimonios</span>
+                </span>
+
+                <button
+                  onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={pagina === totalPaginas}
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-white/80 border border-[#F2CC8F]/40 text-[#3D405B] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       {/* CTA final */}
@@ -357,7 +239,8 @@ const TestimoniosPage: React.FC = () => {
             Tu historia también merece ser contada
           </h2>
           <p className="text-[#5D6078] mb-8 max-w-xl mx-auto">
-            El primer paso es el más difícil, pero no tienes que darlo solo. Estamos aquí para acompañarte.
+            El primer paso es el más difícil, pero no tienes que darlo solo. Estamos
+            aquí para acompañarte.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
@@ -379,7 +262,6 @@ const TestimoniosPage: React.FC = () => {
       {/* Footer */}
       <Footer />
       <WhatsAppButton />
-
     </div>
   );
 };
