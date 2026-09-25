@@ -216,5 +216,15 @@ export const cobrosService = {
       ...headers()
     });
     return response.data;
-  }
+  },
+ 
+   // Condonar multa (admin)
+  condonarMulta: async (multaId: string) => {
+    const response = await axios.patch(
+      `${API_URL}/cobros/admin/multas/${multaId}/condonar`,
+      {},
+      headers()
+    );
+    return response.data;
+  }  
 };

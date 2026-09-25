@@ -9,6 +9,7 @@ router.post('/turnos/:turnoId/calcular-costo', auth_1.authenticateToken, cobrosC
 router.get('/turnos/:turnoId/verificar-pago', auth_1.authenticateToken, cobrosController_1.verificarPagoTurno);
 router.post('/confirmar-pago', auth_1.authenticateToken, cobrosController_1.confirmarPago);
 router.post('/registrar-pago-manual', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.registrarPagoManual);
+router.patch('/admin/multas/:multaId/condonar', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.condonarMulta);
 router.get('/turnos/:turnoId/cobro', auth_1.authenticateToken, cobrosController_1.obtenerCobroPorTurno);
 router.get('/historial', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerCobros);
 router.get('/estadisticas', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerEstadisticasCobros);

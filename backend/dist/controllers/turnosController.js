@@ -85,8 +85,11 @@ const solicitarApoyo = async (req, res) => {
         }
         const turnosPreviosQuery = await connection_1.pool.query('SELECT COUNT(*) as total FROM turnos WHERE usuario_id = $1', [usuarioId]);
         const totalTurnosPrevios = parseInt(turnosPreviosQuery.rows[0].total);
-        const esPrimeraVez = totalTurnosPrevios === 0;
+        const usuarioGuiaQuery = await connection_1.pool.query('SELECT guia_asignado_id FROM usuarios WHERE id = $1', [usuarioId]);
+        const tieneGuiaAsignado = !!usuarioGuiaQuery.rows[0]?.guia_asignado_id;
+        const esPrimeraVez = totalTurnosPrevios === 0 && !tieneGuiaAsignado;
         console.log(`👤 Usuario ${usuarioId} - Total turnos previos: ${totalTurnosPrevios}`);
+        console.log(`👤 Tiene guía asignado: ${tieneGuiaAsignado}`);
         console.log(`🎯 Es primera vez: ${esPrimeraVez ? 'SÍ' : 'NO'}`);
         let guiaAsignado = null;
         let estado = 'pendiente';
@@ -663,10 +666,10 @@ const cancelarTurno = async (req, res) => {
             res.status(403).json({ error: 'Rol no autorizado para cancelar turnos' });
             return;
         }
-        const estadosPermitidos = ['pendiente', 'aceptado'];
+        const estadosPermitidos = ['pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado'];
         if (!estadosPermitidos.includes(turno.estado)) {
             res.status(400).json({
-                error: `No se puede cancelar un turno en estado "${turno.estado}". Solo se pueden cancelar turnos pendientes o aceptados.`
+                error: `No se puede cancelar un turno en estado "${turno.estado}".`
             });
             return;
         }

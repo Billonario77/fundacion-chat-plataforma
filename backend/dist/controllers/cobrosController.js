@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
+exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
@@ -484,4 +484,82 @@ const generarFirmaPagoSesion = async (req, res) => {
     }
 };
 exports.generarFirmaPagoSesion = generarFirmaPagoSesion;
+const condonarMulta = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden condonar multas' });
+        }
+        const adminId = req.user.id;
+        const { multaId } = req.params;
+        if (!multaId) {
+            return res.status(400).json({ error: 'ID de multa requerido' });
+        }
+        const client = await connection_1.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const multaQuery = await client.query(`SELECT id, usuario_id, total, estado, incluida_en_cobro_id
+         FROM cobros
+         WHERE id = $1 AND tipo = 'multa'`, [multaId]);
+            if (multaQuery.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ error: 'Multa no encontrada' });
+            }
+            const multa = multaQuery.rows[0];
+            if (multa.estado !== 'pendiente') {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    error: `Solo se pueden condonar multas en estado pendiente. Esta está en "${multa.estado}".`
+                });
+            }
+            const montoMulta = parseFloat(multa.total);
+            if (multa.incluida_en_cobro_id) {
+                const sesionQuery = await client.query(`SELECT id, total, monto_multas, estado
+           FROM cobros
+           WHERE id = $1 AND tipo = 'sesion'`, [multa.incluida_en_cobro_id]);
+                if (sesionQuery.rows.length > 0) {
+                    const sesion = sesionQuery.rows[0];
+                    if (sesion.estado === 'pendiente') {
+                        const nuevoTotal = Math.max(0, parseFloat(sesion.total) - montoMulta);
+                        const nuevoMontoMultas = Math.max(0, parseFloat(sesion.monto_multas) - montoMulta);
+                        await client.query(`UPDATE cobros
+               SET total = $1, monto_multas = $2, updated_at = NOW()
+               WHERE id = $3`, [nuevoTotal, nuevoMontoMultas, sesion.id]);
+                        console.log(`💰 Sesión ${sesion.id} ajustada: total $${sesion.total} → $${nuevoTotal}`);
+                    }
+                }
+            }
+            await client.query(`UPDATE cobros
+         SET estado = 'condonada',
+             incluida_en_cobro_id = NULL,
+             creado_por = $1,
+             updated_at = NOW()
+         WHERE id = $2`, [adminId, multaId]);
+            await client.query(`INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+         VALUES ($1, $2, $3, NOW())`, [
+                multa.usuario_id,
+                'multa_condonada',
+                JSON.stringify({ multa_id: multaId, monto: montoMulta, admin_id: adminId })
+            ]);
+            await client.query('COMMIT');
+            console.log(`✅ Multa ${multaId} condonada por admin ${adminId}`);
+            res.json({
+                success: true,
+                message: 'Multa condonada exitosamente',
+                montoCondonado: montoMulta
+            });
+        }
+        catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        }
+        finally {
+            client.release();
+        }
+    }
+    catch (error) {
+        console.error('Error al condonar multa:', error);
+        res.status(500).json({ error: error.message || 'Error al condonar multa' });
+    }
+};
+exports.condonarMulta = condonarMulta;
 //# sourceMappingURL=cobrosController.js.map

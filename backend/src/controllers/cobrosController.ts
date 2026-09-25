@@ -653,3 +653,122 @@ export const generarFirmaPagoSesion = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ error: error.message || 'Error al generar firma' });
   }
 };
+
+
+// ============================================
+// CONDONAR MULTA (Admin)
+// ============================================
+export const condonarMulta = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden condonar multas' });
+    }
+
+    const adminId = req.user.id;
+    const { multaId } = req.params;
+
+    if (!multaId) {
+      return res.status(400).json({ error: 'ID de multa requerido' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Verificar que la multa existe, es tipo 'multa' y está pendiente
+      const multaQuery = await client.query(
+        `SELECT id, usuario_id, total, estado, incluida_en_cobro_id
+         FROM cobros
+         WHERE id = $1 AND tipo = 'multa'`,
+        [multaId]
+      );
+
+      if (multaQuery.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Multa no encontrada' });
+      }
+
+      const multa = multaQuery.rows[0];
+
+      if (multa.estado !== 'pendiente') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: `Solo se pueden condonar multas en estado pendiente. Esta está en "${multa.estado}".`
+        });
+      }
+
+      const montoMulta = parseFloat(multa.total);
+
+      // 2. Si está vinculada a un cobro de sesión, ajustar el total
+      if (multa.incluida_en_cobro_id) {
+        // Obtener el cobro de la sesión
+        const sesionQuery = await client.query(
+          `SELECT id, total, monto_multas, estado
+           FROM cobros
+           WHERE id = $1 AND tipo = 'sesion'`,
+          [multa.incluida_en_cobro_id]
+        );
+
+        if (sesionQuery.rows.length > 0) {
+          const sesion = sesionQuery.rows[0];
+
+          if (sesion.estado === 'pendiente') {
+            const nuevoTotal = Math.max(0, parseFloat(sesion.total) - montoMulta);
+            const nuevoMontoMultas = Math.max(0, parseFloat(sesion.monto_multas) - montoMulta);
+
+            await client.query(
+              `UPDATE cobros
+               SET total = $1, monto_multas = $2, updated_at = NOW()
+               WHERE id = $3`,
+              [nuevoTotal, nuevoMontoMultas, sesion.id]
+            );
+
+            console.log(`💰 Sesión ${sesion.id} ajustada: total $${sesion.total} → $${nuevoTotal}`);
+          }
+        }
+      }
+
+      // 3. Marcar la multa como condonada
+      await client.query(
+        `UPDATE cobros
+         SET estado = 'condonada',
+             incluida_en_cobro_id = NULL,
+             creado_por = $1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [adminId, multaId]
+      );
+
+      // 4. Auditoría
+      await client.query(
+        `INSERT INTO auditoria_logs (usuario_afectado_id, accion, detalles, created_at)
+         VALUES ($1, $2, $3, NOW())`,
+        [
+          multa.usuario_id,
+          'multa_condonada',
+          JSON.stringify({ multa_id: multaId, monto: montoMulta, admin_id: adminId })
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      console.log(`✅ Multa ${multaId} condonada por admin ${adminId}`);
+
+      res.json({
+        success: true,
+        message: 'Multa condonada exitosamente',
+        montoCondonado: montoMulta
+      });
+
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+  } catch (error: any) {
+    console.error('Error al condonar multa:', error);
+    res.status(500).json({ error: error.message || 'Error al condonar multa' });
+  }
+};

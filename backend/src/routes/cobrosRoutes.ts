@@ -17,7 +17,8 @@ import {
   marcarUsuarioExento,
   obtenerCupones,
   generarFirmaPagoSesion,
-  obtenerCobros
+  obtenerCobros,
+  condonarMulta
 } from '../controllers/cobrosController';
 
 const router = Router();
@@ -37,6 +38,9 @@ router.post('/confirmar-pago', authenticateToken, confirmarPago);
 
 // Registrar pago manual (solo admin)
 router.post('/registrar-pago-manual', authenticateToken, isAdmin, registrarPagoManual);
+
+// Condonar
+router.patch('/admin/multas/:multaId/condonar', authenticateToken, isAdmin, condonarMulta);
 
 // Obtener cobro por turno
 router.get('/turnos/:turnoId/cobro', authenticateToken, obtenerCobroPorTurno);

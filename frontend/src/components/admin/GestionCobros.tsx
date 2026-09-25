@@ -13,7 +13,10 @@ interface Cobro {
   descuento_porcentaje: number;
   descuento_aplicado: number;
   total: number;
-  estado: 'pendiente' | 'pagado' | 'fallido' | 'exento' | 'consumido_bolsa';
+  monto_multas: number;
+  tipo: 'sesion' | 'multa';
+  concepto?: string;
+  estado: 'pendiente' | 'pagado' | 'fallido' | 'exento' | 'consumido_bolsa' | 'condonada';
   metodo_pago?: string;
   comprobante_url?: string;
   pagado_at?: string;
@@ -69,6 +72,22 @@ const GestionCobros: React.FC = () => {
       toast.error('Error al cargar cobros');
     } finally {
       setLoading(false);
+    }
+  };
+
+    const handleCondonarMulta = async (multaId: string, monto: number) => {
+    if (!window.confirm(
+      `¿Condonar esta multa de ${formatCurrency(monto)}?\n\n` +
+      `Se eliminará la deuda del usuario. Si la multa estaba incluida en una sesión pendiente, el total de esa sesión se ajustará automáticamente.`
+    )) return;
+
+    try {
+      await cobrosService.condonarMulta(multaId);
+      toast.success('Multa condonada exitosamente');
+      cargarDatos();
+    } catch (err: any) {
+      console.error('Error al condonar multa:', err);
+      toast.error(err?.response?.data?.error || 'Error al condonar la multa');
     }
   };
 
@@ -238,16 +257,18 @@ const GestionCobros: React.FC = () => {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guía</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {cobros.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                       No hay cobros {filtroEstado ? `con estado "${filtroEstado}"` : ''}
                     </td>
                   </tr>
@@ -260,6 +281,17 @@ const GestionCobros: React.FC = () => {
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{cobro.usuario_nombre}</div>
                         <div className="text-xs text-gray-500">{cobro.usuario_email}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {cobro.tipo === 'multa' ? (
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                            Multa
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                            Sesión
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-700">
                         {cobro.guia_nombre}
@@ -274,6 +306,22 @@ const GestionCobros: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-700">
                         {cobro.metodo_pago || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {cobro.tipo === 'multa' && cobro.estado === 'pendiente' ? (
+                          <button
+                            onClick={() => handleCondonarMulta(cobro.id, Number(cobro.total))}
+                            className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-full font-medium transition-colors"
+                          >
+                            Condonar
+                          </button>
+                        ) : cobro.tipo === 'multa' && cobro.estado === 'condonada' ? (
+                          <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full font-medium">
+                            Condonada
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))
