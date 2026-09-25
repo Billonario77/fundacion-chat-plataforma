@@ -28,7 +28,7 @@ const ModalCancelarTurno: React.FC<ModalCancelarTurnoProps> = ({
     const fechaTurno = new Date(fechaProgramada);
     const diffHoras = (fechaTurno.getTime() - fechaActual.getTime()) / (1000 * 60 * 60);
     
-    return diffHoras < 48;
+    return diffHoras < 2;
   };
 
   const requierePenalizacion = calcularPenalizacion();
@@ -79,11 +79,11 @@ const ModalCancelarTurno: React.FC<ModalCancelarTurnoProps> = ({
               <span>
                 {requierePenalizacion ? (
                   <>
-                    <strong>Cancelación con costo:</strong> Cancelaciones con menos de 48 horas de antelación, tienen un costo del 50% del valor de la sesión.
+                    <strong>Cancelación con costo:</strong> Cancelaciones con menos de 2 horas de antelación, tienen un costo del 50% del valor de la sesión.
                   </>
                 ) : (
                   <>
-                    <strong>Cancelación sin costo</strong> Cancelaciones con más de 48 horas de antelación, No tienen costo.
+                    <strong>Cancelación sin costo</strong> Cancelaciones con más de 2 horas de antelación, No tienen costo.
                   </>
                 )}
               </span>
