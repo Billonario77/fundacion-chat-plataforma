@@ -175,6 +175,9 @@ const io = new SocketServer(server, {
 // ============================================
 initSocketService(io);
 
+// Iniciar worker de revisión de turnos impagos (cada 15 min)
+import './workers/impagoWorker';
+
 // ============================================
 // MIDDLEWARES DE SEGURIDAD Y UTILIDAD
 // ============================================

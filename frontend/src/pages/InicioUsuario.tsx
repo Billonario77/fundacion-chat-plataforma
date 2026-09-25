@@ -159,7 +159,7 @@ const InicioUsuario: React.FC = () => {
                 Tienes {totalPagosPendientes} {totalPagosPendientes === 1 ? 'pago pendiente' : 'pagos pendientes'}
               </p>
               <button
-                onClick={() => navigate(`/turnos/${primerPagoPendiente.id}`)}
+                onClick={() => navigate('/usuario', { state: { pestañaInicial: 'activas' } })}
                 className="mt-2 text-sm text-red-700 underline hover:text-red-900"
               >
                 Ir a pagar →

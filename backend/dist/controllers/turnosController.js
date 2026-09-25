@@ -31,6 +31,29 @@ const solicitarApoyo = async (req, res) => {
             return;
         }
         console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
+        const multasQuery = await connection_1.pool.query(`SELECT 
+        COUNT(*) as cantidad,
+        COALESCE(SUM(total), 0) as total
+       FROM cobros
+       WHERE usuario_id = $1
+         AND tipo = 'multa'
+         AND estado = 'pendiente'`, [usuarioId]);
+        const cantidadMultas = parseInt(multasQuery.rows[0].cantidad);
+        const totalMultas = parseFloat(multasQuery.rows[0].total);
+        if (cantidadMultas > 0) {
+            if (totalTurnosActivos >= 1) {
+                res.status(400).json({
+                    error: `Tienes ${cantidadMultas} multa${cantidadMultas > 1 ? 's' : ''} pendiente${cantidadMultas > 1 ? 's' : ''} por $${totalMultas.toLocaleString('es-CO')}. Debes pagar tu sesión actual (que incluirá la multa) antes de agendar otra.`,
+                    requierePagoMulta: true,
+                    cantidadMultas,
+                    totalMultas,
+                    bloqueado: true
+                });
+                return;
+            }
+            console.log(`⚠️ Usuario ${usuarioId} tiene multas pendientes ($${totalMultas}) pero 0 activas - se permite agendar 1`);
+        }
+        console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
         let fechaProgramada;
         if (fechaPreferida) {
             fechaProgramada = new Date(fechaPreferida);
@@ -85,6 +108,9 @@ const solicitarApoyo = async (req, res) => {
             guiaAsignado = asignacion.guiaId;
             estado = 'pendiente';
         }
+        const minutosAntelacion = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
+        const esUrgente = minutosAntelacion < 70;
+        console.log(`⏱️ Minutos de antelación: ${minutosAntelacion.toFixed(2)} - Urgente: ${esUrgente}`);
         if (fechaPreferida && guiaAsignado) {
             console.log('🔍 ENTRANDO A VALIDACIÓN DEL GUÍA');
             const duracion = 60;
@@ -117,9 +143,10 @@ const solicitarApoyo = async (req, res) => {
         estado, 
         modalidad, 
         requiere_asignacion_admin,
+        es_urgente,
         created_at
       )
-      VALUES ($1, $2, $3, $4, 'chat', $5, NOW())
+      VALUES ($1, $2, $3, $4, 'chat', $5, $6, NOW())
       RETURNING id, created_at
     `;
         const result = await connection_1.pool.query(query, [
@@ -127,7 +154,8 @@ const solicitarApoyo = async (req, res) => {
             guiaAsignado,
             fechaProgramada,
             estado,
-            esPrimeraVez
+            esPrimeraVez,
+            esUrgente
         ]);
         const turnoId = result.rows[0].id;
         console.log(`✅ Turno guardado con ID: ${turnoId}`);
@@ -199,7 +227,8 @@ const solicitarApoyo = async (req, res) => {
             message: 'Solicitud procesada exitosamente',
             turnoId: turnoId,
             requiereAsignacion: esPrimeraVez || !guiaAsignado,
-            requierePago
+            requierePago,
+            esUrgente
         });
     }
     catch (error) {
@@ -642,13 +671,64 @@ const cancelarTurno = async (req, res) => {
             return;
         }
         let requierePenalizacion = false;
-        if (rol === 'usuario') {
+        if (rol === 'usuario' && !turno.es_urgente) {
             const fechaActual = new Date();
             const fechaTurno = new Date(turno.fecha_programada);
             const diffHoras = (fechaTurno.getTime() - fechaActual.getTime()) / (1000 * 60 * 60);
-            if (diffHoras < 48) {
+            if (diffHoras < 2) {
                 requierePenalizacion = true;
-                console.log(`⚠️ Cancelación con menos de 48h de antelación. Diferencia: ${diffHoras.toFixed(2)}h`);
+                console.log(`⚠️ Cancelación con menos de 2h de antelación. Diferencia: ${diffHoras.toFixed(2)}h`);
+            }
+        }
+        try {
+            const cobroTurnoQuery = await connection_1.pool.query(`SELECT id FROM cobros WHERE turno_id = $1 AND tipo = 'sesion' LIMIT 1`, [turnoId]);
+            if (cobroTurnoQuery.rows.length > 0) {
+                const cobroTurnoId = cobroTurnoQuery.rows[0].id;
+                const liberarResult = await connection_1.pool.query(`UPDATE cobros
+           SET incluida_en_cobro_id = NULL
+           WHERE incluida_en_cobro_id = $1 AND tipo = 'multa' AND estado = 'pendiente'`, [cobroTurnoId]);
+                if (liberarResult.rowCount && liberarResult.rowCount > 0) {
+                    console.log(`🔓 ${liberarResult.rowCount} multa(s) liberada(s) del cobro ${cobroTurnoId}`);
+                }
+            }
+        }
+        catch (errLiberar) {
+            console.error('⚠️ Error al liberar multas:', errLiberar);
+        }
+        let multaCreada = null;
+        if (requierePenalizacion) {
+            try {
+                const configPrecio = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`);
+                const precioSesion = parseFloat(configPrecio.rows[0]?.valor || '100000');
+                const configMulta = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'multa_cancelacion_porcentaje'`);
+                const porcentajeMulta = parseFloat(configMulta.rows[0]?.valor || '50');
+                const montoMulta = Math.round(precioSesion * (porcentajeMulta / 100) * 100) / 100;
+                const insertMulta = await connection_1.pool.query(`INSERT INTO cobros (
+            turno_id, usuario_id, guia_id, duracion_minutos,
+            costo_por_hora, descuento_porcentaje, descuento_aplicado,
+            total, estado, tipo, concepto
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          RETURNING id, total`, [
+                    turnoId,
+                    usuarioId,
+                    turno.guia_id_actual || null,
+                    0,
+                    0,
+                    0,
+                    0,
+                    montoMulta,
+                    'pendiente',
+                    'multa',
+                    `Multa por cancelación tardía del turno (${porcentajeMulta}% de $${precioSesion})`
+                ]);
+                multaCreada = {
+                    id: insertMulta.rows[0].id,
+                    total: parseFloat(insertMulta.rows[0].total)
+                };
+                console.log(`💰 Multa creada: $${montoMulta} (cobro ${multaCreada.id})`);
+            }
+            catch (errMulta) {
+                console.error('❌ Error al crear multa:', errMulta);
             }
         }
         const updateQuery = `
@@ -708,7 +788,8 @@ const cancelarTurno = async (req, res) => {
         res.json({
             message: 'Turno cancelado exitosamente',
             turno: result.rows[0],
-            requierePenalizacion: requierePenalizacion
+            requierePenalizacion: requierePenalizacion,
+            multa: multaCreada
         });
     }
     catch (error) {

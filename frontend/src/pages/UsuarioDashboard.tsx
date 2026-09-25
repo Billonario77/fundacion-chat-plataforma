@@ -607,36 +607,71 @@ const eliminarTestimonio = async (id: number) => {
     setError('');
     try {
       setLoading(true);
-      await usuarioService.solicitarApoyo(
+      const respuesta = await usuarioService.solicitarApoyo(
         nuevaSolicitud.rol,
         nuevaSolicitud.mensaje,
         nuevaSolicitud.fecha_preferida || undefined
       );
-      
-      setNuevaSolicitud({ rol: 'apoyo', mensaje: '', fecha_preferida: ''});
+
+      setNuevaSolicitud({ rol: 'apoyo', mensaje: '', fecha_preferida: '' });
       setMostrarFormulario(false);
+
+      // Aviso de pago urgente o normal
+      if (respuesta.esUrgente) {
+        toast(
+          'Esta sesión es para dentro de menos de 70 minutos. Debes pagarla antes del inicio. Si no la pagas, se cancelará automáticamente y se aplicará una multa del 50%. Puedes cancelarla sin costo si no puedes asistir.',
+          {
+            duration: 12000,
+            icon: '⚠️',
+            style: {
+              background: '#fef3c7',
+              color: '#92400e',
+              padding: '16px',
+              maxWidth: '480px',
+              whiteSpace: 'normal',
+            },
+          }
+        );
+      } else if (respuesta.requierePago) {
+        toast(
+          'Reservamos tu sesión. Si no puedes asistir, cancela máximo 2 horas antes. Si no realizas el pago 1h antes del inicio, la sesión se cancela automáticamente y se aplica una multa del 50%.',
+          {
+            duration: 10000,
+            icon: '💳',
+            style: {
+              background: '#FDF6EC',
+              color: '#3D405B',
+              padding: '16px',
+              maxWidth: '480px',
+              whiteSpace: 'normal',
+            },
+          }
+        );
+      } else {
+        toast.success('Solicitud recibida exitosamente');
+      }
+
       cargarSolicitudes();
-      
-    } 
-    
-    catch (err: any) {
+
+    } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Error al solicitar apoyo';
+      const esBloqueoMulta = err.response?.data?.requierePagoMulta === true;
+
       toast.error(errorMsg, {
-        duration: 5000,  // 5 segundos
+        duration: esBloqueoMulta ? 8000 : 5000,
         style: {
           background: '#fef2f2',
           color: '#dc2626',
           padding: '12px',
-          borderRadius: '8px'
-        }
+          maxWidth: '480px',
+          whiteSpace: 'normal',
+        },
       });
       setError(errorMsg);
       setTimeout(() => {
-      setError('');
-    }, 5000);
-    } 
-    
-    finally {
+        setError('');
+      }, esBloqueoMulta ? 8000 : 5000);
+    } finally {
       setLoading(false);
     }
   };

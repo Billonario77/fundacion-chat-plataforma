@@ -197,10 +197,33 @@ export class PagoService {
       descuentoAplicado = costoBase * (descuentoPorcentaje / 100);
       total = costoBase - descuentoAplicado;
     }
+    
+        total = Math.round(total * 100) / 100;
 
-    total = Math.round(total * 100) / 100;
+    // 4.3 Buscar multas pendientes del usuario (no vinculadas a otro cobro)
+    const multasQuery = await this.pool.query(
+      `SELECT id, total FROM cobros
+       WHERE usuario_id = $1
+         AND tipo = 'multa'
+         AND estado = 'pendiente'
+         AND incluida_en_cobro_id IS NULL`,
+      [usuarioId]
+    );
 
-    // 4.3 Crear cobro pendiente
+    const multasPendientes = multasQuery.rows;
+    const montoMultas = multasPendientes.reduce(
+      (sum: number, m: any) => sum + parseFloat(m.total),
+      0
+    );
+
+    const totalConMultas = Math.round((total + montoMultas) * 100) / 100;
+
+    if (montoMultas > 0) {
+      console.log(`💰 Multas pendientes: ${multasPendientes.length} - Total multas: $${montoMultas}`);
+      console.log(`💰 Total final (sesión + multas): $${totalConMultas}`);
+    }
+
+    // 4.4 Crear cobro pendiente
     const cobro = await this.crearCobro({
       turnoId,
       usuarioId,
@@ -209,20 +232,32 @@ export class PagoService {
       costoPorHora,
       descuentoPorcentaje,
       descuentoAplicado,
-      total,
+      total: totalConMultas,
       estado: 'pendiente',
-      entidadId: usuario.entidad_id
+      entidadId: usuario.entidad_id,
+      montoMultas
     });
 
+    // 4.5 Vincular las multas al nuevo cobro
+    if (multasPendientes.length > 0) {
+      await this.pool.query(
+        `UPDATE cobros
+         SET incluida_en_cobro_id = $1
+         WHERE id = ANY($2::uuid[])`,
+        [cobro.id, multasPendientes.map((m: any) => m.id)]
+      );
+      console.log(`🔗 ${multasPendientes.length} multa(s) vinculada(s) al cobro ${cobro.id}`);
+    }
+
     return {
-      total,
+      total: totalConMultas,
       descuentoPorcentaje,
       descuentoAplicado,
       esExento: false,
       usaBolsa: false,
       entidadId: usuario.entidad_id || undefined,
       cobroId: cobro.id
-    };
+    };    
   }
 
   /**
@@ -239,12 +274,14 @@ export class PagoService {
     total: number;
     estado: string;
     entidadId?: string;
+    montoMultas?: number;
   }): Promise<CobroRecord> {
     const query = `
       INSERT INTO cobros (
         turno_id, usuario_id, guia_id, entidad_id, duracion_minutos,
-        costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado,
+        monto_multas
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
     const result = await this.pool.query(query, [
@@ -257,7 +294,8 @@ export class PagoService {
       data.descuentoPorcentaje,
       data.descuentoAplicado,
       data.total,
-      data.estado
+      data.estado,
+      data.montoMultas ?? 0
     ]);
     return result.rows[0];
   }
@@ -313,12 +351,21 @@ export class PagoService {
         [metodoPago, cobro.id]
       );
 
+      // Marcar también las multas vinculadas a este cobro
+      await client.query(
+        `UPDATE cobros
+         SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1
+         WHERE incluida_en_cobro_id = $2 AND tipo = 'multa'`,
+        [metodoPago, cobro.id]
+      );
+
       await client.query(
         `UPDATE turnos SET estado = 'aceptado' WHERE id = $1`,
         [turnoId]
       );
 
       await client.query('COMMIT');
+
 
       const result = await client.query(
         `SELECT * FROM cobros WHERE id = $1`,
@@ -367,12 +414,21 @@ export class PagoService {
         [metodoPago, comprobanteUrl || null, adminId, cobro.id]
       );
 
+      // Marcar también las multas vinculadas a este cobro
+      await client.query(
+        `UPDATE cobros
+         SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1, comprobante_url = $2, creado_por = $3
+         WHERE incluida_en_cobro_id = $4 AND tipo = 'multa'`,
+        [metodoPago, comprobanteUrl || null, adminId, cobro.id]
+      );
+
       await client.query(
         `UPDATE turnos SET estado = 'aceptado' WHERE id = $1`,
         [turnoId]
       );
 
       await client.query('COMMIT');
+
 
       const result = await client.query(
         `SELECT * FROM cobros WHERE id = $1`,

@@ -101,6 +101,18 @@ class PagoService {
             total = costoBase - descuentoAplicado;
         }
         total = Math.round(total * 100) / 100;
+        const multasQuery = await this.pool.query(`SELECT id, total FROM cobros
+       WHERE usuario_id = $1
+         AND tipo = 'multa'
+         AND estado = 'pendiente'
+         AND incluida_en_cobro_id IS NULL`, [usuarioId]);
+        const multasPendientes = multasQuery.rows;
+        const montoMultas = multasPendientes.reduce((sum, m) => sum + parseFloat(m.total), 0);
+        const totalConMultas = Math.round((total + montoMultas) * 100) / 100;
+        if (montoMultas > 0) {
+            console.log(`💰 Multas pendientes: ${multasPendientes.length} - Total multas: $${montoMultas}`);
+            console.log(`💰 Total final (sesión + multas): $${totalConMultas}`);
+        }
         const cobro = await this.crearCobro({
             turnoId,
             usuarioId,
@@ -109,12 +121,19 @@ class PagoService {
             costoPorHora,
             descuentoPorcentaje,
             descuentoAplicado,
-            total,
+            total: totalConMultas,
             estado: 'pendiente',
-            entidadId: usuario.entidad_id
+            entidadId: usuario.entidad_id,
+            montoMultas
         });
+        if (multasPendientes.length > 0) {
+            await this.pool.query(`UPDATE cobros
+         SET incluida_en_cobro_id = $1
+         WHERE id = ANY($2::uuid[])`, [cobro.id, multasPendientes.map((m) => m.id)]);
+            console.log(`🔗 ${multasPendientes.length} multa(s) vinculada(s) al cobro ${cobro.id}`);
+        }
         return {
-            total,
+            total: totalConMultas,
             descuentoPorcentaje,
             descuentoAplicado,
             esExento: false,
@@ -127,8 +146,9 @@ class PagoService {
         const query = `
       INSERT INTO cobros (
         turno_id, usuario_id, guia_id, entidad_id, duracion_minutos,
-        costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado,
+        monto_multas
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
         const result = await this.pool.query(query, [
@@ -141,7 +161,8 @@ class PagoService {
             data.descuentoPorcentaje,
             data.descuentoAplicado,
             data.total,
-            data.estado
+            data.estado,
+            data.montoMultas ?? 0
         ]);
         return result.rows[0];
     }
@@ -172,6 +193,9 @@ class PagoService {
                 return cobro;
             }
             await client.query(`UPDATE cobros SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1 WHERE id = $2`, [metodoPago, cobro.id]);
+            await client.query(`UPDATE cobros
+         SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1
+         WHERE incluida_en_cobro_id = $2 AND tipo = 'multa'`, [metodoPago, cobro.id]);
             await client.query(`UPDATE turnos SET estado = 'aceptado' WHERE id = $1`, [turnoId]);
             await client.query('COMMIT');
             const result = await client.query(`SELECT * FROM cobros WHERE id = $1`, [cobro.id]);
@@ -199,6 +223,9 @@ class PagoService {
                 throw new Error('Este turno ya fue pagado');
             }
             await client.query(`UPDATE cobros SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1, comprobante_url = $2, creado_por = $3 WHERE id = $4`, [metodoPago, comprobanteUrl || null, adminId, cobro.id]);
+            await client.query(`UPDATE cobros
+         SET estado = 'pagado', pagado_at = NOW(), metodo_pago = $1, comprobante_url = $2, creado_por = $3
+         WHERE incluida_en_cobro_id = $4 AND tipo = 'multa'`, [metodoPago, comprobanteUrl || null, adminId, cobro.id]);
             await client.query(`UPDATE turnos SET estado = 'aceptado' WHERE id = $1`, [turnoId]);
             await client.query('COMMIT');
             const result = await client.query(`SELECT * FROM cobros WHERE id = $1`, [cobro.id]);

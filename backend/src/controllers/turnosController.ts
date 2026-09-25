@@ -46,6 +46,41 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
+// ============================================
+    // VALIDAR MULTAS PENDIENTES
+    // ============================================
+    const multasQuery = await pool.query(
+      `SELECT 
+        COUNT(*) as cantidad,
+        COALESCE(SUM(total), 0) as total
+       FROM cobros
+       WHERE usuario_id = $1
+         AND tipo = 'multa'
+         AND estado = 'pendiente'`,
+      [usuarioId]
+    );
+
+    const cantidadMultas = parseInt(multasQuery.rows[0].cantidad);
+    const totalMultas = parseFloat(multasQuery.rows[0].total);
+
+    if (cantidadMultas > 0) {
+      // Con multa pendiente, el máximo de sesiones activas es 1
+      if (totalTurnosActivos >= 1) {
+        res.status(400).json({
+          error: `Tienes ${cantidadMultas} multa${cantidadMultas > 1 ? 's' : ''} pendiente${cantidadMultas > 1 ? 's' : ''} por $${totalMultas.toLocaleString('es-CO')}. Debes pagar tu sesión actual (que incluirá la multa) antes de agendar otra.`,
+          requierePagoMulta: true,
+          cantidadMultas,
+          totalMultas,
+          bloqueado: true
+        });
+        return;
+      }
+
+      // Si no tiene sesiones activas, se le permite agendar 1 (que pagará la multa)
+      console.log(`⚠️ Usuario ${usuarioId} tiene multas pendientes ($${totalMultas}) pero 0 activas - se permite agendar 1`);
+    }
+
+    console.log(`📊 Usuario ${usuarioId} tiene ${totalTurnosActivos}/5 turnos activos`);
 
 
     // ============================================
@@ -138,6 +173,13 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     }
 
     // ============================================
+    // DETERMINAR SI ES URGENTE (<70 min de antelación)
+    // ============================================
+    const minutosAntelacion = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
+    const esUrgente = minutosAntelacion < 70;
+    console.log(`⏱️ Minutos de antelación: ${minutosAntelacion.toFixed(2)} - Urgente: ${esUrgente}`);
+
+    // ============================================
     // VALIDAR DISPONIBILIDAD DEL GUÍA
     // ============================================
     if (fechaPreferida && guiaAsignado) {
@@ -182,9 +224,10 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
         estado, 
         modalidad, 
         requiere_asignacion_admin,
+        es_urgente,
         created_at
       )
-      VALUES ($1, $2, $3, $4, 'chat', $5, NOW())
+      VALUES ($1, $2, $3, $4, 'chat', $5, $6, NOW())
       RETURNING id, created_at
     `;
     
@@ -193,7 +236,8 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       guiaAsignado, 
       fechaProgramada,
       estado,
-      esPrimeraVez
+      esPrimeraVez,
+      esUrgente
     ]);
     
     const turnoId = result.rows[0].id;
@@ -288,7 +332,8 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       message: 'Solicitud procesada exitosamente',
       turnoId: turnoId,
       requiereAsignacion: esPrimeraVez || !guiaAsignado,
-      requierePago
+      requierePago,
+      esUrgente
     });
 
   } catch (error) {
@@ -730,6 +775,10 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
   }
 };
 
+
+// TODO: Los cobros de sesiones canceladas quedan en estado 'pendiente' sin uso.
+//       Agregar estado 'cancelado' al CHECK de cobros.estado y usarlo aquí.
+
 // ============================================
 // CANCELAR TURNO
 // ============================================
@@ -805,14 +854,101 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     let requierePenalizacion = false;
-    if (rol === 'usuario') {
+    if (rol === 'usuario' && !turno.es_urgente) {
       const fechaActual = new Date();
       const fechaTurno = new Date(turno.fecha_programada);
       const diffHoras = (fechaTurno.getTime() - fechaActual.getTime()) / (1000 * 60 * 60);
       
-      if (diffHoras < 48) {
+      if (diffHoras < 2) {
         requierePenalizacion = true;
-        console.log(`⚠️ Cancelación con menos de 48h de antelación. Diferencia: ${diffHoras.toFixed(2)}h`);
+        console.log(`⚠️ Cancelación con menos de 2h de antelación. Diferencia: ${diffHoras.toFixed(2)}h`);
+      }
+    }
+
+    // ============================================
+    // LIBERAR MULTAS VINCULADAS AL COBRO DE ESTE TURNO
+    // ============================================
+    // Si el turno tenía un cobro con multas incluidas, las liberamos
+    // para que se sumen a la próxima sesión del usuario.
+    
+    try {
+      const cobroTurnoQuery = await pool.query(
+        `SELECT id FROM cobros WHERE turno_id = $1 AND tipo = 'sesion' LIMIT 1`,
+        [turnoId]
+      );
+
+      if (cobroTurnoQuery.rows.length > 0) {
+        const cobroTurnoId = cobroTurnoQuery.rows[0].id;
+
+        const liberarResult = await pool.query(
+          `UPDATE cobros
+           SET incluida_en_cobro_id = NULL
+           WHERE incluida_en_cobro_id = $1 AND tipo = 'multa' AND estado = 'pendiente'`,
+          [cobroTurnoId]
+        );
+
+        if (liberarResult.rowCount && liberarResult.rowCount > 0) {
+          console.log(`🔓 ${liberarResult.rowCount} multa(s) liberada(s) del cobro ${cobroTurnoId}`);
+        }
+      }
+    } catch (errLiberar) {
+      console.error('⚠️ Error al liberar multas:', errLiberar);
+      // No rompemos la cancelación si falla la liberación
+    }
+
+    // ============================================
+    // CREAR COBRO DE MULTA SI APLICA
+    // ============================================
+    let multaCreada: { id: string; total: number } | null = null;
+    if (requierePenalizacion) {
+      try {
+        // 1. Obtener el precio de la sesión
+        const configPrecio = await pool.query(
+          `SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`
+        );
+        const precioSesion = parseFloat(configPrecio.rows[0]?.valor || '100000');
+
+        // 2. Obtener el % de multa
+        const configMulta = await pool.query(
+          `SELECT valor FROM configuracion WHERE clave = 'multa_cancelacion_porcentaje'`
+        );
+        const porcentajeMulta = parseFloat(configMulta.rows[0]?.valor || '50');
+
+        // 3. Calcular monto de la multa
+        const montoMulta = Math.round(precioSesion * (porcentajeMulta / 100) * 100) / 100;
+
+        // 4. Crear el cobro tipo 'multa'
+        const insertMulta = await pool.query(
+          `INSERT INTO cobros (
+            turno_id, usuario_id, guia_id, duracion_minutos,
+            costo_por_hora, descuento_porcentaje, descuento_aplicado,
+            total, estado, tipo, concepto
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          RETURNING id, total`,
+          [
+            turnoId,
+            usuarioId,
+            turno.guia_id_actual || null,
+            0,                              // sin duración (no es una sesión)
+            0,                              // sin costo por hora
+            0,                              // sin descuento
+            0,                              // sin descuento aplicado
+            montoMulta,
+            'pendiente',
+            'multa',
+            `Multa por cancelación tardía del turno (${porcentajeMulta}% de $${precioSesion})`
+          ]
+        );
+
+        multaCreada = {
+          id: insertMulta.rows[0].id,
+          total: parseFloat(insertMulta.rows[0].total)
+        };
+
+        console.log(`💰 Multa creada: $${montoMulta} (cobro ${multaCreada.id})`);
+      } catch (errMulta) {
+        console.error('❌ Error al crear multa:', errMulta);
+        // No rompemos la cancelación si falla la multa
       }
     }
 
@@ -884,7 +1020,8 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
     res.json({
       message: 'Turno cancelado exitosamente',
       turno: result.rows[0],
-      requierePenalizacion: requierePenalizacion
+      requierePenalizacion: requierePenalizacion,
+      multa: multaCreada
     });
 
   } catch (error) {
