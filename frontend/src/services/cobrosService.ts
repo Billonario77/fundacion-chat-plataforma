@@ -49,6 +49,9 @@ export interface Cobro {
   descuento_porcentaje: number;
   descuento_aplicado: number;
   total: number;
+  monto_multas: number;
+  tipo: 'sesion' | 'multa';
+  concepto?: string;
   estado: 'pendiente' | 'pagado' | 'fallido' | 'exento' | 'consumido_bolsa';
   metodo_pago?: string;
   comprobante_url?: string;

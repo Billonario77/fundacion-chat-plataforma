@@ -7,13 +7,14 @@ import Layout from '../components/Layout';
 import toast from 'react-hot-toast';
 import Videollamada from '../components/Videollamada';
 import { useSocket } from '../contexts/SocketContext';
-import { cobrosService } from '../services/cobrosService';
+import { cobrosService, Cobro } from '../services/cobrosService';
 
 const DetalleTurno: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [turno, setTurno] = useState<TurnoDetalle | null>(null);
+  const [cobro, setCobro] = useState<Cobro | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mostrarChat, setMostrarChat] = useState(true);
@@ -38,6 +39,19 @@ const DetalleTurno: React.FC = () => {
       cargarTurno();
     }
   }, [id]);
+
+
+  // Cargar cobro si el turno requiere pago
+  useEffect(() => {
+    if (turno?.estado === 'pendiente_pago' && turno.id) {
+      cobrosService.obtenerCobroPorTurno(turno.id)
+        .then((data) => setCobro(data.data))
+        .catch((err) => console.error('Error al cargar cobro:', err));
+    } else {
+      setCobro(null);
+    }
+  }, [turno?.id, turno?.estado]);
+
 
   // ============================================
   // ESCUCHAR CAMBIOS DE ESTADO EN TIEMPO REAL
@@ -378,20 +392,55 @@ const DetalleTurno: React.FC = () => {
           </div>
 
           {/* 💳 AVISO DE PAGO PENDIENTE */}
+          
           {turno.estado === 'pendiente_pago' && (
             <div className="mt-4 p-5 bg-gradient-to-r from-[#F2CC8F]/40 to-[#E07A5F]/20 rounded-2xl border-2 border-[#E07A5F]/30">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
+                <div className="flex-1">
                   <p className="text-lg font-semibold text-[#3D405B] flex items-center gap-2">
                     💳 Esta sesión requiere pago
                   </p>
                   <p className="text-sm text-[#5D6078] mt-1">
                     Completa el pago para confirmar tu sesión con el guía.
                   </p>
+
+                  {/* Desglose de pago */}
+                  {cobro && (
+                    <div className="mt-3 text-sm space-y-1 max-w-xs">
+                      <div className="flex justify-between">
+                        <span className="text-[#5D6078]">Sesión:</span>
+                        <span className="font-medium text-[#3D405B]">
+                          ${(parseFloat(String(cobro.total)) - parseFloat(String(cobro.monto_multas || 0))).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+
+                      {cobro.monto_multas > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-red-600">Multa pendiente:</span>
+                          <span className="font-medium text-red-700">
+                            ${parseFloat(String(cobro.monto_multas)).toLocaleString('es-CO')}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between pt-1 border-t border-[#E07A5F]/30 mt-1">
+                        <span className="font-semibold text-[#3D405B]">Total a pagar:</span>
+                        <span className="font-bold text-[#3D405B]">
+                          ${parseFloat(String(cobro.total)).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+
+                      {cobro.monto_multas > 0 && (
+                        <p className="text-xs text-red-600 mt-2 italic">
+                          La multa corresponde a una cancelación tardía o impago anterior. Se cobra junto con esta sesión.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handlePagarSesion}
-                  className="bg-[#E07A5F] text-white px-6 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30 whitespace-nowrap"
+                  className="bg-[#E07A5F] text-white px-6 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30 whitespace-nowrap self-start md:self-center"
                 >
                   💛 Pagar Sesión
                 </button>
