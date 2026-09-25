@@ -130,9 +130,19 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       [usuarioId]
     );
     const totalTurnosPrevios = parseInt(turnosPreviosQuery.rows[0].total);
-    const esPrimeraVez = totalTurnosPrevios === 0;
+
+    // Verificar si el usuario ya tiene guía asignado en su perfil
+    const usuarioGuiaQuery = await pool.query(
+      'SELECT guia_asignado_id FROM usuarios WHERE id = $1',
+      [usuarioId]
+    );
+    const tieneGuiaAsignado = !!usuarioGuiaQuery.rows[0]?.guia_asignado_id;
+
+    // Solo es "primera vez" si no tiene turnos previos NI guía asignado
+    const esPrimeraVez = totalTurnosPrevios === 0 && !tieneGuiaAsignado;
 
     console.log(`👤 Usuario ${usuarioId} - Total turnos previos: ${totalTurnosPrevios}`);
+    console.log(`👤 Tiene guía asignado: ${tieneGuiaAsignado}`);
     console.log(`🎯 Es primera vez: ${esPrimeraVez ? 'SÍ' : 'NO'}`);
 
     // ============================================
@@ -845,10 +855,10 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const estadosPermitidos = ['pendiente', 'aceptado'];
+    const estadosPermitidos = ['pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado'];
     if (!estadosPermitidos.includes(turno.estado)) {
       res.status(400).json({ 
-        error: `No se puede cancelar un turno en estado "${turno.estado}". Solo se pueden cancelar turnos pendientes o aceptados.` 
+        error: `No se puede cancelar un turno en estado "${turno.estado}".` 
       });
       return;
     }
