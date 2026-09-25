@@ -607,6 +607,9 @@ const eliminarTestimonio = async (id: number) => {
     setError('');
     try {
       setLoading(true);
+      console.log('🔍 fecha_preferida que voy a enviar:', nuevaSolicitud.fecha_preferida);
+      console.log('🔍 Date interpretado:', new Date(nuevaSolicitud.fecha_preferida));
+      console.log('🔍 Hora Colombia del Date:', new Date(nuevaSolicitud.fecha_preferida).toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
       const respuesta = await usuarioService.solicitarApoyo(
         nuevaSolicitud.rol,
         nuevaSolicitud.mensaje,

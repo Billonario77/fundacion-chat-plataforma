@@ -24,11 +24,13 @@ import donacionesRoutes from './routes/donacionesRoutes';
 import configuracionRoutes from './routes/configuracionRoutes';
 import testimonioRoutes from './routes/testimonioRoutes';
 
-// Configurar zona horaria para toda la aplicación
-process.env.TZ = 'America/Bogota';
-console.log('🕐 Zona horaria configurada:', process.env.TZ);
-console.log('🕐 Hora en backend:', new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
-console.log('🕐 Hora actual:', new Date().toString());
+// ✅ Configurar zona horaria del proceso en UTC.
+// Los Date se serializan a Postgres en UTC (correcto) y el frontend
+// los renderiza en hora Colombia cuando lo necesita.
+process.env.TZ = 'UTC';
+console.log('🕐 Zona horaria del proceso: UTC');
+console.log('🕐 Hora UTC:', new Date().toISOString());
+console.log('🕐 Hora Colombia:', new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }));
 
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
 dotenv.config({ path: '.env.production' });
