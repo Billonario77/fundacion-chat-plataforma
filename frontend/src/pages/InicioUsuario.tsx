@@ -11,18 +11,20 @@ const InicioUsuario: React.FC = () => {
   const [solicitudes, setSolicitudes] = useState<Turno[]>([]);
   const [miFoto, setMiFoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [perfilUsuario, setPerfilUsuario] = useState<any>(null);
 
   // Cargar datos
   useEffect(() => {
     const cargar = async () => {
       try {
         setLoading(true);
-        const [data, perfil] = await Promise.all([
-          usuarioService.getMisSolicitudes(),
-          usuarioService.getMiPerfil()
-        ]);
-        setSolicitudes(data.turnos);
-        setMiFoto(perfil?.foto_perfil || null);
+      const [data, perfil] = await Promise.all([
+        usuarioService.getMisSolicitudes(),
+        usuarioService.getMiPerfil()
+      ]);
+      setSolicitudes(data.turnos);
+      setMiFoto(perfil?.foto_perfil || null);
+      setPerfilUsuario(perfil);
       } catch (error) {
         console.error('Error al cargar inicio:', error);
       } finally {
@@ -59,11 +61,8 @@ const InicioUsuario: React.FC = () => {
   const totalPagosPendientes = pagosPendientes.length;
   const primerPagoPendiente = pagosPendientes[0];
 
-  // Guía asignado (último turno con guía)
-  const ultimoTurnoConGuia = solicitudes
-    .filter(s => s.guia_id)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-  const guiaAsignado = ultimoTurnoConGuia?.guia_nombre || null;
+    // Guía asignado (desde el perfil del usuario, no desde el último turno)
+  const guiaAsignado = perfilUsuario?.guia_asignado_nombre || null;
 
   // Últimas 3 sesiones completadas o canceladas
   const ultimasSesiones = solicitudes

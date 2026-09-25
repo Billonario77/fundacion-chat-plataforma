@@ -103,7 +103,7 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       const turnosUsuario = await pool.query(
         `SELECT id FROM turnos 
          WHERE usuario_id = $1 
-         AND estado IN ('pendiente', 'aceptado', 'iniciado')
+         AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')
          AND (
            (fecha_programada < $2 AND (fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute')) > $3)
            OR
@@ -194,7 +194,7 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
                 (SELECT nombre FROM usuarios WHERE id = usuario_id) as usuario_nombre
          FROM turnos 
          WHERE guia_id = $1 
-         AND estado IN ('pendiente', 'aceptado', 'iniciado')
+         AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')
          AND (
            (fecha_programada < $2 AND (fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute')) > $3)
            OR
@@ -1206,9 +1206,13 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const query = `
-      SELECT id, nombre, email, foto_perfil, rol, datos_completados
-      FROM usuarios 
-      WHERE id = $1
+      SELECT 
+        u.id, u.nombre, u.email, u.foto_perfil, u.rol, u.datos_completados,
+        u.guia_asignado_id,
+        g.nombre AS guia_asignado_nombre
+      FROM usuarios u
+      LEFT JOIN usuarios g ON g.id = u.guia_asignado_id
+      WHERE u.id = $1
     `;
 
     const result = await pool.query(query, [usuarioId]);

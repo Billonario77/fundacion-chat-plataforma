@@ -67,6 +67,7 @@ const UsuarioDashboard: React.FC = () => {
   });
 
 const [miFoto, setMiFoto] = useState<string | null>(null);
+const [perfilUsuario, setPerfilUsuario] = useState<any>(null);
 const [mostrarCompletarDatos, setMostrarCompletarDatos] = useState(false);
 const [datosCompletados, setDatosCompletados] = useState(true);
 const [modalCerrado, setModalCerrado] = useState(false);
@@ -80,13 +81,10 @@ const [modalCerrado, setModalCerrado] = useState(false);
       ).guia_nombre 
     : null;
 
-  // Obtener el guía del último turno del usuario (cualquier estado)
-  const ultimoTurnoConGuia = solicitudes
-    .filter(s => s.guia_id)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  // Guía actual desde el perfil del usuario (no desde el último turno)
+  const guiaId = perfilUsuario?.guia_asignado_id || '';
+  const usuarioGuiaActual = perfilUsuario?.guia_asignado_nombre || null;
 
-  const guiaId = ultimoTurnoConGuia?.guia_id || '';
-  const usuarioGuiaActual = ultimoTurnoConGuia?.guia_nombre || null;
   const usuarioTieneGuiaOriginal = !!usuarioGuiaOriginal;
   const usuarioTieneGuiaActual = !!usuarioGuiaActual;
   const usuarioGuiaCambio = usuarioTieneGuiaOriginal && usuarioTieneGuiaActual && usuarioGuiaOriginal !== usuarioGuiaActual;
@@ -265,18 +263,19 @@ const [modalCerrado, setModalCerrado] = useState(false);
     cargarConteo();
   }, []);
 
-  // Cargar foto de perfil del usuario
+  // Cargar perfil del usuario (foto + guía asignado)
   useEffect(() => {
-    const cargarMiFoto = async () => {
+    const cargarMiPerfil = async () => {
       try {
         const data = await usuarioService.getMiPerfil();
         console.log('Datos del perfil:', data);
         setMiFoto(data.foto_perfil);
+        setPerfilUsuario(data);
       } catch (err) {
-        console.error('Error al cargar mi foto:', err);
+        console.error('Error al cargar mi perfil:', err);
       }
     };
-    cargarMiFoto();
+    cargarMiPerfil();
   }, []);
 
 
