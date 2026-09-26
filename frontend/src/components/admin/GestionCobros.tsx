@@ -54,19 +54,16 @@ const GestionCobros: React.FC = () => {
     try {
       setLoading(true);
 
-      // Cargar estadísticas
       const statsResponse = await cobrosService.obtenerEstadisticas();
       if (statsResponse.success) {
         setEstadisticas(statsResponse.data);
       }
 
-      // Cargar cobros con filtro
       const filtros = filtroEstado ? { estado: filtroEstado } : undefined;
       const cobrosResponse = await cobrosService.obtenerCobros(filtros);
       if (cobrosResponse.success) {
         setCobros(cobrosResponse.data);
       }
-
     } catch (error) {
       console.error('Error al cargar datos:', error);
       toast.error('Error al cargar cobros');
@@ -75,11 +72,14 @@ const GestionCobros: React.FC = () => {
     }
   };
 
-    const handleCondonarMulta = async (multaId: string, monto: number) => {
-    if (!window.confirm(
-      `¿Condonar esta multa de ${formatCurrency(monto)}?\n\n` +
-      `Se eliminará la deuda del usuario. Si la multa estaba incluida en una sesión pendiente, el total de esa sesión se ajustará automáticamente.`
-    )) return;
+  const handleCondonarMulta = async (multaId: string, monto: number) => {
+    if (
+      !window.confirm(
+        `¿Condonar esta multa de ${formatCurrency(monto)}?\n\n` +
+          `Se eliminará la deuda del usuario. Si la multa estaba incluida en una sesión pendiente, el total de esa sesión se ajustará automáticamente.`
+      )
+    )
+      return;
 
     try {
       await cobrosService.condonarMulta(multaId);
@@ -95,7 +95,7 @@ const GestionCobros: React.FC = () => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
     }).format(Number(value));
   };
 
@@ -106,7 +106,7 @@ const GestionCobros: React.FC = () => {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Bogota'
+      timeZone: 'America/Bogota',
     });
   };
 
@@ -117,6 +117,7 @@ const GestionCobros: React.FC = () => {
       case 'fallido': return 'bg-red-100 text-red-800';
       case 'exento': return 'bg-purple-100 text-purple-800';
       case 'consumido_bolsa': return 'bg-blue-100 text-blue-800';
+      case 'condonada': return 'bg-purple-100 text-purple-700';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -128,6 +129,7 @@ const GestionCobros: React.FC = () => {
       case 'fallido': return '❌ Fallido';
       case 'exento': return '💜 Exento';
       case 'consumido_bolsa': return '🎁 Bolsa';
+      case 'condonada': return '🕊️ Condonada';
       default: return estado;
     }
   };
@@ -137,14 +139,16 @@ const GestionCobros: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-primario mb-6">Cobros de Sesiones</h2>
+    <div className="p-4 md:p-6">
+      <h2 className="text-xl md:text-2xl font-bold text-primario mb-4 md:mb-6">
+        Cobros de Sesiones
+      </h2>
 
       {/* Pestañas */}
       <div className="flex gap-2 mb-6 bg-gray-100/80 p-2 rounded-2xl">
         <button
           onClick={() => setPestanaActiva('estadisticas')}
-          className={`px-4 py-2 rounded-xl font-medium transition-all ${
+          className={`flex-1 md:flex-initial px-3 md:px-4 py-2 rounded-xl font-medium transition-all text-sm md:text-base ${
             pestanaActiva === 'estadisticas'
               ? 'bg-white text-primario shadow-md'
               : 'text-gray-600 hover:bg-white/50'
@@ -154,7 +158,7 @@ const GestionCobros: React.FC = () => {
         </button>
         <button
           onClick={() => setPestanaActiva('historial')}
-          className={`px-4 py-2 rounded-xl font-medium transition-all ${
+          className={`flex-1 md:flex-initial px-3 md:px-4 py-2 rounded-xl font-medium transition-all text-sm md:text-base ${
             pestanaActiva === 'historial'
               ? 'bg-white text-primario shadow-md'
               : 'text-gray-600 hover:bg-white/50'
@@ -167,38 +171,52 @@ const GestionCobros: React.FC = () => {
       {/* CONTENIDO: ESTADÍSTICAS */}
       {pestanaActiva === 'estadisticas' && estadisticas && (
         <div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{estadisticas.total}</div>
-              <p className="text-sm text-gray-600 mt-1">Total</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-blue-600">
+                {estadisticas.total}
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Total</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{estadisticas.pagados}</div>
-              <p className="text-sm text-gray-600 mt-1">Pagados</p>
+            <div className="bg-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-green-600">
+                {estadisticas.pagados}
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Pagados</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{estadisticas.pendientes}</div>
-              <p className="text-sm text-gray-600 mt-1">Pendientes</p>
+            <div className="bg-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-yellow-600">
+                {estadisticas.pendientes}
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Pendientes</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{estadisticas.fallidos}</div>
-              <p className="text-sm text-gray-600 mt-1">Fallidos</p>
+            <div className="bg-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-red-600">
+                {estadisticas.fallidos}
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Fallidos</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{estadisticas.exentos}</div>
-              <p className="text-sm text-gray-600 mt-1">Exentos</p>
+            <div className="bg-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-purple-600">
+                {estadisticas.exentos}
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">Exentos</p>
             </div>
-            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow p-4 text-center">
-              <div className="text-xl font-bold">
+            <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow p-3 md:p-4 text-center">
+              <div className="text-sm md:text-xl font-bold break-all">
                 {formatCurrency(estadisticas.total_recaudado || 0)}
               </div>
-              <p className="text-sm text-white/80 mt-1">Recaudado</p>
+              <p className="text-xs md:text-sm text-white/80 mt-1">Recaudado</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-semibold text-primario mb-3">Consumidos de bolsa</h3>
-            <p className="text-2xl font-bold text-blue-600">{estadisticas.consumidos_bolsa || 0}</p>
+          <div className="bg-white rounded-lg shadow p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold text-primario mb-3">
+              Consumidos de bolsa
+            </h3>
+            <p className="text-xl md:text-2xl font-bold text-blue-600">
+              {estadisticas.consumidos_bolsa || 0}
+            </p>
           </div>
         </div>
       )}
@@ -210,7 +228,7 @@ const GestionCobros: React.FC = () => {
           <div className="mb-4 flex gap-2 flex-wrap">
             <button
               onClick={() => setFiltroEstado('')}
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1 rounded-full text-xs md:text-sm ${
                 filtroEstado === '' ? 'bg-primario text-white' : 'bg-gray-200 text-gray-700'
               }`}
             >
@@ -218,7 +236,7 @@ const GestionCobros: React.FC = () => {
             </button>
             <button
               onClick={() => setFiltroEstado('pagado')}
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1 rounded-full text-xs md:text-sm ${
                 filtroEstado === 'pagado' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
               }`}
             >
@@ -226,15 +244,17 @@ const GestionCobros: React.FC = () => {
             </button>
             <button
               onClick={() => setFiltroEstado('pendiente')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filtroEstado === 'pendiente' ? 'bg-yellow-600 text-white' : 'bg-gray-200 text-gray-700'
+              className={`px-3 py-1 rounded-full text-xs md:text-sm ${
+                filtroEstado === 'pendiente'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-200 text-gray-700'
               }`}
             >
               Pendientes
             </button>
             <button
               onClick={() => setFiltroEstado('exento')}
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1 rounded-full text-xs md:text-sm ${
                 filtroEstado === 'exento' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
               }`}
             >
@@ -242,8 +262,10 @@ const GestionCobros: React.FC = () => {
             </button>
             <button
               onClick={() => setFiltroEstado('consumido_bolsa')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filtroEstado === 'consumido_bolsa' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+              className={`px-3 py-1 rounded-full text-xs md:text-sm ${
+                filtroEstado === 'consumido_bolsa'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700'
               }`}
             >
               Bolsa
@@ -252,17 +274,17 @@ const GestionCobros: React.FC = () => {
 
           {/* Tabla */}
           <div className="bg-white rounded-lg shadow overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guía</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guía</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
+                  <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -275,14 +297,16 @@ const GestionCobros: React.FC = () => {
                 ) : (
                   cobros.map((cobro) => (
                     <tr key={cobro.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      <td className="px-3 md:px-4 py-3 text-gray-700 whitespace-nowrap text-xs md:text-sm">
                         {formatFecha(cobro.created_at)}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{cobro.usuario_nombre}</div>
+                      <td className="px-3 md:px-4 py-3">
+                        <div className="font-medium text-gray-900 text-sm">
+                          {cobro.usuario_nombre}
+                        </div>
                         <div className="text-xs text-gray-500">{cobro.usuario_email}</div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 md:px-4 py-3">
                         {cobro.tipo === 'multa' ? (
                           <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
                             Multa
@@ -293,30 +317,36 @@ const GestionCobros: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-3 md:px-4 py-3 text-gray-700 text-xs md:text-sm">
                         {cobro.guia_nombre}
                       </td>
-                      <td className="px-4 py-3 font-bold text-green-600 whitespace-nowrap">
+                      <td className="px-3 md:px-4 py-3 font-bold text-green-600 whitespace-nowrap text-xs md:text-sm">
                         {formatCurrency(cobro.total)}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(cobro.estado)}`}>
+                      <td className="px-3 md:px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getEstadoColor(
+                            cobro.estado
+                          )}`}
+                        >
                           {getEstadoLabel(cobro.estado)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-3 md:px-4 py-3 text-gray-700 text-xs md:text-sm">
                         {cobro.metodo_pago || '-'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 md:px-4 py-3">
                         {cobro.tipo === 'multa' && cobro.estado === 'pendiente' ? (
                           <button
-                            onClick={() => handleCondonarMulta(cobro.id, Number(cobro.total))}
-                            className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-full font-medium transition-colors"
+                            onClick={() =>
+                              handleCondonarMulta(cobro.id, Number(cobro.total))
+                            }
+                            className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap"
                           >
                             Condonar
                           </button>
                         ) : cobro.tipo === 'multa' && cobro.estado === 'condonada' ? (
-                          <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full font-medium">
+                          <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded-full font-medium whitespace-nowrap">
                             Condonada
                           </span>
                         ) : (
