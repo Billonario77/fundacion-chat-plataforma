@@ -26,7 +26,7 @@ const HomePage: React.FC = () => {
       t.es_anonimo ? '🍀' : EMOJIS[t.id % EMOJIS.length];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
+      <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0] overflow-x-hidden">
       {/* ============================================ */}
       {/* NAVEGACIÓN */}
       {/* ============================================ */}
