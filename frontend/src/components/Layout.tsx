@@ -27,17 +27,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0] flex flex-col">
       {/* Header con estilo del HomePage */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-[#F2CC8F]/30 sticky top-0 z-40">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
+        <div className="container mx-auto px-3 md:px-6 py-4">
+          <div className="flex justify-between items-center gap-2">
             {/* Logo */}
             <div 
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-2 md:gap-3 cursor-pointer group min-w-0"
               onClick={() => navigate(isAuthenticated ? '/inicio' : '/')}
             >
-              <span className="text-3xl group-hover:scale-110 transition-transform">💛</span>
-              <div>
-                <h1 className="text-xl md:text-2xl font-serif font-bold text-[#3D405B] group-hover:text-[#E07A5F] transition-colors">
-                  Fundación Voces del Alma
+              <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform flex-shrink-0">💛</span>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base md:text-2xl font-serif font-bold text-[#3D405B] group-hover:text-[#E07A5F] transition-colors">
+                  <span className="hidden sm:inline">Fundación </span>Voces del Alma
                 </h1>
                 <p className="text-xs text-[#5D6078] hidden md:block">
                   Un espacio para respirar y sanar
@@ -46,13 +46,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
 
             {/* Menú de navegación */}
-            <nav className="flex items-center gap-2">
+            <nav className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               {isAuthenticated ? (
                 <>
                   {/* Botón Inicio */}
                   <button
                     onClick={() => navigate('/inicio')}
-                    className={`px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
+                    className={`px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute('/inicio')
                         ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30' 
                         : 'text-[#3D405B] hover:bg-[#F2CC8F]/20'
@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       user?.rol === 'guia' ? '/guia' : 
                       user?.rol === 'admin' ? '/admin' : '/usuario'
                     )}
-                    className={`px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
+                    className={`px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute(
                         user?.rol === 'guia' ? '/guia' : 
                         user?.rol === 'admin' ? '/admin' : '/usuario'
@@ -84,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {/* Botón Salir */}
                   <button
                     onClick={handleLogout}
-                    className="px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 text-[#E07A5F] hover:bg-[#E07A5F]/10 border border-[#E07A5F]/30"
+                    className="px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 text-[#E07A5F] hover:bg-[#E07A5F]/10 border border-[#E07A5F]/30"
                   >
                     <span className="text-lg">🚪</span>
                     <span className="hidden md:inline">Salir</span>
