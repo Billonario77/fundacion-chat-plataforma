@@ -394,57 +394,47 @@ const GuiaDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Turnos Activos</p>
-              <p className="text-2xl font-bold text-primario">{miCarga.activos}</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-xl">📋</span>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">📋</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Turnos Activos
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-primario">
+            {miCarga.activos}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Pendientes</p>
-              <p className="text-2xl font-bold text-yellow-600">{miCarga.pendientes}</p>
-            </div>
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <span className="text-xl">⏳</span>
-            </div>
-          </div>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">⏳</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Pendientes
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-yellow-600">
+            {miCarga.pendientes}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">En Curso</p>
-              <p className="text-2xl font-bold text-green-600">{miCarga.enCurso}</p>
-            </div>
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-xl">🔄</span>
-            </div>
-          </div>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">🔄</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            En Curso
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-green-600">
+            {miCarga.enCurso}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Próximas 24h</p>
-              <p className="text-2xl font-bold text-purple-600">{miCarga.proximas24h}</p>
-            </div>
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-xl">📅</span>
-            </div>
-          </div>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">📅</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Próximas 24h
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-purple-600">
+            {miCarga.proximas24h}
+          </p>
         </div>
-      </div>
-
-      
+      </div>      
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
