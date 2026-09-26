@@ -131,7 +131,7 @@ const Login: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] text-white py-4 rounded-full text-lg font-semibold hover:shadow-xl transition-all shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] text-white py-3 md:py-4 rounded-full text-base md:text-lg font-semibold hover:shadow-xl transition-all shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? '⏳ Ingresando...' : '💛 Ingresar'}
                 </motion.button>
@@ -150,7 +150,7 @@ const Login: React.FC = () => {
               {/* Link a registro */}
               <Link
                 to="/registro"
-                className="block w-full text-center border-2 border-[#81B29A] text-[#81B29A] py-3 rounded-full font-medium hover:bg-[#81B29A]/10 transition-all"
+                className="block w-full text-center border-2 border-[#81B29A] text-[#81B29A] py-2.5 md:py-3 rounded-full text-sm md:text-base font-medium hover:bg-[#81B29A]/10 transition-all"
               >
                 ✨ Nueva Cuenta
               </Link>
