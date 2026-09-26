@@ -94,17 +94,17 @@ const HomePage: React.FC = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+              className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start"
             >
               <Link
                 to="/login"
-                className="bg-[#E07A5F] text-white px-10 py-4 rounded-full text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg hover:shadow-xl shadow-[#E07A5F]/30"
+                className="bg-[#E07A5F] text-white px-6 sm:px-10 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg hover:shadow-xl shadow-[#E07A5F]/30 text-center"
               >
                 🌱 Agendar una Sesión
               </Link>
               <Link
                 to="/testimonios"
-                className="border-2 border-[#81B29A] text-[#81B29A] px-8 py-4 rounded-full text-lg font-medium hover:bg-[#81B29A]/10 transition-all"
+                className="border-2 border-[#81B29A] text-[#81B29A] px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#81B29A]/10 transition-all text-center"
               >
                 ✨ Escuchar Historias
               </Link>
