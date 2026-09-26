@@ -52,7 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {/* Botón Inicio */}
                   <button
                     onClick={() => navigate('/inicio')}
-                    className={`px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
+                    className={`w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 justify-center flex-shrink-0 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute('/inicio')
                         ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30' 
                         : 'text-[#3D405B] hover:bg-[#F2CC8F]/20'
@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       user?.rol === 'guia' ? '/guia' : 
                       user?.rol === 'admin' ? '/admin' : '/usuario'
                     )}
-                    className={`px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
+                    className={`w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 justify-center flex-shrink-0 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
                       isActiveRoute(
                         user?.rol === 'guia' ? '/guia' : 
                         user?.rol === 'admin' ? '/admin' : '/usuario'
@@ -84,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {/* Botón Salir */}
                   <button
                     onClick={handleLogout}
-                    className="px-2 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 text-[#E07A5F] hover:bg-[#E07A5F]/10 border border-[#E07A5F]/30"
+                    className="w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 justify-center flex-shrink-0 rounded-full font-medium transition-all duration-300 flex items-center gap-2 text-[#E07A5F] hover:bg-[#E07A5F]/10 border border-[#E07A5F]/30"
                   >
                     <span className="text-lg">🚪</span>
                     <span className="hidden md:inline">Salir</span>
