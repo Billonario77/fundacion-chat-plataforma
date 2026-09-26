@@ -152,7 +152,7 @@ const Login: React.FC = () => {
                 to="/registro"
                 className="block w-full text-center border-2 border-[#81B29A] text-[#81B29A] py-3 rounded-full font-medium hover:bg-[#81B29A]/10 transition-all"
               >
-                ✨ Crear una cuenta nueva
+                ✨ Nueva Cuenta
               </Link>
 
               {/* Aviso de registro anónimo */}

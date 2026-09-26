@@ -21,22 +21,22 @@ const HomePage: React.FC = () => {
     return () => { activo = false; };
   }, []);
 
-    const EMOJIS = ['🕊️', '🌙', '☀️', '✨', '🍃', '💫', '🕯️', '🌟'];
-    const getAvatar = (t: TestimonioPublico) =>
-      t.es_anonimo ? '🍀' : EMOJIS[t.id % EMOJIS.length];
+  const EMOJIS = ['🕊️', '🌙', '☀️', '✨', '🍃', '💫', '🕯️', '🌟'];
+  const getAvatar = (t: TestimonioPublico) =>
+    t.es_anonimo ? '🍀' : EMOJIS[t.id % EMOJIS.length];
 
   return (
-      <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0] overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* ============================================ */}
       {/* NAVEGACIÓN */}
       {/* ============================================ */}
       <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
-        <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <span className="text-2xl md:text-3xl flex-shrink-0">💛</span>
-          <span className="text-lg md:text-2xl font-serif font-bold text-[#3D405B] leading-tight truncate">
+        <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+          <span className="text-2xl md:text-3xl">💛</span>
+          <span className="text-base sm:text-lg md:text-2xl font-serif font-bold text-[#3D405B] leading-tight whitespace-nowrap">
             Voces del Alma
           </span>
-        </div>
+        </Link>
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
           <Link
             to="/donar"
@@ -46,10 +46,10 @@ const HomePage: React.FC = () => {
           </Link>
           <Link
             to="/login"
-            className="flex items-center gap-2 text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors px-4 py-2 rounded-full border border-[#3D405B]/20 hover:border-[#E07A5F]/40"
+            className="flex items-center gap-1.5 md:gap-2 text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors px-3 md:px-4 py-2 rounded-full border border-[#3D405B]/20 hover:border-[#E07A5F]/40"
           >
             <span>🔑</span>
-            Ingresar
+            <span className="hidden sm:inline">Ingresar</span>
           </Link>
         </div>
       </nav>
@@ -57,14 +57,14 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       {/* HERO SECTION */}
       {/* ============================================ */}
-      <section className="container mx-auto px-6 py-12 md:py-20 relative">
+      <section className="container mx-auto px-6 py-12 md:py-20 relative overflow-hidden">
         {/* Luz de fondo */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#F2CC8F]/20 rounded-full blur-3xl"></div>
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-full max-w-[600px] aspect-square bg-[#F2CC8F]/20 rounded-full blur-3xl"></div>
         </div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 relative">
-          <div className="flex-1 text-center lg:text-left">
+          <div className="flex-1 text-center lg:text-left w-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -101,13 +101,13 @@ const HomePage: React.FC = () => {
             >
               <Link
                 to="/login"
-                className="bg-[#E07A5F] text-white px-6 sm:px-10 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg hover:shadow-xl shadow-[#E07A5F]/30 text-center"
+                className="w-full sm:w-auto bg-[#E07A5F] text-white px-6 sm:px-10 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg hover:shadow-xl shadow-[#E07A5F]/30 text-center"
               >
                 🌱 Agendar una Sesión
               </Link>
               <Link
                 to="/testimonios"
-                className="border-2 border-[#81B29A] text-[#81B29A] px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#81B29A]/10 transition-all text-center"
+                className="w-full sm:w-auto border-2 border-[#81B29A] text-[#81B29A] px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#81B29A]/10 transition-all text-center"
               >
                 ✨ Escuchar Historias
               </Link>
@@ -118,17 +118,17 @@ const HomePage: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="mt-10 flex gap-8 justify-center lg:justify-start text-sm text-[#5D6078]"
+              className="mt-10 flex flex-wrap gap-6 md:gap-8 justify-center lg:justify-start text-sm text-[#5D6078]"
             >
-              <div>
+              <div className="text-center lg:text-left">
                 <div className="text-2xl font-serif font-bold text-[#3D405B]">+500</div>
                 <div>Personas acompañadas</div>
               </div>
-              <div>
+              <div className="text-center lg:text-left">
                 <div className="text-2xl font-serif font-bold text-[#3D405B]">100%</div>
                 <div>Confidencial</div>
               </div>
-              <div>
+              <div className="text-center lg:text-left">
                 <div className="text-2xl font-serif font-bold text-[#3D405B]">24/7</div>
                 <div>Disponible</div>
               </div>
@@ -140,25 +140,25 @@ const HomePage: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
-            className="flex-1 flex justify-center relative"
+            className="flex-1 flex justify-center relative w-full"
           >
             <div className="relative">
               {/* Círculo principal con degradado amanecer */}
-              <div className="w-72 h-72 md:w-96 md:h-96 rounded-full bg-gradient-to-br from-[#F2CC8F] via-[#E07A5F]/40 to-[#81B29A]/40 flex items-center justify-center shadow-2xl shadow-[#F2CC8F]/50">
-                <span className="text-9xl md:text-[10rem]">🕊️</span>
+              <div className="w-64 h-64 sm:w-72 sm:h-72 md:w-96 md:h-96 rounded-full bg-gradient-to-br from-[#F2CC8F] via-[#E07A5F]/40 to-[#81B29A]/40 flex items-center justify-center shadow-2xl shadow-[#F2CC8F]/50">
+                <span className="text-7xl sm:text-8xl md:text-[10rem]">🕊️</span>
               </div>
               {/* Elementos flotantes */}
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-4 -right-4 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center text-3xl"
+                className="absolute -top-2 -right-2 md:-top-4 md:-right-4 w-12 h-12 md:w-16 md:h-16 bg-white rounded-full shadow-lg flex items-center justify-center text-2xl md:text-3xl"
               >
                 ☀️
               </motion.div>
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -bottom-4 -left-4 w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center text-3xl"
+                className="absolute -bottom-2 -left-2 md:-bottom-4 md:-left-4 w-12 h-12 md:w-16 md:h-16 bg-white rounded-full shadow-lg flex items-center justify-center text-2xl md:text-3xl"
               >
                 🌿
               </motion.div>
@@ -247,7 +247,7 @@ const HomePage: React.FC = () => {
             </p>
             <Link
               to="/donar"
-              className="inline-block mt-6 bg-white text-[#E07A5F] px-10 py-4 rounded-full text-lg font-medium hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
+              className="inline-block mt-6 bg-white text-[#E07A5F] px-8 sm:px-10 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
             >
               💛 Donar Ahora
             </Link>
@@ -336,9 +336,9 @@ const HomePage: React.FC = () => {
           </p>
           <Link
             to="/login"
-            className="inline-block bg-[#E07A5F] text-white px-12 py-4 rounded-full text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30"
+            className="inline-block bg-[#E07A5F] text-white px-8 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30"
           >
-            Comenzar Ahora →
+            Comenzar →
           </Link>
         </motion.div>
       </section>
@@ -346,9 +346,8 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       {/* FOOTER */}
       {/* ============================================ */}
-      <footer />
+      <Footer />
       <WhatsAppButton />
-
     </div>
   );
 };
