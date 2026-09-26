@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
           </Link>
           <Link
             to="/login"
-            className="flex items-center gap-1.5 md:gap-2 text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors px-3 md:px-4 py-2 rounded-full border border-[#3D405B]/20 hover:border-[#E07A5F]/40"
+            className="flex items-center justify-center gap-1.5 md:gap-2 text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-full border border-[#3D405B]/20 hover:border-[#E07A5F]/40"
           >
             <span>🔑</span>
             <span className="hidden sm:inline">Ingresar</span>

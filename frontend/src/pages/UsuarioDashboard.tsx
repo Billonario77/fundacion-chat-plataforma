@@ -859,6 +859,7 @@ const eliminarTestimonio = async (id: number) => {
         {pestañaActiva === 'activas' && '📋 Solicitudes Activas'}
         {pestañaActiva === 'reprogramaciones' && '🔄 Reprogramar'}
         {pestañaActiva === 'cancelados' && '✗ Cancelados'}
+        {pestañaActiva === 'testimonio' && '💬 Mi testimonio'}
         {pestañaActiva === 'historial' && '📚 Historial'}
       </span>
       <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>

@@ -352,8 +352,12 @@ const AdminDashboard: React.FC = () => {
               {pestañaActiva === 'estadisticas' && '📊 Estadísticas'}
               {pestañaActiva === 'carga-guias' && '📊 Carga Guías'}
               {pestañaActiva === 'entidades' && '🏢 Entidades'}
-              {pestañaActiva === 'cupones' && '🎫 Cupones'}
+              {pestañaActiva === 'cupones' && '🎫 Cupones'}              
+              {pestañaActiva === 'donaciones' && '💝 Donaciones'}
+              {pestañaActiva === 'cobros' && '💵 Cobros de Sesiones'}
               {pestañaActiva === 'estadisticas-cobros' && '💰 Estadísticas Cobros'}
+              {pestañaActiva === 'configuracion' && '⚙️ Configuración'}
+              {pestañaActiva === 'testimonios' && '💬 Testimonios'}
             </span>
             <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
           </button>
