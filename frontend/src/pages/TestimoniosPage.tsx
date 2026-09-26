@@ -74,7 +74,12 @@ const TestimoniosPage: React.FC = () => {
       {/* Navegación */}
       <nav className="container mx-auto px-6 py-5 flex justify-between items-center">
         <Link to="/" className="text-2xl font-serif font-bold text-[#3D405B]">
-          Fundación Apoyo
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <span className="text-2xl md:text-3xl flex-shrink-0">💛</span>
+          <span className="text-lg md:text-2xl font-serif font-bold text-[#3D405B] leading-tight truncate">
+            Voces del Alma
+          </span>
+        </div>
         </Link>
         <Link
           to="/"
