@@ -21,12 +21,12 @@ const Avatar: React.FC<AvatarProps> = ({ nombre, foto, size = 'md' }) => {
     lg: 'w-12 h-12 text-base'
   };
 
-  if (foto) {
+    if (foto) {
     return (
       <img
         src={foto}
         alt={nombre}
-        className={`${sizes[size]} rounded-full object-cover`}
+        className={`${sizes[size]} rounded-full object-cover flex-shrink-0 aspect-square`}
       />
     );
   }
@@ -39,8 +39,8 @@ const Avatar: React.FC<AvatarProps> = ({ nombre, foto, size = 'md' }) => {
   const colorIndex = nombre.length % colores.length;
   const colorFondo = colores[colorIndex];
 
-  return (
-    <div className={`${sizes[size]} ${colorFondo} rounded-full flex items-center justify-center text-white font-bold`}>
+    return (
+    <div className={`${sizes[size]} ${colorFondo} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 aspect-square`}>
       {iniciales}
     </div>
   );

@@ -148,10 +148,10 @@ const AsignacionesGuia: React.FC = () => {
       )}
 
       {/* Selector de vista */}
-      <div className="flex space-x-2 bg-gray-100/80 p-1.5 rounded-2xl inline-flex mb-6">
+      <div className="flex flex-wrap gap-2 bg-gray-100/80 p-1.5 rounded-2xl mb-6">
         <button
           onClick={() => setVista('por-guia')}
-          className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+          className={`flex-1 md:flex-initial px-3 md:px-4 py-2 rounded-xl font-medium transition-all duration-300 text-sm md:text-base ${
             vista === 'por-guia'
               ? 'bg-white text-primario shadow-md' 
               : 'text-texto-claro hover:bg-white/50 hover:text-primario'
@@ -161,7 +161,7 @@ const AsignacionesGuia: React.FC = () => {
         </button>
         <button
           onClick={() => setVista('buscar-usuario')}
-          className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+          className={`flex-1 md:flex-initial px-3 md:px-4 py-2 rounded-xl font-medium transition-all duration-300 text-sm md:text-base ${
             vista === 'buscar-usuario'
               ? 'bg-white text-primario shadow-md' 
               : 'text-texto-claro hover:bg-white/50 hover:text-primario'
@@ -228,12 +228,12 @@ const AsignacionesGuia: React.FC = () => {
                 }
               }}
               placeholder="Buscar por nombre o email..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+              className="flex-1 min-w-0 px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario text-sm md:text-base"
               onKeyPress={(e) => e.key === 'Enter' && buscarUsuario()}
             />
             <button
               onClick={() => buscarUsuario(busqueda)}
-              className="bg-primario text-white px-6 py-2 rounded-lg hover:bg-primario-dark transition-colors"
+              className="bg-primario text-white px-4 md:px-6 py-2 rounded-lg hover:bg-primario-dark transition-colors flex-shrink-0 text-sm md:text-base"
             >
               Buscar
             </button>
@@ -253,7 +253,7 @@ const AsignacionesGuia: React.FC = () => {
                         Último turno: {formatFecha(usuario.ultimo_turno || '')}
                       </p>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-lg min-w-[200px]">
+                    <div className="bg-gray-50 p-3 rounded-lg md:min-w-[200px]">
                       {usuario.guia_nombre ? (
                         <>
                           <p className="text-sm font-medium text-primario">Guía asignado:</p>
