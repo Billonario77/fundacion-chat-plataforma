@@ -94,14 +94,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 /* Botón Ingresar */
                 <button
                   onClick={() => navigate('/login')}
-                  className={`px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-2 ${
+                  className={`px-3 md:px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center gap-1.5 md:gap-2 text-sm md:text-base ${
                     isActiveRoute('/login') || isActiveRoute('/registro')
                       ? 'bg-[#E07A5F] text-white shadow-md shadow-[#E07A5F]/30'
                       : 'bg-[#E07A5F] text-white hover:bg-[#d16a4f] shadow-md shadow-[#E07A5F]/20'
                   }`}
                 >
-                  <span className="text-lg">🔑</span>
-                  <span>Ingresar</span>
+                  <span className="text-base md:text-lg">🔑</span>
+                  <span className="hidden sm:inline">Ingresar</span>
                 </button>
               )}
             </nav>
