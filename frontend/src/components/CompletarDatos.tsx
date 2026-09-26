@@ -134,7 +134,7 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Información personal */}
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <h3 className="font-semibold text-primario border-b pb-2 mb-3">Información Personal</h3>
             </div>
             
@@ -209,7 +209,7 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
               <input type="number" name="peso" value={formData.peso} onChange={handleChange} className="input" />
             </div>
             
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
               <input type="text" name="direccion" value={formData.direccion} onChange={handleChange} className="input" />
             </div>
@@ -222,17 +222,17 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
             {/* Campos solo si es usuario */}
             {rol === 'usuario' && (
               <>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Adicción</label>
                   <input type="text" name="tipoAdiccion" value={formData.tipoAdiccion} onChange={handleChange} className="input" />
                 </div>
 
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
                   <textarea name="observaciones" rows={3} value={formData.observaciones} onChange={handleChange} className="input" />
                 </div>
 
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <h3 className="font-semibold text-primario border-b pb-2 mb-3">Contacto de Emergencia</h3>
                 </div>
 
@@ -246,7 +246,7 @@ const CompletarDatos: React.FC<CompletarDatosProps> = ({ onCompletado, onCerrar,
                   <input type="text" name="cto_emerg_celular" value={formData.contactoEmergencia.celular} onChange={handleChange} className="input" />
                 </div>
 
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input type="email" name="cto_emerg_email" value={formData.contactoEmergencia.email} onChange={handleChange} className="input" />
                 </div>
