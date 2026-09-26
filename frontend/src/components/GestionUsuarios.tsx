@@ -195,11 +195,11 @@ const GestionUsuarios: React.FC = () => {
               {usuarios.map((usuario) => (
                 <tr key={usuario.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primario text-white flex items-center justify-center text-sm font-medium">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-primario text-white flex items-center justify-center text-sm font-medium flex-shrink-0">
                         {usuario.nombre ? usuario.nombre.charAt(0) : 'U'}
                       </div>
-                      <span className="font-medium text-gray-900">{usuario.nombre}</span>
+                      <span className="font-medium text-gray-900 truncate">{usuario.nombre}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{usuario.email}</td>
