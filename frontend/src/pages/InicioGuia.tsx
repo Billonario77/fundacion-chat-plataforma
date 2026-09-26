@@ -133,37 +133,45 @@ const InicioGuia: React.FC = () => {
       </div>
 
       {/* Resumen rápido */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">👥</span>
-            <p className="text-sm font-medium text-gray-500">Pacientes activos</p>
-          </div>
-          <p className="text-3xl font-bold text-[#3D405B]">{miCarga.activos}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">👥</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Pacientes activos
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-[#3D405B]">
+            {miCarga.activos}
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">⏳</span>
-            <p className="text-sm font-medium text-gray-500">Pendientes</p>
-          </div>
-          <p className="text-3xl font-bold text-yellow-600">{miCarga.pendientes}</p>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">⏳</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Pendientes
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-yellow-600">
+            {miCarga.pendientes}
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">🔄</span>
-            <p className="text-sm font-medium text-gray-500">En curso</p>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{miCarga.enCurso}</p>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">🔄</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            En curso
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-green-600">
+            {miCarga.enCurso}
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">📅</span>
-            <p className="text-sm font-medium text-gray-500">Próximas 24h</p>
-          </div>
-          <p className="text-3xl font-bold text-purple-600">{miCarga.proximas24h}</p>
+        <div className="bg-white rounded-2xl p-3 md:p-5 shadow-sm border border-gray-100 text-center">
+          <div className="text-2xl md:text-3xl mb-1">📅</div>
+          <p className="text-xs md:text-sm font-medium text-gray-500 leading-tight mb-1">
+            Próximas 24h
+          </p>
+          <p className="text-2xl md:text-3xl font-bold text-purple-600">
+            {miCarga.proximas24h}
+          </p>
         </div>
       </div>
 
