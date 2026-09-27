@@ -261,7 +261,7 @@ const Registro: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] text-white py-4 rounded-full text-lg font-semibold hover:shadow-xl transition-all shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-[#E07A5F] to-[#d16a4f] text-white py-3 md:py-4 rounded-full text-base md:text-lg font-semibold hover:shadow-xl transition-all shadow-lg shadow-[#E07A5F]/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? '⏳ Creando cuenta...' : '✨ Crear mi cuenta'}
                 </motion.button>

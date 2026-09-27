@@ -18,6 +18,7 @@ import GraciasPage from './pages/GraciasPage';
 import Inicio from './pages/Inicio';
 import TestimoniosPage from './pages/TestimoniosPage';
 import ScrollToTop from './components/ScrollToTop';
+import ScrollReset from './components/ScrollReset';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -138,6 +139,7 @@ function App() {
         <SocketProvider>
           <MensajesNoLeidosProvider>
             <Toaster position="top-right" />
+            <ScrollReset />
             <AppContent />
             <ScrollToTop />
           </MensajesNoLeidosProvider>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { donacionesService } from '../services/donacionesService';
 import toast from 'react-hot-toast';
+import Logo from '../components/Logo';
 
 const GraciasPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -56,12 +57,12 @@ const GraciasPage: React.FC = () => {
 
   const compartirEnWhatsApp = () => {
     const texto = encodeURIComponent(
-      'Acabo de donar a Fundación Apoyo 💛 Un espacio para respirar y sanar. Únete: https://fundacion-chat-frontend-api.netlify.app/donar'
+      'Acabo de donar a Fundación Voces del Alma 💛 Un espacio para respirar y sanar. Únete: https://fundacion-chat-frontend-api.netlify.app/donar'
     );
     window.open(`https://wa.me/?text=${texto}`, '_blank');
   };
 
-  const compartirEnTwitter = () => {
+  const compartirEnX = () => {
     const texto = encodeURIComponent(
       'Acabo de donar a @FundacionApoyo 💛 Un espacio seguro para sanar. Únete: https://fundacion-chat-frontend-api.netlify.app/donar'
     );
@@ -82,7 +83,20 @@ const GraciasPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0] py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
+      {/* Navegación */}
+      <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
+        <Logo />
+        <Link
+          to="/"
+          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2 flex-shrink-0"
+        >
+          ← Volver
+        </Link>
+      </nav>
+
+      {/* Contenido */}
+      <div className="py-12 px-4">
       {/* Confetti sutil de fondo */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-30">
         {[...Array(15)].map((_, i) => (
@@ -235,10 +249,10 @@ const GraciasPage: React.FC = () => {
               <span>💬</span> WhatsApp
             </button>
             <button
-              onClick={compartirEnTwitter}
-              className="flex items-center gap-2 bg-[#1DA1F2] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#0d8ddb] transition-all hover:scale-105"
+              onClick={compartirEnX}
+              className="flex items-center gap-2 bg-[#000000] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#1a1a1a] transition-all hover:scale-105"
             >
-              <span>🐦</span> Twitter
+              <span>𝕏</span>
             </button>
             <button
               onClick={copiarLink}
@@ -258,13 +272,13 @@ const GraciasPage: React.FC = () => {
         >
           <Link
             to="/"
-            className="bg-[#E07A5F] text-white px-8 py-3 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 text-center"
+            className="w-full sm:w-auto bg-[#E07A5F] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 text-center whitespace-nowrap"
           >
             🏠 Volver
           </Link>
           <Link
             to="/donar"
-            className="border-2 border-[#81B29A] text-[#81B29A] px-8 py-3 rounded-full font-medium hover:bg-[#81B29A]/10 transition-all text-center"
+            className="w-full sm:w-auto border-2 border-[#81B29A] text-[#81B29A] px-4 sm:px-8 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-medium hover:bg-[#81B29A]/10 transition-all text-center whitespace-nowrap"
           >
             💛 Donar de nuevo
           </Link>
@@ -280,6 +294,7 @@ const GraciasPage: React.FC = () => {
           Recibirás un correo de confirmación en tu bandeja de entrada 💌
         </motion.p>
       </motion.div>
+      </div>
     </div>
   );
 };

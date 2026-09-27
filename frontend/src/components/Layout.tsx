@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Footer from './Footer';
+import Logo from './Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,21 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="container mx-auto px-3 md:px-6 py-4">
           <div className="flex justify-between items-center gap-2">
             {/* Logo */}
-            <div 
-              className="flex items-center gap-2 md:gap-3 cursor-pointer group min-w-0"
-              onClick={() => navigate(isAuthenticated ? '/inicio' : '/')}
-            >
-              <span className="text-2xl md:text-3xl group-hover:scale-110 transition-transform flex-shrink-0">💛</span>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-base md:text-2xl font-serif font-bold text-[#3D405B] group-hover:text-[#E07A5F] transition-colors">
-                  <span className="hidden sm:inline">Fundación </span>Voces del Alma
-                </h1>
-                <p className="text-xs text-[#5D6078] hidden md:block">
-                  Un espacio para respirar y sanar
-                </p>
-              </div>
-            </div>
-
+            <Logo to={isAuthenticated ? '/inicio' : '/'} />
             {/* Menú de navegación */}
             <nav className="flex items-center gap-1 md:gap-2 flex-shrink-0">
               {isAuthenticated ? (

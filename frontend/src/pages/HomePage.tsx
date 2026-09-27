@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
+import Logo from '../components/Logo';
 
 const HomePage: React.FC = () => {
   const [testimoniosHome, setTestimoniosHome] = useState<TestimonioPublico[]>([]);
@@ -31,12 +32,7 @@ const HomePage: React.FC = () => {
       {/* NAVEGACIÓN */}
       {/* ============================================ */}
       <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
-        <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-          <span className="text-2xl md:text-3xl">💛</span>
-          <span className="text-base sm:text-lg md:text-2xl font-serif font-bold text-[#3D405B] leading-tight whitespace-nowrap">
-            Voces del Alma
-          </span>
-        </Link>
+        <Logo />
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
           <Link
             to="/donar"

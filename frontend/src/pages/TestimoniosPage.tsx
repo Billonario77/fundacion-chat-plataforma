@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
+import Logo from '../components/Logo';
 
 const POR_PAGINA = 9;
 
@@ -72,18 +73,11 @@ const TestimoniosPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
       {/* Navegación */}
-      <nav className="container mx-auto px-6 py-5 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-serif font-bold text-[#3D405B]">
-        <div className="flex items-center gap-2 md:gap-3 min-w-0">
-          <span className="text-2xl md:text-3xl flex-shrink-0">💛</span>
-          <span className="text-lg md:text-2xl font-serif font-bold text-[#3D405B] leading-tight truncate">
-            Voces del Alma
-          </span>
-        </div>
-        </Link>
+      <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
+        <Logo />
         <Link
           to="/"
-          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2"
+          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2 flex-shrink-0"
         >
           ← Volver
         </Link>
@@ -254,13 +248,13 @@ const TestimoniosPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/login"
-              className="bg-[#E07A5F] text-white px-8 py-4 rounded-full font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30"
+              className="w-full sm:w-auto bg-[#E07A5F] text-white px-4 sm:px-8 py-3 sm:py-4 rounded-full text-sm sm:text-lg font-medium hover:bg-[#d16a4f] transition-all hover:scale-105 shadow-lg shadow-[#E07A5F]/30 text-center whitespace-nowrap"
             >
               🌱 Comenzar ahora
             </Link>
             <Link
               to="/"
-              className="border-2 border-[#81B29A] text-[#81B29A] px-8 py-4 rounded-full font-medium hover:bg-[#81B29A]/10 transition-all"
+              className="w-full sm:w-auto border-2 border-[#81B29A] text-[#81B29A] px-4 sm:px-8 py-3 sm:py-4 rounded-full text-sm sm:text-lg font-medium hover:bg-[#81B29A]/10 transition-all text-center whitespace-nowrap"
             >
               ← Volver al inicio
             </Link>
