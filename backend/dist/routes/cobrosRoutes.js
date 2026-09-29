@@ -17,6 +17,8 @@ router.post('/turnos/:turnoId/generar-pago', auth_1.authenticateToken, cobrosCon
 router.post('/entidades', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.crearEntidad);
 router.get('/entidades', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerEntidades);
 router.get('/entidades/:entidadId/resumen', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerResumenEntidad);
+router.post('/entidades/:entidadId/agregar-horas', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.agregarHorasBolsa);
+router.get('/entidades/:entidadId/consumo', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerConsumoPeriodo);
 router.post('/usuarios/asignar-entidad', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.asignarUsuarioAEntidad);
 router.post('/usuarios/marcar-exento', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.marcarUsuarioExento);
 router.post('/cupones', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.crearCupon);

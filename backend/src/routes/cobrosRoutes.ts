@@ -13,6 +13,8 @@ import {
   validarCupon,
   obtenerEntidades,
   obtenerResumenEntidad,
+  agregarHorasBolsa,
+  obtenerConsumoPeriodo,
   asignarUsuarioAEntidad,
   marcarUsuarioExento,
   obtenerCupones,
@@ -66,6 +68,12 @@ router.get('/entidades', authenticateToken, isAdmin, obtenerEntidades);
 
 // Obtener resumen de entidad (solo admin)
 router.get('/entidades/:entidadId/resumen', authenticateToken, isAdmin, obtenerResumenEntidad);
+
+// Agregar horas a la bolsa de una entidad (solo admin)
+router.post('/entidades/:entidadId/agregar-horas', authenticateToken, isAdmin, agregarHorasBolsa);
+
+// Obtener consumo de un período (solo admin - reporte mensual)
+router.get('/entidades/:entidadId/consumo', authenticateToken, isAdmin, obtenerConsumoPeriodo);
 
 // Asignar usuario a entidad (solo admin)
 router.post('/usuarios/asignar-entidad', authenticateToken, isAdmin, asignarUsuarioAEntidad);

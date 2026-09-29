@@ -66,6 +66,34 @@ export interface ResumenEntidad {
   horas_restantes: number;
 }
 
+export interface ConsumoItem {
+  id: string;
+  turno_id: string;
+  usuario_id: string;
+  horas_consumidas: string | number;
+  fecha_consumo: string;
+  usuario_nombre?: string;
+  usuario_email?: string;
+  turno_fecha?: string;
+}
+
+export interface ReporteConsumo {
+  entidad: {
+    id: string;
+    nombre: string;
+    identificador?: string;
+    descuento_porcentaje: number;
+    bolsa_horas_restantes: number;
+  };
+  periodo: {
+    desde: string;
+    hasta: string;
+  };
+  total_horas: number;
+  precio_sesion_referencia: number;
+  consumos: ConsumoItem[];
+}
+
 // ============================================
 // SERVICIO DE COBROS
 // ============================================
@@ -118,6 +146,32 @@ export const cobrosService = {
       entidadId
     }, headers());
     return response.data;
+  },
+
+    // Agregar horas a la bolsa de una entidad (admin)
+  agregarHorasBolsa: async (entidadId: string, horas: number) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/entidades/${entidadId}/agregar-horas`,
+      { horas },
+      headers()
+    );
+    return response.data;
+  },
+
+  // Obtener reporte de consumo de un período (admin)
+  obtenerConsumoPeriodo: async (
+    entidadId: string,
+    desde: string,
+    hasta: string
+  ): Promise<ReporteConsumo> => {
+    const response = await axios.get(
+      `${API_URL}/cobros/entidades/${entidadId}/consumo`,
+      {
+        params: { desde, hasta },
+        ...headers()
+      }
+    );
+    return response.data.data;
   },
 
   // Marcar usuario como exento (admin)

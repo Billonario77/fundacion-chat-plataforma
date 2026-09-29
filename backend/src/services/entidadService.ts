@@ -82,25 +82,40 @@ export class EntidadService {
   }
 
   /**
-   * Obtener consumo de horas por entidad en un período
+   * Obtener consumo de horas por entidad en un período (con datos del usuario)
    */
   async obtenerConsumoPeriodo(entidadId: string, desde: Date, hasta: Date): Promise<{
     totalHoras: number;
     consumos: any[];
   }> {
     const query = `
-      SELECT * FROM consumo_bolsa 
-      WHERE entidad_id = $1 
-      AND fecha_consumo BETWEEN $2 AND $3
-      ORDER BY fecha_consumo DESC
+      SELECT 
+        cb.id,
+        cb.turno_id,
+        cb.usuario_id,
+        cb.horas_consumidas,
+        cb.fecha_consumo,
+        u.nombre AS usuario_nombre,
+        u.email AS usuario_email,
+        t.fecha_programada AS turno_fecha
+      FROM consumo_bolsa cb
+      LEFT JOIN usuarios u ON u.id = cb.usuario_id
+      LEFT JOIN turnos t ON t.id = cb.turno_id
+      WHERE cb.entidad_id = $1 
+        AND cb.fecha_consumo BETWEEN $2 AND $3
+      ORDER BY cb.fecha_consumo DESC
     `;
     const result = await this.pool.query(query, [entidadId, desde, hasta]);
-    const totalHoras = result.rows.reduce((sum, c) => sum + c.horas_consumidas, 0);
+    const totalHoras = result.rows.reduce(
+      (sum, c) => sum + parseFloat(c.horas_consumidas),
+      0
+    );
     return {
       totalHoras,
       consumos: result.rows
     };
   }
+
 
   /**
    * Obtener resumen de entidad

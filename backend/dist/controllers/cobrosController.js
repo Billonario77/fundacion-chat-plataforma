@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
+exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
@@ -367,6 +367,101 @@ const obtenerResumenEntidad = async (req, res) => {
     }
 };
 exports.obtenerResumenEntidad = obtenerResumenEntidad;
+const agregarHorasBolsa = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden agregar horas' });
+        }
+        const { entidadId } = req.params;
+        const { horas } = req.body;
+        if (!entidadId) {
+            return res.status(400).json({ error: 'Entidad ID es requerido' });
+        }
+        const horasNum = Number(horas);
+        if (!horasNum || isNaN(horasNum) || horasNum <= 0) {
+            return res.status(400).json({ error: 'Debes indicar una cantidad de horas mayor a 0' });
+        }
+        const entidad = await entidadService.agregarHorasBolsa(entidadId, horasNum);
+        if (!entidad) {
+            return res.status(404).json({ error: 'Entidad no encontrada' });
+        }
+        await connection_1.pool.query(`INSERT INTO auditoria_logs (accion, detalles, created_at)
+       VALUES ($1, $2, NOW())`, [
+            'agregar_horas_bolsa',
+            JSON.stringify({
+                entidad_id: entidadId,
+                horas_agregadas: horasNum,
+                admin_id: req.user?.id
+            })
+        ]);
+        res.json({
+            success: true,
+            message: `${horasNum} hora(s) agregada(s) a la bolsa`,
+            data: entidad
+        });
+    }
+    catch (error) {
+        console.error('Error al agregar horas a la bolsa:', error);
+        res.status(500).json({ error: error.message || 'Error al agregar horas' });
+    }
+};
+exports.agregarHorasBolsa = agregarHorasBolsa;
+const obtenerConsumoPeriodo = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden ver el reporte de consumo' });
+        }
+        const { entidadId } = req.params;
+        const { desde, hasta } = req.query;
+        if (!entidadId) {
+            return res.status(400).json({ error: 'Entidad ID es requerido' });
+        }
+        if (!desde || !hasta) {
+            return res.status(400).json({ error: 'Los parámetros "desde" y "hasta" son requeridos (formato YYYY-MM-DD)' });
+        }
+        const fechaDesde = new Date(`${desde}T00:00:00.000Z`);
+        const fechaHasta = new Date(`${hasta}T23:59:59.999Z`);
+        if (isNaN(fechaDesde.getTime()) || isNaN(fechaHasta.getTime())) {
+            return res.status(400).json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD' });
+        }
+        if (fechaDesde > fechaHasta) {
+            return res.status(400).json({ error: 'La fecha "desde" no puede ser posterior a "hasta"' });
+        }
+        const [entidad, consumo] = await Promise.all([
+            entidadService.obtenerEntidad(entidadId),
+            entidadService.obtenerConsumoPeriodo(entidadId, fechaDesde, fechaHasta)
+        ]);
+        if (!entidad) {
+            return res.status(404).json({ error: 'Entidad no encontrada' });
+        }
+        const configPrecio = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`);
+        const precioSesion = parseFloat(configPrecio.rows[0]?.valor || '100000');
+        res.json({
+            success: true,
+            data: {
+                entidad: {
+                    id: entidad.id,
+                    nombre: entidad.nombre,
+                    identificador: entidad.identificador,
+                    descuento_porcentaje: entidad.descuento_porcentaje,
+                    bolsa_horas_restantes: entidad.bolsa_horas_restantes
+                },
+                periodo: {
+                    desde: fechaDesde.toISOString(),
+                    hasta: fechaHasta.toISOString()
+                },
+                total_horas: consumo.totalHoras,
+                precio_sesion_referencia: precioSesion,
+                consumos: consumo.consumos
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener consumo del período:', error);
+        res.status(500).json({ error: error.message || 'Error al obtener consumo' });
+    }
+};
+exports.obtenerConsumoPeriodo = obtenerConsumoPeriodo;
 const asignarUsuarioAEntidad = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {
