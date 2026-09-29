@@ -108,6 +108,19 @@ export class ImpagoService {
       return;
     }
 
+    const cancelarCobroResult = await pool.query(
+      `UPDATE cobros
+       SET estado = 'cancelado'
+       WHERE turno_id = $1
+         AND tipo = 'sesion'
+         AND estado = 'pendiente'`,
+      [turno.id]
+    );
+
+    if (cancelarCobroResult.rowCount && cancelarCobroResult.rowCount > 0) {
+      console.log(`🚫 Cobro de sesión del turno ${turno.id} marcado como 'cancelado'`);
+    }
+
     // ============================================
     // 2. OBTENER CONFIGURACIÓN Y CALCULAR MULTA
     // ============================================

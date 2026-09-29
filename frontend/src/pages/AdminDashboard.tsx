@@ -311,7 +311,7 @@ const AdminDashboard: React.FC = () => {
       {/* Header del dashboard */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4 animate-fadeIn">
         
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <Avatar nombre={user.nombre} foto={miFoto} size="lg" />
           <div className="min-w-0">
             <h1 className="text-xl md:text-3xl font-bold text-primario break-words">
@@ -464,7 +464,7 @@ const AdminDashboard: React.FC = () => {
                 }`}
               >
                 <span>🏢</span>
-                <span>Entidades</span>
+                <span>Convenios</span>
               </button>
 
               <button
@@ -647,7 +647,7 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             <span className="text-lg">🏢</span>
-            <span>Entidades</span>
+            <span>Convenios</span>
           </button>
 
           <button

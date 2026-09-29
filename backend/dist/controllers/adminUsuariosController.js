@@ -18,22 +18,25 @@ const getUsuarios = async (req, res) => {
         const params = [];
         let paramIndex = 1;
         if (search) {
-            whereClause += ` AND (nombre ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
+            whereClause += ` AND (u.nombre ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
             params.push(`%${search}%`);
             paramIndex++;
         }
         const query = `
       SELECT 
-        id, nombre, email, telefono, rol, disponible, 
-        datos_completados, created_at, primer_nombre, primer_apellido,
-        foto_perfil, cedula, edad, celular, ciudad
-      FROM usuarios
+        u.id, u.nombre, u.email, u.telefono, u.rol, u.disponible, 
+        u.datos_completados, u.created_at, u.primer_nombre, u.primer_apellido,
+        u.foto_perfil, u.cedula, u.edad, u.celular, u.ciudad,
+        u.entidad_id,
+        e.nombre AS entidad_nombre
+      FROM usuarios u
+      LEFT JOIN entidades e ON e.id = u.entidad_id
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY u.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
         const countQuery = `
-      SELECT COUNT(*) as total FROM usuarios ${whereClause}
+      SELECT COUNT(*) as total FROM usuarios u ${whereClause}
     `;
         const paramsWithPagination = [...params, Number(limit), offset];
         const paramsForCount = params;

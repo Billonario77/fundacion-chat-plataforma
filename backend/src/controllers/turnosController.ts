@@ -900,6 +900,19 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
         if (liberarResult.rowCount && liberarResult.rowCount > 0) {
           console.log(`🔓 ${liberarResult.rowCount} multa(s) liberada(s) del cobro ${cobroTurnoId}`);
         }
+
+        // 👇 NUEVO: marcar el cobro de sesión como 'cancelado' para no dejar pendientes huérfanos
+        const cancelarCobroResult = await pool.query(
+          `UPDATE cobros
+           SET estado = 'cancelado'
+           WHERE id = $1
+             AND estado = 'pendiente'`,
+          [cobroTurnoId]
+        );
+
+        if (cancelarCobroResult.rowCount && cancelarCobroResult.rowCount > 0) {
+          console.log(`🚫 Cobro de sesión ${cobroTurnoId} marcado como 'cancelado'`);
+        }
       }
     } catch (errLiberar) {
       console.error('⚠️ Error al liberar multas:', errLiberar);

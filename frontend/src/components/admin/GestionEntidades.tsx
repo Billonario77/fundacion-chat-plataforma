@@ -71,12 +71,12 @@ const GestionEntidades: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-primario">Gestión de Entidades</h2>
+        <h2 className="text-2xl font-bold text-primario">Gestión de Convenios</h2>
         <button
           onClick={() => setShowModal(true)}
           className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark"
         >
-          + Nueva Entidad
+          + Nuevo Convenio
         </button>
       </div>
 
@@ -102,7 +102,7 @@ const GestionEntidades: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Nueva Entidad</h3>
+            <h3 className="text-xl font-bold mb-4">Nuevo Convenio</h3>
             <form onSubmit={handleSubmit}>
               <div className="space-y-3">
                 <input
@@ -119,8 +119,9 @@ const GestionEntidades: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
                 >
                   <option value="empresa">Empresa</option>
-                  <option value="ong">ONG</option>
-                  <option value="gobierno">Gobierno</option>
+                  <option value="ong">Colegio</option>
+                  <option value="gobierno">Universidad</option>
+                  <option value="gobierno">Entidad Estatal</option>
                 </select>
                 <input
                   type="text"

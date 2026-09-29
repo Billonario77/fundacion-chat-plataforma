@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminUsuariosService, Usuario } from '../services/adminUsuariosService';
+import { cobrosService, Entidad } from '../services/cobrosService';
 import ModalEditarUsuario from './ModalEditarUsuario';
 import toast from 'react-hot-toast';
 
@@ -7,6 +8,7 @@ type TabType = 'usuarios' | 'guias';
 
 const GestionUsuarios: React.FC = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [entidades, setEntidades] = useState<Entidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pestaña, setPestaña] = useState<TabType>('usuarios');
@@ -20,6 +22,15 @@ const GestionUsuarios: React.FC = () => {
   }>({
     abierto: false,
     usuario: null
+  });
+  const [modalConvenio, setModalConvenio] = useState<{
+    abierto: boolean;
+    usuario: Usuario | null;
+    entidadId: string;
+  }>({
+    abierto: false,
+    usuario: null,
+    entidadId: ''
   });
 
   const cargarUsuarios = async (page = 1, search = '') => {
@@ -40,9 +51,22 @@ const GestionUsuarios: React.FC = () => {
     }
   };
 
+  const cargarEntidades = async () => {
+    try {
+      const data = await cobrosService.obtenerEntidades();
+      setEntidades(data);
+    } catch (err) {
+      console.error('Error al cargar convenios:', err);
+    }
+  };
+
   useEffect(() => {
     cargarUsuarios(1, busqueda);
   }, [busqueda]);
+
+  useEffect(() => {
+    cargarEntidades();
+  }, []);
 
   const handleBuscar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +121,35 @@ const GestionUsuarios: React.FC = () => {
     }
   };
 
+  const abrirModalConvenio = (usuario: Usuario) => {
+    setModalConvenio({
+      abierto: true,
+      usuario,
+      entidadId: usuario.entidad_id || ''
+    });
+  };
+
+  const handleAsignarConvenio = async () => {
+    if (!modalConvenio.usuario) return;
+    if (!modalConvenio.entidadId) {
+      toast.error('Selecciona un convenio');
+      return;
+    }
+
+    try {
+      await cobrosService.asignarUsuarioAEntidad(
+        modalConvenio.usuario.id,
+        modalConvenio.entidadId
+      );
+      toast.success('Usuario asignado al convenio');
+      setModalConvenio({ abierto: false, usuario: null, entidadId: '' });
+      cargarUsuarios(pagina, busqueda);
+    } catch (err) {
+      toast.error('Error al asignar convenio');
+      console.error(err);
+    }
+  };
+
   const getColorEstado = (disponible: boolean): string => {
     return disponible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
@@ -138,11 +191,11 @@ const GestionUsuarios: React.FC = () => {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre o email..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+          className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
         />
         <button
           type="submit"
-          className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark transition-colors"
+          className="flex-shrink-0 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark transition-colors"
         >
           Buscar
         </button>
@@ -184,6 +237,9 @@ const GestionUsuarios: React.FC = () => {
                   Estado
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Convenio
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Datos
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -213,6 +269,15 @@ const GestionUsuarios: React.FC = () => {
                       {usuario.disponible ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm">
+                    {usuario.entidad_nombre ? (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        {usuario.entidad_nombre}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {usuario.datos_completados ? '✅ Completos' : '⏳ Pendientes'}
                   </td>
@@ -223,6 +288,12 @@ const GestionUsuarios: React.FC = () => {
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         Editar
+                      </button>
+                      <button
+                        onClick={() => abrirModalConvenio(usuario)}
+                        className="text-amber-700 hover:text-amber-900 text-sm"
+                      >
+                        Convenio
                       </button>
                       <button
                         onClick={() => {
@@ -283,6 +354,53 @@ const GestionUsuarios: React.FC = () => {
           onGuardar={handleGuardarEdicion}
           onCerrar={() => setModalEditar({ abierto: false, usuario: null })}
         />
+      )}
+
+      {/* Modal de asignar convenio */}
+      {modalConvenio.abierto && modalConvenio.usuario && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-2 text-primario">Asignar convenio</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Usuario: <span className="font-medium">{modalConvenio.usuario.nombre}</span>
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Convenio
+            </label>
+            <select
+              className="w-full p-2 border rounded mb-4"
+              value={modalConvenio.entidadId}
+              onChange={(e) =>
+                setModalConvenio({ ...modalConvenio, entidadId: e.target.value })
+              }
+            >
+              <option value="">— Sin convenio —</option>
+              {entidades.map((ent) => (
+                <option key={ent.id} value={ent.id}>
+                  {ent.nombre}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleAsignarConvenio}
+                disabled={!modalConvenio.entidadId}
+                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalConvenio({ abierto: false, usuario: null, entidadId: '' })}
+                className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -22,7 +22,7 @@ const Footer: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <span className="text-3xl">💛</span>
               <h3 className="text-xl font-serif font-bold text-white">
-                Fundación Voces del Alma
+                Voces del Alma
               </h3>
             </div>
             <p className="text-white/70 text-sm leading-relaxed mb-4">
@@ -31,12 +31,12 @@ const Footer: React.FC = () => {
               que necesitas para sanar a tu propio ritmo.
             </p>
             <a 
-              href="https://www.fva.com" 
+              href="https://www.vocesdelalma.com" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-[#F2CC8F] hover:text-white transition-colors text-sm inline-flex items-center gap-1"
             >
-              🌐 www.fva.com
+              🌐 www.vocesdelalma.com
             </a>
           </div>
 
@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
                   className="text-white/70 hover:text-[#F2CC8F] transition-colors flex items-center gap-2"
                 >
                   <span className="text-lg">📧</span>
-                  contacto@fva.com
+                  contacto@vocesdelalma.com
                 </a>
               </li>
               <li>
@@ -70,7 +70,7 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold text-white mt-6 mb-4">Síguenos</h4>
             <div className="flex gap-3">
               <a 
-                href="https://instagram.com/fundacionvocesdelalma" 
+                href="https://instagram.com/vocesdelalma" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#E07A5F] transition-colors flex items-center justify-center"
@@ -79,7 +79,7 @@ const Footer: React.FC = () => {
                 📸
               </a>
               <a 
-                href="https://facebook.com/fundacionvocesdelalma" 
+                href="https://facebook.com/vocesdelalma" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#E07A5F] transition-colors flex items-center justify-center"
@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
                 📘
               </a>
               <a 
-                href="https://x.com/fundacionvocesdelalma" 
+                href="https://x.com/vocesdelalma" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#E07A5F] transition-colors flex items-center justify-center"
@@ -97,7 +97,7 @@ const Footer: React.FC = () => {
                 ✖️
               </a>
               <a 
-                href="https://youtube.com/@fundacionvocesdelalma" 
+                href="https://youtube.com/@vocesdelalma" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#E07A5F] transition-colors flex items-center justify-center"
@@ -156,7 +156,7 @@ const Footer: React.FC = () => {
                 rel="noopener noreferrer"
                 className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
               >
-                Fundación Voces del Alma. 
+                Voces del Alma. 
               </a> 
               &nbsp;Todos los derechos reservados.
             </p>

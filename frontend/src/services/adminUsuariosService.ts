@@ -30,6 +30,8 @@ export interface Usuario {
   cto_emerg_nombre?: string;
   cto_emerg_celular?: string;
   cto_emerg_email?: string;
+  entidad_id?: string;
+  entidad_nombre?: string;
 }
 
 export interface Guia extends Usuario {

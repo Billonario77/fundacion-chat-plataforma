@@ -16,10 +16,10 @@ const Logo: React.FC<LogoProps> = ({ to = '/' }) => {
       </span>
       <div className="min-w-0">
         <h1 className="text-sm sm:text-base md:text-xl lg:text-2xl font-serif font-bold text-[#3D405B] group-hover:text-[#E07A5F] transition-colors leading-tight">
-          Fundación Voces del Alma
+          Voces del Alma
         </h1>
         <p className="text-[10px] sm:text-xs md:text-sm text-[#5D6078] leading-tight">
-          Un espacio para respirar y sanar
+           &nbsp; Hablar para Sanar
         </p>
       </div>
     </Link>

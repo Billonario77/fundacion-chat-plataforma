@@ -66,6 +66,14 @@ class ImpagoService {
             console.log(`⚠️ Turno ${turno.id} ya fue procesado por otro lado. Saltando.`);
             return;
         }
+        const cancelarCobroResult = await connection_1.pool.query(`UPDATE cobros
+       SET estado = 'cancelado'
+       WHERE turno_id = $1
+         AND tipo = 'sesion'
+         AND estado = 'pendiente'`, [turno.id]);
+        if (cancelarCobroResult.rowCount && cancelarCobroResult.rowCount > 0) {
+            console.log(`🚫 Cobro de sesión del turno ${turno.id} marcado como 'cancelado'`);
+        }
         const configPrecio = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`);
         const precioSesion = parseFloat(configPrecio.rows[0]?.valor || '100000');
         const configMulta = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'multa_cancelacion_porcentaje'`);

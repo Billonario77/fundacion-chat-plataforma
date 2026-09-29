@@ -693,6 +693,13 @@ const cancelarTurno = async (req, res) => {
                 if (liberarResult.rowCount && liberarResult.rowCount > 0) {
                     console.log(`🔓 ${liberarResult.rowCount} multa(s) liberada(s) del cobro ${cobroTurnoId}`);
                 }
+                const cancelarCobroResult = await connection_1.pool.query(`UPDATE cobros
+           SET estado = 'cancelado'
+           WHERE id = $1
+             AND estado = 'pendiente'`, [cobroTurnoId]);
+                if (cancelarCobroResult.rowCount && cancelarCobroResult.rowCount > 0) {
+                    console.log(`🚫 Cobro de sesión ${cobroTurnoId} marcado como 'cancelado'`);
+                }
             }
         }
         catch (errLiberar) {
