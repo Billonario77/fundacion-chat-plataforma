@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { cobrosService, Entidad, ReporteConsumo } from '../../services/cobrosService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { cobrosService, Entidad, ReporteConsumo, ConsumoItem } from '../../services/cobrosService';
 import toast from 'react-hot-toast';
 
 const GestionEntidades: React.FC = () => {
   const [entidades, setEntidades] = useState<Entidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
   const [formData, setFormData] = useState<{
     nombre: string;
     tipo: 'empresa' | 'ong' | 'gobierno';
@@ -31,14 +32,10 @@ const GestionEntidades: React.FC = () => {
     abierto: boolean;
     entidad: Entidad | null;
     horas: number;
-  }>({
-    abierto: false,
-    entidad: null,
-    horas: 0
-  });
+  }>({ abierto: false, entidad: null, horas: 0 });
 
-  // Modal reporte mensual
-  const [modalReporte, setModalReporte] = useState<{
+  // Modal detalle / reporte mensual
+  const [modalDetalle, setModalDetalle] = useState<{
     abierto: boolean;
     entidad: Entidad | null;
     desde: string;
@@ -64,7 +61,7 @@ const GestionEntidades: React.FC = () => {
       const data = await cobrosService.obtenerEntidades();
       setEntidades(data);
     } catch (error) {
-      toast.error('Error al cargar entidades');
+      toast.error('Error al cargar convenios');
     } finally {
       setLoading(false);
     }
@@ -92,10 +89,23 @@ const GestionEntidades: React.FC = () => {
     }
   };
 
+  // Filtro local por nombre / identificador / contacto
+  const entidadesFiltradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return entidades;
+    return entidades.filter((e) =>
+      (e.nombre || '').toLowerCase().includes(q) ||
+      (e.identificador || '').toLowerCase().includes(q) ||
+      (e.contacto_nombre || '').toLowerCase().includes(q) ||
+      (e.contacto_email || '').toLowerCase().includes(q)
+    );
+  }, [entidades, busqueda]);
+
   // ============================================
   // AGREGAR HORAS
   // ============================================
-  const abrirModalHoras = (entidad: Entidad) => {
+  const abrirModalHoras = (entidad: Entidad, e: React.MouseEvent) => {
+    e.stopPropagation(); // que no abra el modal de detalle
     setModalHoras({ abierto: true, entidad, horas: 0 });
   };
 
@@ -105,7 +115,6 @@ const GestionEntidades: React.FC = () => {
       toast.error('Ingresa una cantidad de horas mayor a 0');
       return;
     }
-
     try {
       await cobrosService.agregarHorasBolsa(modalHoras.entidad.id, modalHoras.horas);
       toast.success(`${modalHoras.horas} hora(s) agregada(s)`);
@@ -118,17 +127,16 @@ const GestionEntidades: React.FC = () => {
   };
 
   // ============================================
-  // REPORTE MENSUAL
+  // DETALLE / REPORTE
   // ============================================
-  const abrirModalReporte = (entidad: Entidad) => {
-    // Por defecto: mes actual
+  const formatFecha = (d: Date) => d.toISOString().slice(0, 10);
+
+  const abrirDetalle = (entidad: Entidad) => {
     const hoy = new Date();
     const primerDia = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1));
     const ultimoDia = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 0));
 
-    const formatFecha = (d: Date) => d.toISOString().slice(0, 10);
-
-    setModalReporte({
+    setModalDetalle({
       abierto: true,
       entidad,
       desde: formatFecha(primerDia),
@@ -136,41 +144,44 @@ const GestionEntidades: React.FC = () => {
       cargando: false,
       reporte: null
     });
+
+    // Cargar automáticamente el reporte del mes actual
+    cargarReporte(entidad.id, formatFecha(primerDia), formatFecha(ultimoDia));
   };
 
-  const handleGenerarReporte = async () => {
-    if (!modalReporte.entidad) return;
-    if (!modalReporte.desde || !modalReporte.hasta) {
-      toast.error('Selecciona las fechas');
-      return;
-    }
-
+  const cargarReporte = async (entidadId: string, desde: string, hasta: string) => {
     try {
-      setModalReporte((m) => ({ ...m, cargando: true, reporte: null }));
-      const data = await cobrosService.obtenerConsumoPeriodo(
-        modalReporte.entidad.id,
-        modalReporte.desde,
-        modalReporte.hasta
-      );
-      setModalReporte((m) => ({ ...m, cargando: false, reporte: data }));
+      setModalDetalle((m) => ({ ...m, cargando: true, reporte: null }));
+      const data = await cobrosService.obtenerConsumoPeriodo(entidadId, desde, hasta);
+      setModalDetalle((m) => ({ ...m, cargando: false, reporte: data }));
     } catch (err) {
       toast.error('Error al generar el reporte');
       console.error(err);
-      setModalReporte((m) => ({ ...m, cargando: false }));
+      setModalDetalle((m) => ({ ...m, cargando: false }));
     }
   };
 
-  // Agrupa los consumos por usuario para el resumen
-  const agruparPorUsuario = (reporte: ReporteConsumo) => {
+  const handleGenerarReporte = () => {
+    if (!modalDetalle.entidad) return;
+    if (!modalDetalle.desde || !modalDetalle.hasta) {
+      toast.error('Selecciona las fechas');
+      return;
+    }
+    cargarReporte(modalDetalle.entidad.id, modalDetalle.desde, modalDetalle.hasta);
+  };
+
+  // Agrupa los consumos por usuario
+  const agruparPorUsuario = (consumos: ConsumoItem[]) => {
     const mapa = new Map<string, {
       usuario_id: string;
       nombre: string;
       email: string;
+      celular: string;
       horas: number;
       sesiones: number;
     }>();
 
-    reporte.consumos.forEach((c) => {
+    consumos.forEach((c) => {
       const id = c.usuario_id;
       const horas = parseFloat(String(c.horas_consumidas));
       const existente = mapa.get(id);
@@ -183,6 +194,7 @@ const GestionEntidades: React.FC = () => {
           usuario_id: id,
           nombre: c.usuario_nombre || 'Usuario',
           email: c.usuario_email || '',
+          celular: c.usuario_celular || c.usuario_telefono || '',
           horas,
           sesiones: 1
         });
@@ -198,7 +210,7 @@ const GestionEntidades: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <h2 className="text-xl md:text-2xl font-bold text-primario">Gestión de Convenios</h2>
         <button
           onClick={() => setShowModal(true)}
@@ -208,43 +220,96 @@ const GestionEntidades: React.FC = () => {
         </button>
       </div>
 
-      {entidades.length === 0 ? (
+      {/* Buscador */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre, NIT, contacto..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+        />
+      </div>
+
+      {entidadesFiltradas.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          No hay convenios creados todavía
+          {busqueda ? 'No se encontraron convenios con ese criterio' : 'No hay convenios creados todavía'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {entidades.map((entidad) => (
-            <div key={entidad.id} className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold text-lg truncate">{entidad.nombre}</h3>
-              <p className="text-sm text-gray-600">Tipo: {entidad.tipo}</p>
-              <p className="text-sm text-gray-600">
-                Horas restantes:{' '}
-                <span className="font-semibold">{entidad.bolsa_horas_restantes}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Descuento: <span className="font-semibold">{entidad.descuento_porcentaje}%</span>
-              </p>
-              {entidad.identificador && (
-                <p className="text-sm text-gray-600">ID: {entidad.identificador}</p>
-              )}
-
-              <div className="flex flex-wrap gap-2 mt-4">
-                <button
-                  onClick={() => abrirModalHoras(entidad)}
-                  className="flex-1 min-w-[120px] bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Convenio
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  NIT
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contacto
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Horas
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Descuento
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {entidadesFiltradas.map((entidad) => (
+                <tr
+                  key={entidad.id}
+                  onClick={() => abrirDetalle(entidad)}
+                  className="hover:bg-amber-50 transition-colors cursor-pointer"
                 >
-                  + Horas
-                </button>
-                <button
-                  onClick={() => abrirModalReporte(entidad)}
-                  className="flex-1 min-w-[120px] bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap"
-                >
-                  Reporte mensual
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td className="px-4 py-3">
+                    <span className="font-medium text-gray-900">{entidad.nombre}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {entidad.identificador || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                    {entidad.tipo}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="min-w-0">
+                      <div className="truncate">{entidad.contacto_nombre || '—'}</div>
+                      {entidad.contacto_email && (
+                        <div className="text-xs text-gray-400 truncate">
+                          {entidad.contacto_email}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm">
+                    <span className="font-semibold text-green-700">
+                      {entidad.bolsa_horas_restantes}
+                    </span>
+                    <span className="text-gray-400 text-xs"> / {entidad.bolsa_horas_inicial}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm text-gray-600">
+                    {entidad.descuento_porcentaje}%
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={(e) => abrirModalHoras(entidad, e)}
+                      className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-xs whitespace-nowrap"
+                    >
+                      + Horas
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -381,23 +446,43 @@ const GestionEntidades: React.FC = () => {
         </div>
       )}
 
-      {/* Modal reporte mensual */}
-      {modalReporte.abierto && modalReporte.entidad && (
+      {/* Modal detalle del convenio */}
+      {modalDetalle.abierto && modalDetalle.entidad && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-2 text-primario">Reporte de consumo</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Convenio: <span className="font-medium">{modalReporte.entidad.nombre}</span>
-            </p>
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold text-primario truncate">
+                  {modalDetalle.entidad.nombre}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {modalDetalle.entidad.identificador
+                    ? `NIT: ${modalDetalle.entidad.identificador}`
+                    : 'Sin NIT'}
+                  {' · '}
+                  Bolsa: {modalDetalle.entidad.bolsa_horas_restantes} / {modalDetalle.entidad.bolsa_horas_inicial} h
+                </p>
+              </div>
+              <button
+                onClick={() => setModalDetalle({
+                  abierto: false, entidad: null, desde: '', hasta: '', cargando: false, reporte: null
+                })}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none flex-shrink-0"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
 
+            {/* Selector de fechas */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
                 <input
                   type="date"
                   className="w-full p-2 border rounded"
-                  value={modalReporte.desde}
-                  onChange={(e) => setModalReporte({ ...modalReporte, desde: e.target.value })}
+                  value={modalDetalle.desde}
+                  onChange={(e) => setModalDetalle({ ...modalDetalle, desde: e.target.value })}
                 />
               </div>
               <div>
@@ -405,60 +490,74 @@ const GestionEntidades: React.FC = () => {
                 <input
                   type="date"
                   className="w-full p-2 border rounded"
-                  value={modalReporte.hasta}
-                  onChange={(e) => setModalReporte({ ...modalReporte, hasta: e.target.value })}
+                  value={modalDetalle.hasta}
+                  onChange={(e) => setModalDetalle({ ...modalDetalle, hasta: e.target.value })}
                 />
               </div>
               <div className="flex items-end">
                 <button
                   onClick={handleGenerarReporte}
-                  disabled={modalReporte.cargando}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  disabled={modalDetalle.cargando}
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
                 >
-                  {modalReporte.cargando ? 'Generando...' : 'Generar'}
+                  {modalDetalle.cargando ? 'Generando...' : 'Actualizar'}
                 </button>
               </div>
             </div>
 
-            {modalReporte.reporte && (
-              <div className="mt-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Total de horas consumidas:</span>{' '}
-                    {modalReporte.reporte.total_horas.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Bolsa restante actual:</span>{' '}
-                    {modalReporte.reporte.entidad.bolsa_horas_restantes} horas
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Precio referencia sesión:</span> $
-                    {modalReporte.reporte.precio_sesion_referencia.toLocaleString('es-CO')}
-                  </p>
+            {modalDetalle.cargando && (
+              <div className="text-center py-8 text-gray-500">Cargando consumos...</div>
+            )}
+
+            {modalDetalle.reporte && !modalDetalle.cargando && (
+              <div>
+                {/* Resumen */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Horas consumidas</p>
+                    <p className="text-lg font-semibold text-blue-800">
+                      {modalDetalle.reporte.total_horas.toFixed(2)} h
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Sesiones</p>
+                    <p className="text-lg font-semibold text-blue-800">
+                      {modalDetalle.reporte.consumos.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Usuarios activos</p>
+                    <p className="text-lg font-semibold text-blue-800">
+                      {agruparPorUsuario(modalDetalle.reporte.consumos).length}
+                    </p>
+                  </div>
                 </div>
 
-                {modalReporte.reporte.consumos.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">
+                {modalDetalle.reporte.consumos.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
                     No hay consumos en este período
                   </p>
                 ) : (
                   <>
+                    {/* Resumen por usuario */}
                     <h4 className="font-semibold text-gray-800 mb-2">Resumen por usuario</h4>
-                    <div className="overflow-x-auto mb-4">
+                    <div className="overflow-x-auto mb-6">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-3 py-2 text-left">Usuario</th>
-                            <th className="px-3 py-2 text-left">Email</th>
+                            <th className="px-3 py-2 text-left">Nombre</th>
+                            <th className="px-3 py-2 text-left">Correo</th>
+                            <th className="px-3 py-2 text-left">Celular</th>
                             <th className="px-3 py-2 text-right">Sesiones</th>
                             <th className="px-3 py-2 text-right">Horas</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {agruparPorUsuario(modalReporte.reporte).map((u) => (
+                          {agruparPorUsuario(modalDetalle.reporte.consumos).map((u) => (
                             <tr key={u.usuario_id}>
                               <td className="px-3 py-2">{u.nombre}</td>
-                              <td className="px-3 py-2 text-gray-600">{u.email}</td>
+                              <td className="px-3 py-2 text-gray-600">{u.email || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">{u.celular || '—'}</td>
                               <td className="px-3 py-2 text-right">{u.sesiones}</td>
                               <td className="px-3 py-2 text-right font-semibold">
                                 {u.horas.toFixed(2)}
@@ -469,60 +568,49 @@ const GestionEntidades: React.FC = () => {
                       </table>
                     </div>
 
-                    <details className="mb-4">
-                      <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800">
-                        Ver detalle ({modalReporte.reporte.consumos.length} registros)
-                      </summary>
-                      <div className="overflow-x-auto mt-2">
-                        <table className="w-full text-xs">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-2 py-1 text-left">Fecha</th>
-                              <th className="px-2 py-1 text-left">Usuario</th>
-                              <th className="px-2 py-1 text-right">Horas</th>
+                    {/* Detalle cronológico */}
+                    <h4 className="font-semibold text-gray-800 mb-2">Detalle de sesiones</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Fecha y hora</th>
+                            <th className="px-3 py-2 text-left">Usuario</th>
+                            <th className="px-3 py-2 text-left">Correo</th>
+                            <th className="px-3 py-2 text-left">Celular</th>
+                            <th className="px-3 py-2 text-right">Horas</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {modalDetalle.reporte.consumos.map((c) => (
+                            <tr key={c.id}>
+                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                                {new Date(c.fecha_consumo).toLocaleString('es-CO', {
+                                  timeZone: 'America/Bogota',
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </td>
+                              <td className="px-3 py-2">{c.usuario_nombre || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">{c.usuario_email || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">
+                                {c.usuario_celular || c.usuario_telefono || '—'}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                {parseFloat(String(c.horas_consumidas)).toFixed(2)}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {modalReporte.reporte.consumos.map((c) => (
-                              <tr key={c.id}>
-                                <td className="px-2 py-1">
-                                  {new Date(c.fecha_consumo).toLocaleString('es-CO', {
-                                    timeZone: 'America/Bogota'
-                                  })}
-                                </td>
-                                <td className="px-2 py-1">{c.usuario_nombre || '—'}</td>
-                                <td className="px-2 py-1 text-right">
-                                  {parseFloat(String(c.horas_consumidas)).toFixed(2)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </>
                 )}
               </div>
             )}
-
-            <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setModalReporte({
-                    abierto: false,
-                    entidad: null,
-                    desde: '',
-                    hasta: '',
-                    cargando: false,
-                    reporte: null
-                  })
-                }
-                className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 w-full"
-              >
-                Cerrar
-              </button>
-            </div>
           </div>
         </div>
       )}

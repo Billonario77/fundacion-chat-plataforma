@@ -74,6 +74,8 @@ export interface ConsumoItem {
   fecha_consumo: string;
   usuario_nombre?: string;
   usuario_email?: string;
+  usuario_celular?: string;
+  usuario_telefono?: string;
   turno_fecha?: string;
 }
 
