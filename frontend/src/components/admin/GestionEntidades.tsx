@@ -7,15 +7,15 @@ const GestionEntidades: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [formData, setFormData] = useState<{
+    const [formData, setFormData] = useState<{
     nombre: string;
     tipo: 'empresa' | 'ong' | 'gobierno';
     identificador: string;
     contactoNombre: string;
     contactoEmail: string;
     contactoTelefono: string;
-    descuentoPorcentaje: number;
-    bolsaHorasInicial: number;
+    descuentoPorcentaje: number | '';
+    bolsaHorasInicial: number | '';
   }>({
     nombre: '',
     tipo: 'empresa',
@@ -23,8 +23,8 @@ const GestionEntidades: React.FC = () => {
     contactoNombre: '',
     contactoEmail: '',
     contactoTelefono: '',
-    descuentoPorcentaje: 0,
-    bolsaHorasInicial: 0
+    descuentoPorcentaje: '',
+    bolsaHorasInicial: ''
   });
 
   // Modal agregar horas
@@ -70,7 +70,18 @@ const GestionEntidades: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await cobrosService.crearEntidad(formData);
+      await cobrosService.crearEntidad({
+        nombre: formData.nombre,
+        tipo: formData.tipo,
+        identificador: formData.identificador,
+        contactoNombre: formData.contactoNombre,
+        contactoEmail: formData.contactoEmail,
+        contactoTelefono: formData.contactoTelefono,
+        descuentoPorcentaje:
+          formData.descuentoPorcentaje === '' ? 0 : Number(formData.descuentoPorcentaje),
+        bolsaHorasInicial:
+          formData.bolsaHorasInicial === '' ? 0 : Number(formData.bolsaHorasInicial)
+      });
       toast.success('Convenio creado exitosamente');
       setShowModal(false);
       setFormData({
@@ -80,8 +91,8 @@ const GestionEntidades: React.FC = () => {
         contactoNombre: '',
         contactoEmail: '',
         contactoTelefono: '',
-        descuentoPorcentaje: 0,
-        bolsaHorasInicial: 0
+        descuentoPorcentaje: '',
+        bolsaHorasInicial: ''
       });
       cargarEntidades();
     } catch (error) {
@@ -319,68 +330,129 @@ const GestionEntidades: React.FC = () => {
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">Nuevo Convenio</h3>
             <form onSubmit={handleSubmit}>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nombre"
-                  className="w-full p-2 border rounded"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  required
-                />
-                <select
-                  className="w-full p-2 border rounded"
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
-                >
-                  <option value="empresa">Empresa</option>
-                  <option value="ong">Colegio / Universidad / ONG</option>
-                  <option value="gobierno">Entidad Estatal</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Identificador (NIT)"
-                  className="w-full p-2 border rounded"
-                  value={formData.identificador}
-                  onChange={(e) => setFormData({ ...formData, identificador: e.target.value })}
-                />
-                <input
-                  type="text"
-                  placeholder="Contacto Nombre"
-                  className="w-full p-2 border rounded"
-                  value={formData.contactoNombre}
-                  onChange={(e) => setFormData({ ...formData, contactoNombre: e.target.value })}
-                />
-                <input
-                  type="email"
-                  placeholder="Contacto Email"
-                  className="w-full p-2 border rounded"
-                  value={formData.contactoEmail}
-                  onChange={(e) => setFormData({ ...formData, contactoEmail: e.target.value })}
-                />
-                <input
-                  type="text"
-                  placeholder="Contacto Teléfono"
-                  className="w-full p-2 border rounded"
-                  value={formData.contactoTelefono}
-                  onChange={(e) => setFormData({ ...formData, contactoTelefono: e.target.value })}
-                />
-                <input
-                  type="number"
-                  placeholder="Descuento %"
-                  className="w-full p-2 border rounded"
-                  value={formData.descuentoPorcentaje}
-                  onChange={(e) => setFormData({ ...formData, descuentoPorcentaje: Number(e.target.value) })}
-                />
-                <input
-                  type="number"
-                  placeholder="Horas iniciales"
-                  className="w-full p-2 border rounded"
-                  value={formData.bolsaHorasInicial}
-                  onChange={(e) => setFormData({ ...formData, bolsaHorasInicial: Number(e.target.value) })}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Biozynex S.A.S."
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
+                  >
+                    <option value="empresa">Empresa</option>
+                    <option value="ong">Colegio / Universidad / ONG</option>
+                    <option value="gobierno">Entidad Estatal</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Identificador (NIT)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 900123456-7"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.identificador}
+                    onChange={(e) => setFormData({ ...formData, identificador: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del contacto
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: María Pérez"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.contactoNombre}
+                    onChange={(e) => setFormData({ ...formData, contactoNombre: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Correo del contacto
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Ej: contacto@empresa.com"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.contactoEmail}
+                    onChange={(e) => setFormData({ ...formData, contactoEmail: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teléfono del contacto
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: +57 300 123 4567"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.contactoTelefono}
+                    onChange={(e) => setFormData({ ...formData, contactoTelefono: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descuento (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="Ej: 20 (dejar vacío = sin descuento)"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.descuentoPorcentaje}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        descuentoPorcentaje: e.target.value === '' ? '' : Number(e.target.value)
+                      })
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Horas iniciales en la bolsa
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ej: 40 (dejar vacío = 0 horas)"
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.bolsaHorasInicial}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        bolsaHorasInicial: e.target.value === '' ? '' : Number(e.target.value)
+                      })
+                    }
+                  />
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+
+              <div className="flex flex-col sm:flex-row gap-2 mt-6">
                 <button
                   type="submit"
                   className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1"

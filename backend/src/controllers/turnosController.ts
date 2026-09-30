@@ -1891,13 +1891,10 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // 👈 OBTENER LA HORA INICIO AJUSTADA A COLOMBIA DIRECTAMENTE EN SQL
     const result = await pool.query(
       `SELECT 
         id, 
         hora_inicio,
-        -- Convertir hora_inicio a Colombia (UTC-5)
-        (hora_inicio - INTERVAL '5 hours') as hora_inicio_colombia,
         duracion_solicitada,
         estado,
         advertencia_5min_enviada
@@ -1931,24 +1928,23 @@ export const getTiempoSesion = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // 👈 USAR LA HORA DE COLOMBIA DESDE LA CONSULTA SQL
-    const horaInicioColombia = new Date(turno.hora_inicio_colombia);
+    // Cálculo en UTC: ambos timestamps son momentos absolutos, no requieren ajuste de zona.
+    const horaInicio = new Date(turno.hora_inicio);
     const ahora = new Date();
     const duracionTotal = turno.duracion_solicitada || 6;
     const tiempoTotalSegundos = duracionTotal * 60;
-    
-    let transcurrido = Math.floor((ahora.getTime() - horaInicioColombia.getTime()) / 1000);
+
+    let transcurrido = Math.floor((ahora.getTime() - horaInicio.getTime()) / 1000);
     if (transcurrido < 0) transcurrido = 0;
-    
+
     let tiempoRestante = tiempoTotalSegundos - transcurrido;
     if (tiempoRestante < 0) tiempoRestante = 0;
 
-    console.log('📊 getTiempoSesion:');
-    console.log('   hora_inicio (BD):', turno.hora_inicio);
-    console.log('   hora_inicio_colombia:', turno.hora_inicio_colombia);
-    console.log('   ahora:', ahora);
-    console.log('   transcurrido:', transcurrido);
-    console.log('   tiempoRestante:', tiempoRestante);
+    console.log('📊 getTiempoSesion (UTC):');
+    console.log('   hora_inicio:', horaInicio.toISOString());
+    console.log('   ahora:', ahora.toISOString());
+    console.log('   transcurrido (s):', transcurrido);
+    console.log('   tiempoRestante (s):', tiempoRestante);
 
     const debeAdvertir = tiempoRestante <= 300 && tiempoRestante > 0 && !turno.advertencia_5min_enviada;
 
