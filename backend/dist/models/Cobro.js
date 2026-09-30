@@ -53,7 +53,7 @@ class CobroModel {
       UPDATE cobros 
       SET estado = $1,
           pagado_at = COALESCE($2, pagado_at),
-          updated_at = NOW() AT TIME ZONE 'America/Bogota'
+          updated_at = NOW()
       WHERE id = $3
       RETURNING *
     `;
@@ -65,7 +65,7 @@ class CobroModel {
       UPDATE cobros 
       SET metodo_pago = $1,
           preferencia_id = COALESCE($2, preferencia_id),
-          updated_at = NOW() AT TIME ZONE 'America/Bogota'
+          updated_at = NOW()
       WHERE id = $3
       RETURNING *
     `;

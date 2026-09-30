@@ -52,7 +52,7 @@ const enviarMensaje = async (req, res) => {
         }
         const insertQuery = `
       INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido, created_at)
-      VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'America/Bogota')
+      VALUES ($1, $2, $3, $4, NOW())
       RETURNING id, created_at
     `;
         const result = await connection_1.pool.query(insertQuery, [turnoId, emisorId, emisorrol, contenido]);

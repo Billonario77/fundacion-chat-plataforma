@@ -61,7 +61,7 @@ export const enviarMensaje = async (req: AuthRequest, res: Response): Promise<vo
 
     const insertQuery = `
       INSERT INTO mensajes (turno_id, emisor_id, emisor_tipo, contenido, created_at)
-      VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'America/Bogota')
+      VALUES ($1, $2, $3, $4, NOW())
       RETURNING id, created_at
     `;
 

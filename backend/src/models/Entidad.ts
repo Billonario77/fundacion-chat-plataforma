@@ -66,7 +66,7 @@ export class EntidadModel {
     const query = `
       UPDATE entidades 
       SET bolsa_horas_restantes = bolsa_horas_restantes - $1,
-          updated_at = NOW() AT TIME ZONE 'America/Bogota'
+          updated_at = NOW()
       WHERE id = $2 AND activo = true
       RETURNING *
     `;
@@ -89,7 +89,7 @@ export class EntidadModel {
 
     if (campos.length === 0) return null;
 
-    campos.push(`updated_at = NOW() AT TIME ZONE 'America/Bogota'`);
+    campos.push(`updated_at = NOW()`);
     valores.push(id);
 
     const query = `

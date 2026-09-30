@@ -49,8 +49,8 @@ export class CuponModel {
       SELECT * FROM cupones 
       WHERE codigo = $1 
       AND activo = true 
-      AND (fecha_expiracion IS NULL OR fecha_expiracion > NOW() AT TIME ZONE 'America/Bogota')
-      AND (fecha_inicio IS NULL OR fecha_inicio <= NOW() AT TIME ZONE 'America/Bogota')
+      AND (fecha_expiracion IS NULL OR fecha_expiracion > NOW())
+      AND (fecha_inicio IS NULL OR fecha_inicio <= NOW())
       AND usos_actuales < usos_maximos
     `;
     const result = await this.pool.query(query, [codigo]);
@@ -63,8 +63,8 @@ export class CuponModel {
       LEFT JOIN usuarios u ON u.id = $2
       WHERE c.codigo = $1 
       AND c.activo = true 
-      AND (c.fecha_expiracion IS NULL OR c.fecha_expiracion > NOW() AT TIME ZONE 'America/Bogota')
-      AND (c.fecha_inicio IS NULL OR c.fecha_inicio <= NOW() AT TIME ZONE 'America/Bogota')
+      AND (c.fecha_expiracion IS NULL OR c.fecha_expiracion > NOW())
+      AND (c.fecha_inicio IS NULL OR c.fecha_inicio <= NOW())
       AND c.usos_actuales < c.usos_maximos
       AND (
         c.aplica_a = 'todos' 
@@ -80,7 +80,7 @@ export class CuponModel {
     const query = `
       UPDATE cupones 
       SET usos_actuales = usos_actuales + 1,
-          updated_at = NOW() AT TIME ZONE 'America/Bogota'
+          updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `;

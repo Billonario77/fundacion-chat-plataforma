@@ -12,7 +12,8 @@ const pool = new pg_1.Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    max: 20
+    max: 20,
+    options: '-c timezone=UTC'
 });
 exports.pool = pool;
 pool.connect((err, client, release) => {

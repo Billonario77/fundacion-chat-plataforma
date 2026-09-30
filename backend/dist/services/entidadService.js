@@ -64,6 +64,8 @@ class EntidadService {
         cb.fecha_consumo,
         u.nombre AS usuario_nombre,
         u.email AS usuario_email,
+        u.celular AS usuario_celular,
+        u.telefono AS usuario_telefono,
         t.fecha_programada AS turno_fecha
       FROM consumo_bolsa cb
       LEFT JOIN usuarios u ON u.id = cb.usuario_id

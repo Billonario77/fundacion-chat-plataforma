@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS entidades (
   bolsa_horas_inicial INTEGER DEFAULT 0,
   bolsa_horas_restantes INTEGER DEFAULT 0,
   activo BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota',
-  updated_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota'
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================
@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS cupones (
   usos_maximos INTEGER DEFAULT 1,
   usos_actuales INTEGER DEFAULT 0,
   activo BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota',
-  updated_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota'
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS cobros (
   preferencia_id VARCHAR(100), -- ID de MercadoPago/ePay
   pagado_at TIMESTAMP,
   creado_por UUID REFERENCES usuarios(id) ON DELETE SET NULL,
-  created_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota',
-  updated_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota'
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================
@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS consumo_bolsa (
   turno_id UUID NOT NULL REFERENCES turnos(id) ON DELETE CASCADE,
   usuario_id UUID NOT NULL REFERENCES usuarios(id),
   horas_consumidas DECIMAL(5,2) NOT NULL,
-  fecha_consumo TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota',
-  created_at TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota'
+  fecha_consumo TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================
@@ -89,7 +89,7 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS es_exento BOOLEAN DEFAULT FALSE;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS motivo_exencion TEXT;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS descuento_personalizado DECIMAL(5,2) DEFAULT 0;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS es_nuevo BOOLEAN DEFAULT TRUE;
-ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS fecha_registro TIMESTAMP DEFAULT NOW() AT TIME ZONE 'America/Bogota';
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS fecha_registro TIMESTAMP DEFAULT NOW();
 
 -- ============================================
 -- 6. NUEVO ESTADO PARA TURNOS (pendiente_pago)
