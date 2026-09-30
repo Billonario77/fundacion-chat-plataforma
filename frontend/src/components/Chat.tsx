@@ -5,6 +5,7 @@ import { mensajesService, Mensaje } from '../services/mensajesService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import ModalConfirmarFinalizar from './ModalConfirmarFinalizar';
+import { formatearHora } from '../utils/fechaHora';
 
 interface ChatProps {
   turnoId: string;
@@ -191,11 +192,7 @@ const Chat: React.FC<ChatProps> = ({ turnoId, onClose, estado, onFinalizar }) =>
   };
 
   const formatHora = (fecha: string) => {
-    const date = new Date(fecha);
-    return date.toLocaleTimeString('es-CO', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatearHora(fecha);
   };
 
   const isMio = (mensaje: Mensaje) => {
