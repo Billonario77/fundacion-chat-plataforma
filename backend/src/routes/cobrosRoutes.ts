@@ -12,6 +12,8 @@ import {
   crearCupon,
   validarCupon,
   canjearCuponBolsa,
+  obtenerCuponesDeEntidad,
+  generarCuponParaEntidad,
   obtenerEntidades,
   obtenerResumenEntidad,
   agregarHorasBolsa,
@@ -75,6 +77,12 @@ router.post('/entidades/:entidadId/agregar-horas', authenticateToken, isAdmin, a
 
 // Obtener consumo de un período (solo admin - reporte mensual)
 router.get('/entidades/:entidadId/consumo', authenticateToken, isAdmin, obtenerConsumoPeriodo);
+
+// Listar cupones de una entidad (solo admin)
+router.get('/entidades/:entidadId/cupones', authenticateToken, isAdmin, obtenerCuponesDeEntidad);
+
+// Generar cupón de descuento para una entidad (solo admin)
+router.post('/entidades/:entidadId/generar-cupon', authenticateToken, isAdmin, generarCuponParaEntidad);
 
 // Asignar usuario a entidad (solo admin)
 router.post('/usuarios/asignar-entidad', authenticateToken, isAdmin, asignarUsuarioAEntidad);

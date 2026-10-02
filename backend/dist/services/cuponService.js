@@ -142,6 +142,19 @@ class CuponService {
         const result = await this.pool.query(query);
         return result.rows;
     }
+    async obtenerCuponesDeEntidad(entidadId) {
+        const query = `
+      SELECT 
+        id, codigo, descripcion, tipo, valor, entidad_id, aplica_a,
+        fecha_inicio, fecha_expiracion, usos_maximos, usos_actuales,
+        activo, created_at
+      FROM cupones
+      WHERE entidad_id = $1
+      ORDER BY created_at DESC
+    `;
+        const result = await this.pool.query(query, [entidadId]);
+        return result.rows;
+    }
     async desactivarCupon(id) {
         await this.pool.query(`UPDATE cupones SET activo = false WHERE id = $1`, [id]);
     }

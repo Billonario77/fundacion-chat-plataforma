@@ -27,7 +27,7 @@ export interface Cupon {
   id: string;
   codigo: string;
   descripcion: string;
-  tipo: 'porcentaje' | 'fijo' | 'gratis';
+  tipo: 'porcentaje' | 'fijo' | 'gratis' | 'bolsa';
   valor: number;
   entidad_id?: string;
   aplica_a: 'nuevos' | 'antiguos' | 'todos';
@@ -187,6 +187,35 @@ export const cobrosService = {
     }, headers());
     return response.data;
   },
+
+
+   // Obtener cupones de una entidad (admin)
+  obtenerCuponesDeEntidad: async (entidadId: string): Promise<Cupon[]> => {
+    const response = await axios.get(
+      `${API_URL}/cobros/entidades/${entidadId}/cupones`,
+      headers()
+    );
+    return response.data.data;
+  },
+
+  // Generar cupón de descuento para una entidad (admin)
+  generarCuponParaEntidad: async (
+    entidadId: string,
+    data: {
+      descripcion?: string;
+      valor: number;
+      usosMaximos?: number;
+      fechaExpiracion?: string;
+    }
+  ) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/entidades/${entidadId}/generar-cupon`,
+      data,
+      headers()
+    );
+    return response.data;
+  },
+
 
   // ============================================
   // CUPONES

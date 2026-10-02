@@ -186,6 +186,16 @@ export class PagoService {
           // no al agendar. Si llegan aquí, se ignoran por seguridad.
           console.log('⚠️ Cupón tipo "bolsa" recibido en calcularCosto. Se ignora.');
         } else {
+          // 👇 Verificar que el usuario no haya usado ya este cupón
+          const usoPrevioQuery = await this.pool.query(
+            `SELECT id FROM cupon_usos WHERE cupon_id = $1 AND usuario_id = $2`,
+            [cupon.id, usuarioId]
+          );
+
+          if (usoPrevioQuery.rows.length > 0) {
+            throw new Error('CUPON_YA_USADO: Ya usaste este cupón anteriormente. Solo puedes usarlo una vez.');
+          }
+
           if (cupon.tipo === 'porcentaje') {
             descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
           } else if (cupon.tipo === 'gratis') {
@@ -197,6 +207,14 @@ export class PagoService {
             `UPDATE cupones SET usos_actuales = usos_actuales + 1 WHERE id = $1`,
             [cupon.id]
           );
+
+          // 👇 Registrar el uso del cupón por este usuario
+          await this.pool.query(
+            `INSERT INTO cupon_usos (cupon_id, usuario_id) VALUES ($1, $2)`,
+            [cupon.id, usuarioId]
+          );
+
+          console.log(`✅ Cupón ${cupon.codigo} aplicado y registrado para usuario ${usuarioId}`);
         }
       }
     }

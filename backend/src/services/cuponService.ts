@@ -230,6 +230,23 @@ export class CuponService {
     return result.rows;
   }
 
+    /**
+   * Obtener todos los cupones asociados a una entidad (convenio)
+   */
+  async obtenerCuponesDeEntidad(entidadId: string): Promise<any[]> {
+    const query = `
+      SELECT 
+        id, codigo, descripcion, tipo, valor, entidad_id, aplica_a,
+        fecha_inicio, fecha_expiracion, usos_maximos, usos_actuales,
+        activo, created_at
+      FROM cupones
+      WHERE entidad_id = $1
+      ORDER BY created_at DESC
+    `;
+    const result = await this.pool.query(query, [entidadId]);
+    return result.rows;
+  }
+
   /**
    * Desactivar cupón
    */

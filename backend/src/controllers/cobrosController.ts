@@ -62,7 +62,18 @@ export const calcularCostoTurno = async (req: AuthRequest, res: Response) => {
 
   } catch (error: any) {
     console.error('Error al calcular costo:', error);
-    res.status(500).json({ error: error.message || 'Error al calcular costo' });
+
+    // Errores controlados con prefijo: mapear a 400 en vez de 500
+    const mensaje: string = error?.message || '';
+    if (mensaje.startsWith('CUPON_YA_USADO:')) {
+      const textoLimpio = mensaje.replace('CUPON_YA_USADO:', '').trim();
+      return res.status(400).json({
+        error: textoLimpio,
+        codigoError: 'cupon_ya_usado'
+      });
+    }
+
+    res.status(500).json({ error: mensaje || 'Error al calcular costo' });
   }
 };
 
@@ -510,6 +521,109 @@ export const canjearCuponBolsa = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Error al canjear cupón de bolsa:', error);
     res.status(500).json({ error: error.message || 'Error al canjear el cupón' });
+  }
+};
+
+
+// ============================================
+// OBTENER CUPONES DE UNA ENTIDAD (Admin)
+// ============================================
+export const obtenerCuponesDeEntidad = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden ver cupones' });
+    }
+
+    const { entidadId } = req.params;
+
+    if (!entidadId) {
+      return res.status(400).json({ error: 'Entidad ID es requerido' });
+    }
+
+    const cupones = await cuponService.obtenerCuponesDeEntidad(entidadId);
+
+    res.json({
+      success: true,
+      data: cupones
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener cupones de entidad:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener cupones' });
+  }
+};
+
+// ============================================
+// GENERAR CUPÓN PARA UNA ENTIDAD (Admin)
+// ============================================
+export const generarCuponParaEntidad = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden crear cupones' });
+    }
+
+    const { entidadId } = req.params;
+    const { descripcion, valor, usosMaximos, fechaExpiracion } = req.body;
+
+    if (!entidadId) {
+      return res.status(400).json({ error: 'Entidad ID es requerido' });
+    }
+
+    // Validar entidad
+    const entidad = await entidadService.obtenerEntidad(entidadId);
+    if (!entidad) {
+      return res.status(404).json({ error: 'Entidad no encontrada' });
+    }
+
+    if (entidad.modalidad !== 'descuento') {
+      return res.status(400).json({
+        error: 'Solo se pueden generar cupones de descuento para convenios de modalidad "descuento".'
+      });
+    }
+
+    if (valor === undefined || valor === null || Number(valor) <= 0) {
+      return res.status(400).json({ error: 'El valor del descuento debe ser mayor a 0' });
+    }
+
+    if (Number(valor) > 100) {
+      return res.status(400).json({ error: 'El descuento no puede superar el 100%' });
+    }
+
+    const cupon = await cuponService.crearCupon({
+      descripcion: descripcion || `Cupón ${entidad.nombre}`,
+      tipo: 'porcentaje',
+      valor: Number(valor),
+      entidadId,
+      aplicaA: 'todos',
+      fechaExpiracion: fechaExpiracion ? new Date(fechaExpiracion) : undefined,
+      usosMaximos: usosMaximos ? Number(usosMaximos) : 100
+    });
+
+    // Auditoría
+    await pool.query(
+      `INSERT INTO auditoria_logs (accion, detalles, created_at)
+       VALUES ($1, $2, NOW())`,
+      [
+        'generar_cupon_convenio',
+        JSON.stringify({
+          entidad_id: entidadId,
+          cupon_id: cupon.id,
+          codigo: cupon.codigo,
+          valor: cupon.valor,
+          admin_id: req.user?.id
+        })
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `Cupón generado: ${cupon.codigo}`,
+      data: cupon
+    });
+
+  } catch (error: any) {
+    console.error('Error al generar cupón para entidad:', error);
+    res.status(500).json({ error: error.message || 'Error al generar cupón' });
   }
 };
 
