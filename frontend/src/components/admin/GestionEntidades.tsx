@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { cobrosService, Entidad, ReporteConsumo, ConsumoItem } from '../../services/cobrosService';
+import { cobrosService, Entidad, ReporteConsumo, ConsumoItem, Cupon } from '../../services/cobrosService';
 import toast from 'react-hot-toast';
 
 const GestionEntidades: React.FC = () => {
@@ -44,13 +44,32 @@ const GestionEntidades: React.FC = () => {
     hasta: string;
     cargando: boolean;
     reporte: ReporteConsumo | null;
+    cupones: Cupon[];
+    cargandoCupones: boolean;
   }>({
     abierto: false,
     entidad: null,
     desde: '',
     hasta: '',
     cargando: false,
-    reporte: null
+    reporte: null,
+    cupones: [],
+    cargandoCupones: false
+  });
+
+  // Modal generar cupón
+  const [modalCupon, setModalCupon] = useState<{
+    abierto: boolean;
+    entidad: Entidad | null;
+    valor: number | '';
+    usosMaximos: number | '';
+    fechaExpiracion: string;
+  }>({
+    abierto: false,
+    entidad: null,
+    valor: '',
+    usosMaximos: '',
+    fechaExpiracion: ''
   });
 
   useEffect(() => {
@@ -164,10 +183,16 @@ const GestionEntidades: React.FC = () => {
       desde: formatFecha(primerDia),
       hasta: formatFecha(ultimoDia),
       cargando: false,
-      reporte: null
+      reporte: null,
+      cupones: [],
+      cargandoCupones: false
     });
 
-    cargarReporte(entidad.id, formatFecha(primerDia), formatFecha(ultimoDia));
+    if (entidad.modalidad === 'bolsa') {
+      cargarReporte(entidad.id, formatFecha(primerDia), formatFecha(ultimoDia));
+    } else {
+      cargarCupones(entidad.id);
+    }
   };
 
   const cargarReporte = async (entidadId: string, desde: string, hasta: string) => {
@@ -182,6 +207,18 @@ const GestionEntidades: React.FC = () => {
     }
   };
 
+  const cargarCupones = async (entidadId: string) => {
+    try {
+      setModalDetalle((m) => ({ ...m, cargandoCupones: true, cupones: [] }));
+      const data = await cobrosService.obtenerCuponesDeEntidad(entidadId);
+      setModalDetalle((m) => ({ ...m, cargandoCupones: false, cupones: data }));
+    } catch (err) {
+      toast.error('Error al cargar cupones');
+      console.error(err);
+      setModalDetalle((m) => ({ ...m, cargandoCupones: false }));
+    }
+  };
+
   const handleGenerarReporte = () => {
     if (!modalDetalle.entidad) return;
     if (!modalDetalle.desde || !modalDetalle.hasta) {
@@ -189,6 +226,49 @@ const GestionEntidades: React.FC = () => {
       return;
     }
     cargarReporte(modalDetalle.entidad.id, modalDetalle.desde, modalDetalle.hasta);
+  };
+
+  // ============================================
+  // GENERAR CUPÓN
+  // ============================================
+  const abrirModalCupon = () => {
+    if (!modalDetalle.entidad) return;
+    setModalCupon({
+      abierto: true,
+      entidad: modalDetalle.entidad,
+      valor: '',
+      usosMaximos: '',
+      fechaExpiracion: ''
+    });
+  };
+
+  const handleGenerarCupon = async () => {
+    if (!modalCupon.entidad) return;
+    if (!modalCupon.valor || Number(modalCupon.valor) <= 0) {
+      toast.error('El valor del descuento debe ser mayor a 0');
+      return;
+    }
+    if (Number(modalCupon.valor) > 100) {
+      toast.error('El descuento no puede superar el 100%');
+      return;
+    }
+
+    try {
+      const res = await cobrosService.generarCuponParaEntidad(modalCupon.entidad.id, {
+        valor: Number(modalCupon.valor),
+        usosMaximos: modalCupon.usosMaximos !== '' ? Number(modalCupon.usosMaximos) : undefined,
+        fechaExpiracion: modalCupon.fechaExpiracion || undefined
+      });
+      toast.success(`Cupón generado: ${res.data.codigo}`);
+      setModalCupon({ abierto: false, entidad: null, valor: '', usosMaximos: '', fechaExpiracion: '' });
+      // Recargar cupones del modal de detalle
+      if (modalDetalle.entidad) {
+        cargarCupones(modalDetalle.entidad.id);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Error al generar cupón');
+      console.error(err);
+    }
   };
 
   const agruparPorUsuario = (consumos: ConsumoItem[]) => {
@@ -584,7 +664,8 @@ const GestionEntidades: React.FC = () => {
               </div>
               <button
                 onClick={() => setModalDetalle({
-                  abierto: false, entidad: null, desde: '', hasta: '', cargando: false, reporte: null
+                  abierto: false, entidad: null, desde: '', hasta: '', cargando: false,
+                  reporte: null, cupones: [], cargandoCupones: false
                 })}
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none flex-shrink-0"
                 aria-label="Cerrar"
@@ -730,15 +811,165 @@ const GestionEntidades: React.FC = () => {
                 )}
               </>
             ) : (
-              <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
-                <p className="mb-2">
-                  Este convenio es de <strong>descuento</strong>. Los usuarios deben ingresar un cupón al agendar.
-                </p>
-                <p>
-                  Para gestionar los cupones de este convenio, ve a la sección <strong>Cupones</strong>.
+              // Modalidad DESCUENTO: lista de cupones + botón generar
+              <>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                  <p className="text-sm text-gray-600">
+                    Los usuarios deben ingresar un cupón al agendar. Cada cupón es de un solo uso por usuario.
+                  </p>
+                  <button
+                    onClick={abrirModalCupon}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap"
+                  >
+                    + Generar cupón
+                  </button>
+                </div>
+
+                {modalDetalle.cargandoCupones && (
+                  <div className="text-center py-8 text-gray-500">Cargando cupones...</div>
+                )}
+
+                {!modalDetalle.cargandoCupones && modalDetalle.cupones.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                    No hay cupones generados todavía. Haz click en "+ Generar cupón" para crear el primero.
+                  </div>
+                )}
+
+                {!modalDetalle.cargandoCupones && modalDetalle.cupones.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Código</th>
+                          <th className="px-3 py-2 text-right">Descuento</th>
+                          <th className="px-3 py-2 text-right">Usos</th>
+                          <th className="px-3 py-2 text-left">Expira</th>
+                          <th className="px-3 py-2 text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {modalDetalle.cupones.map((c) => (
+                          <tr key={c.id}>
+                            <td className="px-3 py-2 font-mono font-semibold text-gray-800">
+                              {c.codigo}
+                            </td>
+                            <td className="px-3 py-2 text-right">{c.valor}%</td>
+                            <td className="px-3 py-2 text-right">
+                              {c.usos_actuales} / {c.usos_maximos}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600">
+                              {c.fecha_expiracion
+                                ? new Date(c.fecha_expiracion).toLocaleDateString('es-CO', {
+                                    timeZone: 'America/Bogota'
+                                  })
+                                : 'Sin expiración'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {c.activo ? (
+                                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Activo
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                  Inactivo
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal generar cupón */}
+      {modalCupon.abierto && modalCupon.entidad && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-2 text-primario">Generar cupón</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Convenio: <span className="font-medium">{modalCupon.entidad.nombre}</span>
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descuento (%) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="Ej: 20"
+                  className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                  value={modalCupon.valor}
+                  onChange={(e) =>
+                    setModalCupon({
+                      ...modalCupon,
+                      valor: e.target.value === '' ? '' : Number(e.target.value)
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Usos máximos
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Ej: 100 (dejar vacío = 100)"
+                  className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                  value={modalCupon.usosMaximos}
+                  onChange={(e) =>
+                    setModalCupon({
+                      ...modalCupon,
+                      usosMaximos: e.target.value === '' ? '' : Number(e.target.value)
+                    })
+                  }
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Cuántos usuarios distintos pueden usar este cupón (cada uno una sola vez).
                 </p>
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de expiración (opcional)
+                </label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-primario"
+                  value={modalCupon.fechaExpiracion}
+                  onChange={(e) =>
+                    setModalCupon({ ...modalCupon, fechaExpiracion: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleGenerarCupon}
+                disabled={!modalCupon.valor || Number(modalCupon.valor) <= 0}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Generar
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalCupon({ abierto: false, entidad: null, valor: '', usosMaximos: '', fechaExpiracion: '' })}
+                className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
