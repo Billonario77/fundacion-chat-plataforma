@@ -335,27 +335,37 @@ export const crearEntidad = async (req: AuthRequest, res: Response) => {
     const { 
       nombre, 
       tipo, 
+      modalidad,
       identificador, 
       contactoNombre, 
       contactoEmail, 
       contactoTelefono, 
-      descuentoPorcentaje, 
-      bolsaHorasInicial 
+      bolsaHorasInicial,
+      dominioCorporativo
     } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre es requerido' });
     }
 
+    if (!modalidad || !['descuento', 'bolsa'].includes(modalidad)) {
+      return res.status(400).json({ error: 'La modalidad debe ser "descuento" o "bolsa"' });
+    }
+
+    if (modalidad === 'bolsa' && !dominioCorporativo) {
+      return res.status(400).json({ error: 'Los convenios de bolsa requieren un dominio corporativo' });
+    }
+
     const entidad = await entidadService.crearEntidad({
       nombre,
       tipo: tipo || 'empresa',
+      modalidad,
       identificador,
       contactoNombre,
       contactoEmail,
       contactoTelefono,
-      descuentoPorcentaje,
-      bolsaHorasInicial
+      bolsaHorasInicial: modalidad === 'bolsa' ? bolsaHorasInicial : 0,
+      dominioCorporativo: modalidad === 'bolsa' ? dominioCorporativo : undefined
     });
 
     res.json({
@@ -445,6 +455,64 @@ export const validarCupon = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: error.message || 'Error al validar cupón' });
   }
 };
+
+
+// ============================================
+// CANJEAR CUPÓN DE BOLSA (Usuario)
+// ============================================
+export const canjearCuponBolsa = async (req: AuthRequest, res: Response) => {
+  try {
+    const usuarioId = req.user?.id;
+
+    if (!usuarioId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const { codigo } = req.body;
+
+    if (!codigo || typeof codigo !== 'string' || codigo.trim() === '') {
+      return res.status(400).json({ error: 'El código del cupón es requerido' });
+    }
+
+    const resultado = await cuponService.canjearCuponBolsa(codigo.trim(), usuarioId);
+
+    if (!resultado.ok) {
+      // Mapeo de código de error a status HTTP
+      const statusPorError: Record<string, number> = {
+        no_encontrado: 404,
+        no_bolsa: 400,
+        sin_entidad: 400,
+        entidad_invalida: 400,
+        dominio_no_configurado: 500,
+        dominio_no_coincide: 403,
+        ya_vinculado: 409,
+        sin_usos: 400
+      };
+      const status = statusPorError[resultado.codigoError] || 400;
+      return res.status(status).json({
+        error: resultado.mensaje,
+        codigoError: resultado.codigoError
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Te has vinculado al convenio "${resultado.entidad.nombre}". Tus próximas sesiones consumirán de la bolsa de horas.`,
+      data: {
+        entidad: {
+          id: resultado.entidad.id,
+          nombre: resultado.entidad.nombre,
+          bolsa_horas_restantes: resultado.entidad.bolsa_horas_restantes
+        }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error al canjear cupón de bolsa:', error);
+    res.status(500).json({ error: error.message || 'Error al canjear el cupón' });
+  }
+};
+
 
 // ============================================
 // OBTENER ENTIDADES (Admin)

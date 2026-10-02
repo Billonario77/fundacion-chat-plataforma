@@ -24,5 +24,6 @@ router.post('/usuarios/marcar-exento', auth_1.authenticateToken, isAdmin_1.isAdm
 router.post('/cupones', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.crearCupon);
 router.get('/cupones', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerCupones);
 router.get('/cupones/validar/:codigo', auth_1.authenticateToken, cobrosController_1.validarCupon);
+router.post('/cupones/canjear-bolsa', auth_1.authenticateToken, cobrosController_1.canjearCuponBolsa);
 exports.default = router;
 //# sourceMappingURL=cobrosRoutes.js.map

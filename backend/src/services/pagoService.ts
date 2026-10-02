@@ -120,7 +120,11 @@ export class PagoService {
       );
       const entidad = entidadQuery.rows[0];
 
-      if (entidad && entidad.bolsa_horas_restantes >= (duracionMinutos / 60)) {
+      if (
+        entidad &&
+        entidad.modalidad === 'bolsa' &&
+        entidad.bolsa_horas_restantes >= (duracionMinutos / 60)
+      ) {
         // Consumir de bolsa
         await this.pool.query(
           `UPDATE entidades SET bolsa_horas_restantes = bolsa_horas_restantes - $1 WHERE id = $2`,
@@ -177,17 +181,23 @@ export class PagoService {
       console.log('📌 Cupón encontrado:', cupon);
 
       if (cupon) {
-        if (cupon.tipo === 'porcentaje') {
-          descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
-        } else if (cupon.tipo === 'gratis') {
-          descuentoPorcentaje = 100;
-        }
+        if (cupon.tipo === 'bolsa') {
+          // Los cupones de bolsa se canjean desde el perfil del usuario,
+          // no al agendar. Si llegan aquí, se ignoran por seguridad.
+          console.log('⚠️ Cupón tipo "bolsa" recibido en calcularCosto. Se ignora.');
+        } else {
+          if (cupon.tipo === 'porcentaje') {
+            descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
+          } else if (cupon.tipo === 'gratis') {
+            descuentoPorcentaje = 100;
+          }
 
-        // Consumir cupón
-        await this.pool.query(
-          `UPDATE cupones SET usos_actuales = usos_actuales + 1 WHERE id = $1`,
-          [cupon.id]
-        );
+          // Consumir cupón
+          await this.pool.query(
+            `UPDATE cupones SET usos_actuales = usos_actuales + 1 WHERE id = $1`,
+            [cupon.id]
+          );
+        }
       }
     }
 

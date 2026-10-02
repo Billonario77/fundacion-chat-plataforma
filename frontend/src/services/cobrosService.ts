@@ -10,13 +10,14 @@ export interface Entidad {
   id: string;
   nombre: string;
   tipo: 'empresa' | 'ong' | 'gobierno';
+  modalidad: 'descuento' | 'bolsa';
   identificador?: string;
   contacto_nombre?: string;
   contacto_email?: string;
   contacto_telefono?: string;
-  descuento_porcentaje: number;
   bolsa_horas_inicial: number;
   bolsa_horas_restantes: number;
+  dominio_corporativo?: string;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -115,15 +116,17 @@ export const cobrosService = {
   // ============================================
 
   // Crear entidad (admin)
+
   crearEntidad: async (data: {
     nombre: string;
     tipo: 'empresa' | 'ong' | 'gobierno';
+    modalidad: 'descuento' | 'bolsa';
     identificador?: string;
     contactoNombre?: string;
     contactoEmail?: string;
     contactoTelefono?: string;
-    descuentoPorcentaje?: number;
     bolsaHorasInicial?: number;
+    dominioCorporativo?: string;
   }) => {
     const response = await axios.post(`${API_URL}/cobros/entidades`, data, headers());
     return response.data;

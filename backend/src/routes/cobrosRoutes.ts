@@ -11,6 +11,7 @@ import {
   crearEntidad,
   crearCupon,
   validarCupon,
+  canjearCuponBolsa,
   obtenerEntidades,
   obtenerResumenEntidad,
   agregarHorasBolsa,
@@ -93,5 +94,8 @@ router.get('/cupones', authenticateToken, isAdmin, obtenerCupones);
 
 // Validar cupón
 router.get('/cupones/validar/:codigo', authenticateToken, validarCupon);
+
+// Canjear cupón de bolsa (usuario autenticado)
+router.post('/cupones/canjear-bolsa', authenticateToken, canjearCuponBolsa);
 
 export default router;

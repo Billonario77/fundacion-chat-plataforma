@@ -7,24 +7,26 @@ const GestionEntidades: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-    const [formData, setFormData] = useState<{
+  const [formData, setFormData] = useState<{
     nombre: string;
     tipo: 'empresa' | 'ong' | 'gobierno';
+    modalidad: 'descuento' | 'bolsa';
     identificador: string;
     contactoNombre: string;
     contactoEmail: string;
     contactoTelefono: string;
-    descuentoPorcentaje: number | '';
     bolsaHorasInicial: number | '';
+    dominioCorporativo: string;
   }>({
     nombre: '',
     tipo: 'empresa',
+    modalidad: 'descuento',
     identificador: '',
     contactoNombre: '',
     contactoEmail: '',
     contactoTelefono: '',
-    descuentoPorcentaje: '',
-    bolsaHorasInicial: ''
+    bolsaHorasInicial: '',
+    dominioCorporativo: ''
   });
 
   // Modal agregar horas
@@ -69,38 +71,47 @@ const GestionEntidades: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.modalidad === 'bolsa' && !formData.dominioCorporativo.trim()) {
+      toast.error('Los convenios de bolsa requieren un dominio corporativo');
+      return;
+    }
+
     try {
       await cobrosService.crearEntidad({
         nombre: formData.nombre,
         tipo: formData.tipo,
+        modalidad: formData.modalidad,
         identificador: formData.identificador,
         contactoNombre: formData.contactoNombre,
         contactoEmail: formData.contactoEmail,
         contactoTelefono: formData.contactoTelefono,
-        descuentoPorcentaje:
-          formData.descuentoPorcentaje === '' ? 0 : Number(formData.descuentoPorcentaje),
         bolsaHorasInicial:
-          formData.bolsaHorasInicial === '' ? 0 : Number(formData.bolsaHorasInicial)
+          formData.modalidad === 'bolsa' && formData.bolsaHorasInicial !== ''
+            ? Number(formData.bolsaHorasInicial)
+            : 0,
+        dominioCorporativo:
+          formData.modalidad === 'bolsa' ? formData.dominioCorporativo.trim() : undefined
       });
       toast.success('Convenio creado exitosamente');
       setShowModal(false);
       setFormData({
         nombre: '',
         tipo: 'empresa',
+        modalidad: 'descuento',
         identificador: '',
         contactoNombre: '',
         contactoEmail: '',
         contactoTelefono: '',
-        descuentoPorcentaje: '',
-        bolsaHorasInicial: ''
+        bolsaHorasInicial: '',
+        dominioCorporativo: ''
       });
       cargarEntidades();
-    } catch (error) {
-      toast.error('Error al crear convenio');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Error al crear convenio');
     }
   };
 
-  // Filtro local por nombre / identificador / contacto
   const entidadesFiltradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     if (!q) return entidades;
@@ -116,7 +127,7 @@ const GestionEntidades: React.FC = () => {
   // AGREGAR HORAS
   // ============================================
   const abrirModalHoras = (entidad: Entidad, e: React.MouseEvent) => {
-    e.stopPropagation(); // que no abra el modal de detalle
+    e.stopPropagation();
     setModalHoras({ abierto: true, entidad, horas: 0 });
   };
 
@@ -156,7 +167,6 @@ const GestionEntidades: React.FC = () => {
       reporte: null
     });
 
-    // Cargar automáticamente el reporte del mes actual
     cargarReporte(entidad.id, formatFecha(primerDia), formatFecha(ultimoDia));
   };
 
@@ -181,7 +191,6 @@ const GestionEntidades: React.FC = () => {
     cargarReporte(modalDetalle.entidad.id, modalDetalle.desde, modalDetalle.hasta);
   };
 
-  // Agrupa los consumos por usuario
   const agruparPorUsuario = (consumos: ConsumoItem[]) => {
     const mapa = new Map<string, {
       usuario_id: string;
@@ -231,7 +240,6 @@ const GestionEntidades: React.FC = () => {
         </button>
       </div>
 
-      {/* Buscador */}
       <div className="mb-4">
         <input
           type="text"
@@ -258,16 +266,13 @@ const GestionEntidades: React.FC = () => {
                   NIT
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
+                  Modalidad
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contacto
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Horas
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Descuento
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -287,8 +292,16 @@ const GestionEntidades: React.FC = () => {
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {entidad.identificador || '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 capitalize">
-                    {entidad.tipo}
+                  <td className="px-4 py-3 text-sm">
+                    {entidad.modalidad === 'bolsa' ? (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Bolsa de horas
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Descuento
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     <div className="min-w-0">
@@ -301,21 +314,28 @@ const GestionEntidades: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
-                    <span className="font-semibold text-green-700">
-                      {entidad.bolsa_horas_restantes}
-                    </span>
-                    <span className="text-gray-400 text-xs"> / {entidad.bolsa_horas_inicial}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm text-gray-600">
-                    {entidad.descuento_porcentaje}%
+                    {entidad.modalidad === 'bolsa' ? (
+                      <>
+                        <span className="font-semibold text-green-700">
+                          {entidad.bolsa_horas_restantes}
+                        </span>
+                        <span className="text-gray-400 text-xs"> / {entidad.bolsa_horas_inicial}</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={(e) => abrirModalHoras(entidad, e)}
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-xs whitespace-nowrap"
-                    >
-                      + Horas
-                    </button>
+                    {entidad.modalidad === 'bolsa' ? (
+                      <button
+                        onClick={(e) => abrirModalHoras(entidad, e)}
+                        className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 text-xs whitespace-nowrap"
+                      >
+                        + Horas
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -358,6 +378,25 @@ const GestionEntidades: React.FC = () => {
                     <option value="ong">Colegio / Universidad / ONG</option>
                     <option value="gobierno">Entidad Estatal</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Modalidad <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-primario"
+                    value={formData.modalidad}
+                    onChange={(e) => setFormData({ ...formData, modalidad: e.target.value as any })}
+                  >
+                    <option value="descuento">Descuento (cupón por sesión)</option>
+                    <option value="bolsa">Bolsa de horas</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.modalidad === 'descuento'
+                      ? 'Los usuarios ingresan un cupón al agendar y se les aplica el % de descuento.'
+                      : 'Los usuarios canjean un código una vez y sus sesiones consumen de la bolsa.'}
+                  </p>
                 </div>
 
                 <div>
@@ -412,44 +451,46 @@ const GestionEntidades: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descuento (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="Ej: 20 (dejar vacío = sin descuento)"
-                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
-                    value={formData.descuentoPorcentaje}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        descuentoPorcentaje: e.target.value === '' ? '' : Number(e.target.value)
-                      })
-                    }
-                  />
-                </div>
+                {formData.modalidad === 'bolsa' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Dominio corporativo <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: biozynex.com"
+                        className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                        value={formData.dominioCorporativo}
+                        onChange={(e) =>
+                          setFormData({ ...formData, dominioCorporativo: e.target.value })
+                        }
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Solo los correos con este dominio podrán canjear el código de bolsa.
+                      </p>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Horas iniciales en la bolsa
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Ej: 40 (dejar vacío = 0 horas)"
-                    className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
-                    value={formData.bolsaHorasInicial}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        bolsaHorasInicial: e.target.value === '' ? '' : Number(e.target.value)
-                      })
-                    }
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Horas iniciales en la bolsa
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 40 (dejar vacío = 0 horas)"
+                        className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario"
+                        value={formData.bolsaHorasInicial}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            bolsaHorasInicial: e.target.value === '' ? '' : Number(e.target.value)
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 mt-6">
@@ -532,7 +573,13 @@ const GestionEntidades: React.FC = () => {
                     ? `NIT: ${modalDetalle.entidad.identificador}`
                     : 'Sin NIT'}
                   {' · '}
-                  Bolsa: {modalDetalle.entidad.bolsa_horas_restantes} / {modalDetalle.entidad.bolsa_horas_inicial} h
+                  Modalidad: {modalDetalle.entidad.modalidad === 'bolsa' ? 'Bolsa de horas' : 'Descuento'}
+                  {modalDetalle.entidad.modalidad === 'bolsa' && (
+                    <>
+                      {' · '}
+                      Bolsa: {modalDetalle.entidad.bolsa_horas_restantes} / {modalDetalle.entidad.bolsa_horas_inicial} h
+                    </>
+                  )}
                 </p>
               </div>
               <button
@@ -546,141 +593,150 @@ const GestionEntidades: React.FC = () => {
               </button>
             </div>
 
-            {/* Selector de fechas */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded"
-                  value={modalDetalle.desde}
-                  onChange={(e) => setModalDetalle({ ...modalDetalle, desde: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                <input
-                  type="date"
-                  className="w-full p-2 border rounded"
-                  value={modalDetalle.hasta}
-                  onChange={(e) => setModalDetalle({ ...modalDetalle, hasta: e.target.value })}
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={handleGenerarReporte}
-                  disabled={modalDetalle.cargando}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-                >
-                  {modalDetalle.cargando ? 'Generando...' : 'Actualizar'}
-                </button>
-              </div>
-            </div>
-
-            {modalDetalle.cargando && (
-              <div className="text-center py-8 text-gray-500">Cargando consumos...</div>
-            )}
-
-            {modalDetalle.reporte && !modalDetalle.cargando && (
-              <div>
-                {/* Resumen */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {modalDetalle.entidad.modalidad === 'bolsa' ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Horas consumidas</p>
-                    <p className="text-lg font-semibold text-blue-800">
-                      {modalDetalle.reporte.total_horas.toFixed(2)} h
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border rounded"
+                      value={modalDetalle.desde}
+                      onChange={(e) => setModalDetalle({ ...modalDetalle, desde: e.target.value })}
+                    />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Sesiones</p>
-                    <p className="text-lg font-semibold text-blue-800">
-                      {modalDetalle.reporte.consumos.length}
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border rounded"
+                      value={modalDetalle.hasta}
+                      onChange={(e) => setModalDetalle({ ...modalDetalle, hasta: e.target.value })}
+                    />
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Usuarios activos</p>
-                    <p className="text-lg font-semibold text-blue-800">
-                      {agruparPorUsuario(modalDetalle.reporte.consumos).length}
-                    </p>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleGenerarReporte}
+                      disabled={modalDetalle.cargando}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {modalDetalle.cargando ? 'Generando...' : 'Actualizar'}
+                    </button>
                   </div>
                 </div>
 
-                {modalDetalle.reporte.consumos.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">
-                    No hay consumos en este período
-                  </p>
-                ) : (
-                  <>
-                    {/* Resumen por usuario */}
-                    <h4 className="font-semibold text-gray-800 mb-2">Resumen por usuario</h4>
-                    <div className="overflow-x-auto mb-6">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left">Nombre</th>
-                            <th className="px-3 py-2 text-left">Correo</th>
-                            <th className="px-3 py-2 text-left">Celular</th>
-                            <th className="px-3 py-2 text-right">Sesiones</th>
-                            <th className="px-3 py-2 text-right">Horas</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {agruparPorUsuario(modalDetalle.reporte.consumos).map((u) => (
-                            <tr key={u.usuario_id}>
-                              <td className="px-3 py-2">{u.nombre}</td>
-                              <td className="px-3 py-2 text-gray-600">{u.email || '—'}</td>
-                              <td className="px-3 py-2 text-gray-600">{u.celular || '—'}</td>
-                              <td className="px-3 py-2 text-right">{u.sesiones}</td>
-                              <td className="px-3 py-2 text-right font-semibold">
-                                {u.horas.toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                {modalDetalle.cargando && (
+                  <div className="text-center py-8 text-gray-500">Cargando consumos...</div>
+                )}
+
+                {modalDetalle.reporte && !modalDetalle.cargando && (
+                  <div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Horas consumidas</p>
+                        <p className="text-lg font-semibold text-blue-800">
+                          {modalDetalle.reporte.total_horas.toFixed(2)} h
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Sesiones</p>
+                        <p className="text-lg font-semibold text-blue-800">
+                          {modalDetalle.reporte.consumos.length}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Usuarios activos</p>
+                        <p className="text-lg font-semibold text-blue-800">
+                          {agruparPorUsuario(modalDetalle.reporte.consumos).length}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Detalle cronológico */}
-                    <h4 className="font-semibold text-gray-800 mb-2">Detalle de sesiones</h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left">Fecha y hora</th>
-                            <th className="px-3 py-2 text-left">Usuario</th>
-                            <th className="px-3 py-2 text-left">Correo</th>
-                            <th className="px-3 py-2 text-left">Celular</th>
-                            <th className="px-3 py-2 text-right">Horas</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {modalDetalle.reporte.consumos.map((c) => (
-                            <tr key={c.id}>
-                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                                {new Date(c.fecha_consumo).toLocaleString('es-CO', {
-                                  timeZone: 'America/Bogota',
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </td>
-                              <td className="px-3 py-2">{c.usuario_nombre || '—'}</td>
-                              <td className="px-3 py-2 text-gray-600">{c.usuario_email || '—'}</td>
-                              <td className="px-3 py-2 text-gray-600">
-                                {c.usuario_celular || c.usuario_telefono || '—'}
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                {parseFloat(String(c.horas_consumidas)).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
+                    {modalDetalle.reporte.consumos.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8">
+                        No hay consumos en este período
+                      </p>
+                    ) : (
+                      <>
+                        <h4 className="font-semibold text-gray-800 mb-2">Resumen por usuario</h4>
+                        <div className="overflow-x-auto mb-6">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left">Nombre</th>
+                                <th className="px-3 py-2 text-left">Correo</th>
+                                <th className="px-3 py-2 text-left">Celular</th>
+                                <th className="px-3 py-2 text-right">Sesiones</th>
+                                <th className="px-3 py-2 text-right">Horas</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {agruparPorUsuario(modalDetalle.reporte.consumos).map((u) => (
+                                <tr key={u.usuario_id}>
+                                  <td className="px-3 py-2">{u.nombre}</td>
+                                  <td className="px-3 py-2 text-gray-600">{u.email || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600">{u.celular || '—'}</td>
+                                  <td className="px-3 py-2 text-right">{u.sesiones}</td>
+                                  <td className="px-3 py-2 text-right font-semibold">
+                                    {u.horas.toFixed(2)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <h4 className="font-semibold text-gray-800 mb-2">Detalle de sesiones</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left">Fecha y hora</th>
+                                <th className="px-3 py-2 text-left">Usuario</th>
+                                <th className="px-3 py-2 text-left">Correo</th>
+                                <th className="px-3 py-2 text-left">Celular</th>
+                                <th className="px-3 py-2 text-right">Horas</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {modalDetalle.reporte.consumos.map((c) => (
+                                <tr key={c.id}>
+                                  <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                                    {new Date(c.fecha_consumo).toLocaleString('es-CO', {
+                                      timeZone: 'America/Bogota',
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </td>
+                                  <td className="px-3 py-2">{c.usuario_nombre || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600">{c.usuario_email || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-600">
+                                    {c.usuario_celular || c.usuario_telefono || '—'}
+                                  </td>
+                                  <td className="px-3 py-2 text-right">
+                                    {parseFloat(String(c.horas_consumidas)).toFixed(2)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
+              </>
+            ) : (
+              <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                <p className="mb-2">
+                  Este convenio es de <strong>descuento</strong>. Los usuarios deben ingresar un cupón al agendar.
+                </p>
+                <p>
+                  Para gestionar los cupones de este convenio, ve a la sección <strong>Cupones</strong>.
+                </p>
               </div>
             )}
           </div>

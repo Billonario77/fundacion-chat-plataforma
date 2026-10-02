@@ -3,37 +3,39 @@ import { Pool } from 'pg';
 export class EntidadService {
   constructor(private pool: Pool) {}
 
-  /**
+    /**
    * Crear entidad con bolsa de horas
    */
   async crearEntidad(params: {
     nombre: string;
     tipo: 'empresa' | 'ong' | 'gobierno';
+    modalidad: 'descuento' | 'bolsa';
     identificador?: string;
     contactoNombre?: string;
     contactoEmail?: string;
     contactoTelefono?: string;
-    descuentoPorcentaje?: number;
     bolsaHorasInicial?: number;
+    dominioCorporativo?: string;
   }): Promise<any> {
     const query = `
       INSERT INTO entidades (
-        nombre, tipo, identificador, contacto_nombre, contacto_email,
-        contacto_telefono, descuento_porcentaje, bolsa_horas_inicial,
-        bolsa_horas_restantes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        nombre, tipo, modalidad, identificador, contacto_nombre, contacto_email,
+        contacto_telefono, bolsa_horas_inicial, bolsa_horas_restantes,
+        dominio_corporativo
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
     const result = await this.pool.query(query, [
       params.nombre,
       params.tipo,
+      params.modalidad,
       params.identificador || null,
       params.contactoNombre || null,
       params.contactoEmail || null,
       params.contactoTelefono || null,
-      params.descuentoPorcentaje || 0,
       params.bolsaHorasInicial || 0,
-      params.bolsaHorasInicial || 0
+      params.bolsaHorasInicial || 0,
+      params.dominioCorporativo || null
     ]);
     return result.rows[0];
   }

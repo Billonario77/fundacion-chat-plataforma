@@ -47,7 +47,9 @@ class PagoService {
         if (usuario.entidad_id) {
             const entidadQuery = await this.pool.query(`SELECT * FROM entidades WHERE id = $1 AND activo = true`, [usuario.entidad_id]);
             const entidad = entidadQuery.rows[0];
-            if (entidad && entidad.bolsa_horas_restantes >= (duracionMinutos / 60)) {
+            if (entidad &&
+                entidad.modalidad === 'bolsa' &&
+                entidad.bolsa_horas_restantes >= (duracionMinutos / 60)) {
                 await this.pool.query(`UPDATE entidades SET bolsa_horas_restantes = bolsa_horas_restantes - $1 WHERE id = $2`, [duracionMinutos / 60, usuario.entidad_id]);
                 await this.pool.query(`INSERT INTO consumo_bolsa (entidad_id, turno_id, usuario_id, horas_consumidas)
            VALUES ($1, $2, $3, $4)`, [usuario.entidad_id, turnoId, usuarioId, duracionMinutos / 60]);
@@ -86,13 +88,18 @@ class PagoService {
             const cupon = cuponQuery.rows[0];
             console.log('📌 Cupón encontrado:', cupon);
             if (cupon) {
-                if (cupon.tipo === 'porcentaje') {
-                    descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
+                if (cupon.tipo === 'bolsa') {
+                    console.log('⚠️ Cupón tipo "bolsa" recibido en calcularCosto. Se ignora.');
                 }
-                else if (cupon.tipo === 'gratis') {
-                    descuentoPorcentaje = 100;
+                else {
+                    if (cupon.tipo === 'porcentaje') {
+                        descuentoPorcentaje = Math.min(100, Number(descuentoPorcentaje) + Number(cupon.valor));
+                    }
+                    else if (cupon.tipo === 'gratis') {
+                        descuentoPorcentaje = 100;
+                    }
+                    await this.pool.query(`UPDATE cupones SET usos_actuales = usos_actuales + 1 WHERE id = $1`, [cupon.id]);
                 }
-                await this.pool.query(`UPDATE cupones SET usos_actuales = usos_actuales + 1 WHERE id = $1`, [cupon.id]);
             }
         }
         let total = costoBase;
