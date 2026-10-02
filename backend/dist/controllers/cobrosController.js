@@ -420,7 +420,7 @@ const generarCuponParaEntidad = async (req, res) => {
             return res.status(403).json({ error: 'Solo administradores pueden crear cupones' });
         }
         const { entidadId } = req.params;
-        const { descripcion, valor, usosMaximos, fechaExpiracion } = req.body;
+        const { descripcion, valor, usosMaximos, fechaExpiracion, codigo } = req.body;
         if (!entidadId) {
             return res.status(400).json({ error: 'Entidad ID es requerido' });
         }
@@ -443,6 +443,7 @@ const generarCuponParaEntidad = async (req, res) => {
             descripcion: descripcion || `Cupón ${entidad.nombre}`,
             tipo: 'porcentaje',
             valor: Number(valor),
+            codigo: codigo && String(codigo).trim() !== '' ? String(codigo) : undefined,
             entidadId,
             aplicaA: 'todos',
             fechaExpiracion: fechaExpiracion ? new Date(fechaExpiracion) : undefined,
@@ -455,6 +456,7 @@ const generarCuponParaEntidad = async (req, res) => {
                 entidad_id: entidadId,
                 cupon_id: cupon.id,
                 codigo: cupon.codigo,
+                codigo_manual: !!(codigo && String(codigo).trim() !== ''),
                 valor: cupon.valor,
                 admin_id: req.user?.id
             })
@@ -467,7 +469,15 @@ const generarCuponParaEntidad = async (req, res) => {
     }
     catch (error) {
         console.error('Error al generar cupón para entidad:', error);
-        res.status(500).json({ error: error.message || 'Error al generar cupón' });
+        const mensaje = error?.message || '';
+        const esErrorValidacion = mensaje.includes('ya está en uso') ||
+            mensaje.includes('solo puede contener') ||
+            mensaje.includes('debe tener entre') ||
+            mensaje.includes('No se pudo generar');
+        if (esErrorValidacion) {
+            return res.status(400).json({ error: mensaje });
+        }
+        res.status(500).json({ error: mensaje || 'Error al generar cupón' });
     }
 };
 exports.generarCuponParaEntidad = generarCuponParaEntidad;

@@ -13,7 +13,33 @@ class CuponService {
         return crypto_1.default.randomBytes(6).toString('hex').toUpperCase();
     }
     async crearCupon(params) {
-        const codigo = this.generarCodigo();
+        let codigo;
+        if (params.codigo && params.codigo.trim() !== '') {
+            codigo = params.codigo.trim().toUpperCase();
+            if (!/^[A-Z0-9-]+$/.test(codigo)) {
+                throw new Error('El código solo puede contener letras, números y guiones (sin espacios ni símbolos).');
+            }
+            if (codigo.length < 4 || codigo.length > 40) {
+                throw new Error('El código debe tener entre 4 y 40 caracteres.');
+            }
+            const existeQuery = await this.pool.query(`SELECT id FROM cupones WHERE codigo = $1`, [codigo]);
+            if (existeQuery.rows.length > 0) {
+                throw new Error(`El código "${codigo}" ya está en uso. Elige otro.`);
+            }
+        }
+        else {
+            let intentos = 0;
+            do {
+                codigo = this.generarCodigo();
+                const existeQuery = await this.pool.query(`SELECT id FROM cupones WHERE codigo = $1`, [codigo]);
+                if (existeQuery.rows.length === 0)
+                    break;
+                intentos++;
+            } while (intentos < 5);
+            if (intentos >= 5) {
+                throw new Error('No se pudo generar un código único. Intenta de nuevo.');
+            }
+        }
         const query = `
       INSERT INTO cupones (
         codigo, descripcion, tipo, valor, entidad_id, aplica_a,

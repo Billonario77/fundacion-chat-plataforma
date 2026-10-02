@@ -553,6 +553,7 @@ export const obtenerCuponesDeEntidad = async (req: AuthRequest, res: Response) =
   }
 };
 
+
 // ============================================
 // GENERAR CUPÓN PARA UNA ENTIDAD (Admin)
 // ============================================
@@ -563,7 +564,7 @@ export const generarCuponParaEntidad = async (req: AuthRequest, res: Response) =
     }
 
     const { entidadId } = req.params;
-    const { descripcion, valor, usosMaximos, fechaExpiracion } = req.body;
+    const { descripcion, valor, usosMaximos, fechaExpiracion, codigo } = req.body;
 
     if (!entidadId) {
       return res.status(400).json({ error: 'Entidad ID es requerido' });
@@ -593,6 +594,7 @@ export const generarCuponParaEntidad = async (req: AuthRequest, res: Response) =
       descripcion: descripcion || `Cupón ${entidad.nombre}`,
       tipo: 'porcentaje',
       valor: Number(valor),
+      codigo: codigo && String(codigo).trim() !== '' ? String(codigo) : undefined,
       entidadId,
       aplicaA: 'todos',
       fechaExpiracion: fechaExpiracion ? new Date(fechaExpiracion) : undefined,
@@ -609,6 +611,7 @@ export const generarCuponParaEntidad = async (req: AuthRequest, res: Response) =
           entidad_id: entidadId,
           cupon_id: cupon.id,
           codigo: cupon.codigo,
+          codigo_manual: !!(codigo && String(codigo).trim() !== ''),
           valor: cupon.valor,
           admin_id: req.user?.id
         })
@@ -623,7 +626,20 @@ export const generarCuponParaEntidad = async (req: AuthRequest, res: Response) =
 
   } catch (error: any) {
     console.error('Error al generar cupón para entidad:', error);
-    res.status(500).json({ error: error.message || 'Error al generar cupón' });
+
+    // Errores de validación del service → 400 en vez de 500
+    const mensaje: string = error?.message || '';
+    const esErrorValidacion =
+      mensaje.includes('ya está en uso') ||
+      mensaje.includes('solo puede contener') ||
+      mensaje.includes('debe tener entre') ||
+      mensaje.includes('No se pudo generar');
+
+    if (esErrorValidacion) {
+      return res.status(400).json({ error: mensaje });
+    }
+
+    res.status(500).json({ error: mensaje || 'Error al generar cupón' });
   }
 };
 

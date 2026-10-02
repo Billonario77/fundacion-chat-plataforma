@@ -198,12 +198,14 @@ export const cobrosService = {
     return response.data.data;
   },
 
+  
   // Generar cupón de descuento para una entidad (admin)
   generarCuponParaEntidad: async (
     entidadId: string,
     data: {
       descripcion?: string;
       valor: number;
+      codigo?: string;
       usosMaximos?: number;
       fechaExpiracion?: string;
     }

@@ -11,20 +11,61 @@ export class CuponService {
     return crypto.randomBytes(6).toString('hex').toUpperCase();
   }
 
-  /**
+  
+    /**
    * Crear cupón
    */
   async crearCupon(params: {
     descripcion: string;
     tipo: 'porcentaje' | 'fijo' | 'gratis' | 'bolsa';
     valor: number;
+    codigo?: string;
     entidadId?: string;
     aplicaA?: 'nuevos' | 'antiguos' | 'todos';
     fechaInicio?: Date;
     fechaExpiracion?: Date;
     usosMaximos?: number;
   }): Promise<any> {
-    const codigo = this.generarCodigo();
+    // Si viene código personalizado, validar formato y unicidad
+    let codigo: string;
+    if (params.codigo && params.codigo.trim() !== '') {
+      codigo = params.codigo.trim().toUpperCase();
+
+      // Validar formato: solo A-Z, 0-9 y guiones
+      if (!/^[A-Z0-9-]+$/.test(codigo)) {
+        throw new Error('El código solo puede contener letras, números y guiones (sin espacios ni símbolos).');
+      }
+
+      if (codigo.length < 4 || codigo.length > 40) {
+        throw new Error('El código debe tener entre 4 y 40 caracteres.');
+      }
+
+      // Verificar que no exista ya
+      const existeQuery = await this.pool.query(
+        `SELECT id FROM cupones WHERE codigo = $1`,
+        [codigo]
+      );
+      if (existeQuery.rows.length > 0) {
+        throw new Error(`El código "${codigo}" ya está en uso. Elige otro.`);
+      }
+    } else {
+      // Generar código automático y verificar que no colisione (raro, pero posible)
+      let intentos = 0;
+      do {
+        codigo = this.generarCodigo();
+        const existeQuery = await this.pool.query(
+          `SELECT id FROM cupones WHERE codigo = $1`,
+          [codigo]
+        );
+        if (existeQuery.rows.length === 0) break;
+        intentos++;
+      } while (intentos < 5);
+
+      if (intentos >= 5) {
+        throw new Error('No se pudo generar un código único. Intenta de nuevo.');
+      }
+    }
+
     const query = `
       INSERT INTO cupones (
         codigo, descripcion, tipo, valor, entidad_id, aplica_a,

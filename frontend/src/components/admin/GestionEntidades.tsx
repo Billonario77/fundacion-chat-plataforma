@@ -61,12 +61,14 @@ const GestionEntidades: React.FC = () => {
   const [modalCupon, setModalCupon] = useState<{
     abierto: boolean;
     entidad: Entidad | null;
+    codigo: string;
     valor: number | '';
     usosMaximos: number | '';
     fechaExpiracion: string;
   }>({
     abierto: false,
     entidad: null,
+    codigo: '',
     valor: '',
     usosMaximos: '',
     fechaExpiracion: ''
@@ -231,11 +233,12 @@ const GestionEntidades: React.FC = () => {
   // ============================================
   // GENERAR CUPÓN
   // ============================================
-  const abrirModalCupon = () => {
+    const abrirModalCupon = () => {
     if (!modalDetalle.entidad) return;
     setModalCupon({
       abierto: true,
       entidad: modalDetalle.entidad,
+      codigo: '',
       valor: '',
       usosMaximos: '',
       fechaExpiracion: ''
@@ -256,12 +259,12 @@ const GestionEntidades: React.FC = () => {
     try {
       const res = await cobrosService.generarCuponParaEntidad(modalCupon.entidad.id, {
         valor: Number(modalCupon.valor),
+        codigo: modalCupon.codigo.trim() || undefined,
         usosMaximos: modalCupon.usosMaximos !== '' ? Number(modalCupon.usosMaximos) : undefined,
         fechaExpiracion: modalCupon.fechaExpiracion || undefined
       });
       toast.success(`Cupón generado: ${res.data.codigo}`);
-      setModalCupon({ abierto: false, entidad: null, valor: '', usosMaximos: '', fechaExpiracion: '' });
-      // Recargar cupones del modal de detalle
+      setModalCupon({ abierto: false, entidad: null, codigo: '', valor: '', usosMaximos: '', fechaExpiracion: '' });
       if (modalDetalle.entidad) {
         cargarCupones(modalDetalle.entidad.id);
       }
@@ -899,6 +902,28 @@ const GestionEntidades: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código personalizado (opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: BIOZYNEX2026 (vacío = automático)"
+                  className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario uppercase"
+                  value={modalCupon.codigo}
+                  onChange={(e) =>
+                    setModalCupon({
+                      ...modalCupon,
+                      codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+                    })
+                  }
+                  maxLength={40}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Solo letras, números y guiones. Entre 4 y 40 caracteres. Si lo dejas vacío, el sistema genera uno.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Descuento (%) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -964,7 +989,7 @@ const GestionEntidades: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setModalCupon({ abierto: false, entidad: null, valor: '', usosMaximos: '', fechaExpiracion: '' })}
+                onClick={() => setModalCupon({ abierto: false, entidad: null, codigo: '', valor: '', usosMaximos: '', fechaExpiracion: '' })}
                 className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
               >
                 Cancelar
