@@ -6,6 +6,7 @@ import { useMensajesNoLeidos } from '../contexts/MensajesNoLeidosContext';
 import toast from 'react-hot-toast';
 import { usuarioService, Turno, turnosService } from '../services/turnosService';
 import { reprogramacionService, Reprogramacion } from '../services/reprogramacionService';
+import { cobrosService } from '../services/cobrosService';
 import HistorialTurnos from '../components/HistorialTurnos';
 import Layout from '../components/Layout';
 import ModalCancelarTurno from '../components/ModalCancelarTurno';
@@ -15,7 +16,6 @@ import CalendarioHorarios from '../components/CalendarioHorarios';
 import TestimonioForm from '../components/TestimonioForm';
 import MisTestimonios from '../components/MisTestimonios';
 import { testimoniosService, Testimonio } from '../services/testimoniosService';
-import { cobrosService } from '../services/cobrosService';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -42,7 +42,6 @@ const UsuarioDashboard: React.FC = () => {
   // Estados para testimonios
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [editandoTestimonio, setEditandoTestimonio] = useState<Testimonio | null>(null);
-
 
   // Estados para canje de cupón de bolsa
   const [codigoConvenio, setCodigoConvenio] = useState('');
@@ -595,19 +594,22 @@ const eliminarTestimonio = async (id: number) => {
 };
 
 
-const cargarReprogramaciones = async () => {
-  try {
-    setLoadingRepro(true);
-  const data = await reprogramacionService.getMisReprogramaciones();
-    setReprogramaciones(data);
+  const cargarReprogramaciones = async () => {
+    try {
+      setLoadingRepro(true);
+      const data = await reprogramacionService.getMisReprogramaciones();
+      setReprogramaciones(data);
     } catch (err) {
       setError('Error al cargar reprogramaciones');
       console.error(err);
     } finally {
       setLoadingRepro(false);
-   }
+    }
   };
 
+  // ============================================
+  // CANJEAR CÓDIGO DE CONVENIO
+  // ============================================
   const handleCanjearCupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!codigoConvenio.trim()) {
@@ -952,6 +954,16 @@ const cargarReprogramaciones = async () => {
         </button>
 
         <button
+          onClick={() => { setPestañaActiva('convenio'); setMenuAbierto(false); }}
+          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+            pestañaActiva === 'convenio' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+          }`}
+        >
+          <span>🎟️</span>
+          <span>Mi convenio</span>
+        </button>
+
+        <button
           onClick={() => { setPestañaActiva('historial'); setMenuAbierto(false); }}
           className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
             pestañaActiva === 'historial' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
@@ -1040,16 +1052,6 @@ const cargarReprogramaciones = async () => {
         <span className="text-lg">🎟️</span>
         <span>Mi convenio</span>
       </button>
-
-      <button
-          onClick={() => { setPestañaActiva('convenio'); setMenuAbierto(false); }}
-          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'convenio' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>🎟️</span>
-          <span>Mi convenio</span>
-       </button>
 
       <button
         onClick={() => setPestañaActiva('historial')}
@@ -1255,7 +1257,6 @@ const cargarReprogramaciones = async () => {
           </div>
         </div>
       )}
-
 
       {pestañaActiva === 'convenio' && (
         <div className="card">
