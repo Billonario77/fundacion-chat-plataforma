@@ -210,6 +210,19 @@ export const webhookWompi = async (req: Request, res: Response) => {
             );
             console.log(`✅ Turno ${cobro.turno_id} actualizado a "pendiente" (listo para que el guía acepte)`);
 
+
+                        // Marcar las multas vinculadas a este cobro como pagadas
+            const multasActualizadas = await pool.query(
+              `UPDATE cobros
+               SET estado = 'pagado',
+                   pagado_at = NOW(),
+                   metodo_pago = $1,
+                   updated_at = NOW()
+               WHERE incluida_en_cobro_id = $2 AND tipo = 'multa'`,
+              [transaccion.payment_method_type || null, cobro.id]
+            );
+            console.log(`✅ ${multasActualizadas.rowCount} multa(s) marcada(s) como pagada(s)`);
+
             // 📧 Enviar email de confirmación de pago
             const datosEmail = datosEmailQuery.rows[0];
             if (datosEmail && datosEmail.usuario_email) {

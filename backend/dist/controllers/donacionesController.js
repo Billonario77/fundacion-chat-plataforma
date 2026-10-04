@@ -139,6 +139,13 @@ const webhookWompi = async (req, res) => {
                     if (estadoCobro === 'pagado') {
                         await pool.query(`UPDATE turnos SET estado = 'pendiente' WHERE id = $1`, [cobro.turno_id]);
                         console.log(`✅ Turno ${cobro.turno_id} actualizado a "pendiente" (listo para que el guía acepte)`);
+                        const multasActualizadas = await pool.query(`UPDATE cobros
+               SET estado = 'pagado',
+                   pagado_at = NOW(),
+                   metodo_pago = $1,
+                   updated_at = NOW()
+               WHERE incluida_en_cobro_id = $2 AND tipo = 'multa'`, [transaccion.payment_method_type || null, cobro.id]);
+                        console.log(`✅ ${multasActualizadas.rowCount} multa(s) marcada(s) como pagada(s)`);
                         const datosEmail = datosEmailQuery.rows[0];
                         if (datosEmail && datosEmail.usuario_email) {
                             try {
