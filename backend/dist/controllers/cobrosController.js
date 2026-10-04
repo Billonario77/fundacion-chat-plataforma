@@ -681,14 +681,21 @@ const generarFirmaPagoSesion = async (req, res) => {
         if (!usuarioId) {
             return res.status(401).json({ error: 'Usuario no autenticado' });
         }
-        const turnoQuery = await connection_1.pool.query(`SELECT t.*, c.id as cobro_id, c.total, c.estado as cobro_estado, c.referencia_wompi
-       FROM turnos t
-       LEFT JOIN cobros c ON c.turno_id = t.id
-       WHERE t.id = $1`, [turnoId]);
+        const turnoQuery = await connection_1.pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
         if (turnoQuery.rows.length === 0) {
             return res.status(404).json({ error: 'Turno no encontrado' });
         }
         const turno = turnoQuery.rows[0];
+        const cobroQuery = await connection_1.pool.query(`SELECT id, total, estado, referencia_wompi
+       FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion'
+       ORDER BY created_at DESC
+       LIMIT 1`, [turnoId]);
+        const cobroRow = cobroQuery.rows[0];
+        turno.cobro_id = cobroRow?.id || null;
+        turno.total = cobroRow?.total || null;
+        turno.cobro_estado = cobroRow?.estado || null;
+        turno.referencia_wompi = cobroRow?.referencia_wompi || null;
         if (turno.usuario_id !== usuarioId) {
             return res.status(403).json({ error: 'No tienes permiso para pagar este turno' });
         }

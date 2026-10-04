@@ -913,12 +913,9 @@ export const generarFirmaPagoSesion = async (req: AuthRequest, res: Response) =>
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    // Verificar que el turno existe y pertenece al usuario
+    // 1. Verificar que el turno existe
     const turnoQuery = await pool.query(
-      `SELECT t.*, c.id as cobro_id, c.total, c.estado as cobro_estado, c.referencia_wompi
-       FROM turnos t
-       LEFT JOIN cobros c ON c.turno_id = t.id
-       WHERE t.id = $1`,
+      `SELECT * FROM turnos WHERE id = $1`,
       [turnoId]
     );
 
@@ -927,6 +924,25 @@ export const generarFirmaPagoSesion = async (req: AuthRequest, res: Response) =>
     }
 
     const turno = turnoQuery.rows[0];
+
+    // 2. Obtener el cobro tipo 'sesion' más reciente (evita confundir con multas)
+    const cobroQuery = await pool.query(
+      `SELECT id, total, estado, referencia_wompi
+       FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [turnoId]
+    );
+
+    const cobroRow = cobroQuery.rows[0];
+
+    // Adjuntamos los campos del cobro al objeto turno con los mismos nombres
+    // que esperaba el resto del código (cobro_id, total, cobro_estado, referencia_wompi)
+    turno.cobro_id = cobroRow?.id || null;
+    turno.total = cobroRow?.total || null;
+    turno.cobro_estado = cobroRow?.estado || null;
+    turno.referencia_wompi = cobroRow?.referencia_wompi || null;
 
     // Verificar que el usuario sea el dueño
     if (turno.usuario_id !== usuarioId) {

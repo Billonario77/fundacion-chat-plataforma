@@ -114,11 +114,16 @@ class PagoService {
             total = costoBase - descuentoAplicado;
         }
         total = Math.round(total * 100) / 100;
+        const cobroTurnoQuery = await this.pool.query(`SELECT id FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion' AND estado = 'pendiente'
+       ORDER BY created_at DESC
+       LIMIT 1`, [turnoId]);
+        const cobroTurnoId = cobroTurnoQuery.rows[0]?.id || null;
         const multasQuery = await this.pool.query(`SELECT id, total FROM cobros
        WHERE usuario_id = $1
          AND tipo = 'multa'
          AND estado = 'pendiente'
-         AND incluida_en_cobro_id IS NULL`, [usuarioId]);
+         AND (incluida_en_cobro_id IS NULL OR incluida_en_cobro_id = $2)`, [usuarioId, cobroTurnoId]);
         const multasPendientes = multasQuery.rows;
         const montoMultas = multasPendientes.reduce((sum, m) => sum + parseFloat(m.total), 0);
         const totalConMultas = Math.round((total + montoMultas) * 100) / 100;
@@ -126,19 +131,55 @@ class PagoService {
             console.log(`💰 Multas pendientes: ${multasPendientes.length} - Total multas: $${montoMultas}`);
             console.log(`💰 Total final (sesión + multas): $${totalConMultas}`);
         }
-        const cobro = await this.crearCobro({
-            turnoId,
-            usuarioId,
-            guiaId,
-            duracionMinutos,
-            costoPorHora,
-            descuentoPorcentaje,
-            descuentoAplicado,
-            total: totalConMultas,
-            estado: 'pendiente',
-            entidadId: usuario.entidad_id,
-            montoMultas
-        });
+        const cobroExistenteQuery = await this.pool.query(`SELECT id FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion' AND estado = 'pendiente'
+       ORDER BY created_at DESC
+       LIMIT 1`, [turnoId]);
+        let cobro;
+        if (cobroExistenteQuery.rows.length > 0) {
+            const cobroId = cobroExistenteQuery.rows[0].id;
+            const updateResult = await this.pool.query(`UPDATE cobros SET
+           usuario_id = $1,
+           guia_id = $2,
+           entidad_id = $3,
+           duracion_minutos = $4,
+           costo_por_hora = $5,
+           descuento_porcentaje = $6,
+           descuento_aplicado = $7,
+           total = $8,
+           monto_multas = $9,
+           updated_at = NOW()
+         WHERE id = $10
+         RETURNING *`, [
+                usuarioId,
+                guiaId,
+                usuario.entidad_id || null,
+                duracionMinutos,
+                costoPorHora,
+                descuentoPorcentaje,
+                descuentoAplicado,
+                totalConMultas,
+                montoMultas,
+                cobroId
+            ]);
+            cobro = updateResult.rows[0];
+            console.log(`♻️ Cobro ${cobroId} actualizado (no se duplicó)`);
+        }
+        else {
+            cobro = await this.crearCobro({
+                turnoId,
+                usuarioId,
+                guiaId,
+                duracionMinutos,
+                costoPorHora,
+                descuentoPorcentaje,
+                descuentoAplicado,
+                total: totalConMultas,
+                estado: 'pendiente',
+                entidadId: usuario.entidad_id,
+                montoMultas
+            });
+        }
         if (multasPendientes.length > 0) {
             await this.pool.query(`UPDATE cobros
          SET incluida_en_cobro_id = $1
@@ -253,7 +294,13 @@ class PagoService {
         }
     }
     async obtenerCobroPorTurno(turnoId) {
-        const query = `SELECT * FROM cobros WHERE turno_id = $1`;
+        const query = `
+      SELECT * FROM cobros 
+      WHERE turno_id = $1 
+        AND tipo = 'sesion'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
         const result = await this.pool.query(query, [turnoId]);
         return result.rows[0] || null;
     }

@@ -228,14 +228,24 @@ export class PagoService {
     
         total = Math.round(total * 100) / 100;
 
-    // 4.3 Buscar multas pendientes del usuario (no vinculadas a otro cobro)
+    // 4.3 Buscar multas: las libres + las ya vinculadas a un cobro existente de este turno
+    // (si estamos recalculando un cobro que ya existía, sus multas deben seguir sumando)
+    const cobroTurnoQuery = await this.pool.query(
+      `SELECT id FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion' AND estado = 'pendiente'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [turnoId]
+    );
+    const cobroTurnoId = cobroTurnoQuery.rows[0]?.id || null;
+
     const multasQuery = await this.pool.query(
       `SELECT id, total FROM cobros
        WHERE usuario_id = $1
          AND tipo = 'multa'
          AND estado = 'pendiente'
-         AND incluida_en_cobro_id IS NULL`,
-      [usuarioId]
+         AND (incluida_en_cobro_id IS NULL OR incluida_en_cobro_id = $2)`,
+      [usuarioId, cobroTurnoId]
     );
 
     const multasPendientes = multasQuery.rows;
@@ -251,20 +261,65 @@ export class PagoService {
       console.log(`💰 Total final (sesión + multas): $${totalConMultas}`);
     }
 
-    // 4.4 Crear cobro pendiente
-    const cobro = await this.crearCobro({
-      turnoId,
-      usuarioId,
-      guiaId,
-      duracionMinutos,
-      costoPorHora,
-      descuentoPorcentaje,
-      descuentoAplicado,
-      total: totalConMultas,
-      estado: 'pendiente',
-      entidadId: usuario.entidad_id,
-      montoMultas
-    });
+    // 4.4 Crear o actualizar cobro pendiente
+    // Si ya existe un cobro tipo 'sesion' en estado 'pendiente' para este turno,
+    // lo actualizamos en vez de crear uno nuevo (evita duplicados al recalcular).
+    const cobroExistenteQuery = await this.pool.query(
+      `SELECT id FROM cobros
+       WHERE turno_id = $1 AND tipo = 'sesion' AND estado = 'pendiente'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [turnoId]
+    );
+
+    let cobro: any;
+
+    if (cobroExistenteQuery.rows.length > 0) {
+      const cobroId = cobroExistenteQuery.rows[0].id;
+      const updateResult = await this.pool.query(
+        `UPDATE cobros SET
+           usuario_id = $1,
+           guia_id = $2,
+           entidad_id = $3,
+           duracion_minutos = $4,
+           costo_por_hora = $5,
+           descuento_porcentaje = $6,
+           descuento_aplicado = $7,
+           total = $8,
+           monto_multas = $9,
+           updated_at = NOW()
+         WHERE id = $10
+         RETURNING *`,
+        [
+          usuarioId,
+          guiaId,
+          usuario.entidad_id || null,
+          duracionMinutos,
+          costoPorHora,
+          descuentoPorcentaje,
+          descuentoAplicado,
+          totalConMultas,
+          montoMultas,
+          cobroId
+        ]
+      );
+      cobro = updateResult.rows[0];
+      console.log(`♻️ Cobro ${cobroId} actualizado (no se duplicó)`);
+    } else {
+      cobro = await this.crearCobro({
+        turnoId,
+        usuarioId,
+        guiaId,
+        duracionMinutos,
+        costoPorHora,
+        descuentoPorcentaje,
+        descuentoAplicado,
+        total: totalConMultas,
+        estado: 'pendiente',
+        entidadId: usuario.entidad_id,
+        montoMultas
+      });
+    }
 
     // 4.5 Vincular las multas al nuevo cobro
     if (multasPendientes.length > 0) {
@@ -471,11 +526,18 @@ export class PagoService {
     }
   }
 
-  /**
+    /**
    * Obtener cobro por turno
+   * Filtra por tipo='sesion' para no confundir con multas del mismo turno.
    */
   async obtenerCobroPorTurno(turnoId: string): Promise<CobroRecord | null> {
-    const query = `SELECT * FROM cobros WHERE turno_id = $1`;
+    const query = `
+      SELECT * FROM cobros 
+      WHERE turno_id = $1 
+        AND tipo = 'sesion'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
     const result = await this.pool.query(query, [turnoId]);
     return result.rows[0] || null;
   }

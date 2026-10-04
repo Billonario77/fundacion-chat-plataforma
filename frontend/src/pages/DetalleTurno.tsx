@@ -26,11 +26,16 @@ const DetalleTurno: React.FC = () => {
   const [advertencia5minMostrada, setAdvertencia5minMostrada] = useState(false);
   const [tiempoAgotadoMostrado, setTiempoAgotadoMostrado] = useState(false);
 
+  // Estados para cupón de descuento
+  const [codigoCupon, setCodigoCupon] = useState('');
+  const [aplicandoCupon, setAplicandoCupon] = useState(false);
+
   // ✅ NUEVO: Reiniciar estados SOLO cuando cambia el ID del turno
   useEffect(() => {
   if (id) {
     setAdvertencia5minMostrada(false);
     setTiempoAgotadoMostrado(false);
+    setCodigoCupon('');
   }
 }, [id]); // Solo depende del ID del turno, no de todo el objeto
 
@@ -211,7 +216,33 @@ const DetalleTurno: React.FC = () => {
     }
   };
 
-    // ============================================
+  // ============================================
+  // APLICAR CUPÓN DE DESCUENTO
+  // ============================================
+  const handleAplicarCupon = async () => {
+    if (!turno) return;
+    if (!codigoCupon.trim()) {
+      toast.error('Ingresa un código de cupón');
+      return;
+    }
+
+    setAplicandoCupon(true);
+    try {
+      await cobrosService.calcularCosto(turno.id, codigoCupon.trim());
+      toast.success('Cupón aplicado correctamente');
+      setCodigoCupon('');
+      // Recargar el cobro para ver el nuevo total
+      const data = await cobrosService.obtenerCobroPorTurno(turno.id);
+      setCobro(data.data);
+    } catch (err: any) {
+      const mensaje = err?.response?.data?.error || 'Error al aplicar el cupón';
+      toast.error(mensaje, { duration: 6000 });
+    } finally {
+      setAplicandoCupon(false);
+    }
+  };
+
+  // ============================================
   // PAGAR SESIÓN CON WOMPI
   // ============================================
   const handlePagarSesion = async () => {
@@ -405,38 +436,82 @@ const DetalleTurno: React.FC = () => {
                   </p>
 
                   {/* Desglose de pago */}
-                  {cobro && (
-                    <div className="mt-3 text-sm space-y-1 max-w-xs">
-                      <div className="flex justify-between">
-                        <span className="text-[#5D6078]">Sesión:</span>
-                        <span className="font-medium text-[#3D405B]">
-                          ${(parseFloat(String(cobro.total)) - parseFloat(String(cobro.monto_multas || 0))).toLocaleString('es-CO')}
-                        </span>
-                      </div>
+                  {cobro && (() => {
+                    const costoBase = parseFloat(String(cobro.costo_por_hora)) * (parseFloat(String(cobro.duracion_minutos)) / 60);
+                    const descuento = parseFloat(String(cobro.descuento_aplicado || 0));
+                    const montoMultas = parseFloat(String(cobro.monto_multas || 0));
+                    const total = parseFloat(String(cobro.total));
 
-                      {cobro.monto_multas > 0 && (
+                    return (
+                      <div className="mt-3 text-sm space-y-1 max-w-xs">
                         <div className="flex justify-between">
-                          <span className="text-red-600">Multa pendiente:</span>
-                          <span className="font-medium text-red-700">
-                            ${parseFloat(String(cobro.monto_multas)).toLocaleString('es-CO')}
+                          <span className="text-[#5D6078]">Sesión:</span>
+                          <span className="font-medium text-[#3D405B]">
+                            ${costoBase.toLocaleString('es-CO')}
                           </span>
                         </div>
-                      )}
 
-                      <div className="flex justify-between pt-1 border-t border-[#E07A5F]/30 mt-1">
-                        <span className="font-semibold text-[#3D405B]">Total a pagar:</span>
-                        <span className="font-bold text-[#3D405B]">
-                          ${parseFloat(String(cobro.total)).toLocaleString('es-CO')}
-                        </span>
+                        {descuento > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-green-700">
+                              Descuento ({cobro.descuento_porcentaje}%):
+                            </span>
+                            <span className="font-medium text-green-700">
+                              −${descuento.toLocaleString('es-CO')}
+                            </span>
+                          </div>
+                        )}
+
+                        {montoMultas > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-red-600">Multa pendiente:</span>
+                            <span className="font-medium text-red-700">
+                              ${montoMultas.toLocaleString('es-CO')}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between pt-1 border-t border-[#E07A5F]/30 mt-1">
+                          <span className="font-semibold text-[#3D405B]">Total a pagar:</span>
+                          <span className="font-bold text-[#3D405B]">
+                            ${total.toLocaleString('es-CO')}
+                          </span>
+                        </div>
+
+                        {montoMultas > 0 && (
+                          <p className="text-xs text-red-600 mt-2 italic">
+                            La multa corresponde a una cancelación tardía o impago anterior. Se cobra junto con esta sesión.
+                          </p>
+                        )}
                       </div>
+                    );
+                  })()}
 
-                      {cobro.monto_multas > 0 && (
-                        <p className="text-xs text-red-600 mt-2 italic">
-                          La multa corresponde a una cancelación tardía o impago anterior. Se cobra junto con esta sesión.
-                        </p>
-                      )}
+                  {/* Campo de cupón de descuento */}
+                  <div className="mt-4 max-w-md">
+                    <label className="block text-xs font-medium text-[#3D405B] mb-1">
+                      ¿Tienes un cupón de descuento?
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ej: BIOZYNEX2026"
+                        className="flex-1 min-w-0 px-3 py-2 border border-[#E07A5F]/40 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#E07A5F] bg-white"
+                        value={codigoCupon}
+                        onChange={(e) =>
+                          setCodigoCupon(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))
+                        }
+                        disabled={aplicandoCupon}
+                      />
+                      <button
+                        onClick={handleAplicarCupon}
+                        disabled={aplicandoCupon || !codigoCupon.trim()}
+                        className="flex-shrink-0 bg-[#3D405B] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#2D2F44] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        {aplicandoCupon ? 'Aplicando...' : 'Aplicar'}
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
                 <button
                   onClick={handlePagarSesion}
