@@ -1232,9 +1232,15 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
       SELECT 
         u.id, u.nombre, u.email, u.foto_perfil, u.rol, u.datos_completados,
         u.guia_asignado_id,
-        g.nombre AS guia_asignado_nombre
+        g.nombre AS guia_asignado_nombre,
+        u.entidad_id,
+        e.nombre AS entidad_nombre,
+        e.modalidad AS entidad_modalidad,
+        e.bolsa_horas_restantes AS entidad_bolsa_restantes,
+        e.bolsa_horas_inicial AS entidad_bolsa_inicial
       FROM usuarios u
       LEFT JOIN usuarios g ON g.id = u.guia_asignado_id
+      LEFT JOIN entidades e ON e.id = u.entidad_id
       WHERE u.id = $1
     `;
 

@@ -244,6 +244,18 @@ export const cobrosService = {
     return response.data;
   },
 
+
+    // Canjear cupón de bolsa (usuario)
+  canjearCuponBolsa: async (codigo: string) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/cupones/canjear-bolsa`,
+      { codigo },
+      headers()
+    );
+    return response.data;
+  },
+  
+
   // ============================================
   // COBROS
   // ============================================

@@ -15,6 +15,7 @@ import CalendarioHorarios from '../components/CalendarioHorarios';
 import TestimonioForm from '../components/TestimonioForm';
 import MisTestimonios from '../components/MisTestimonios';
 import { testimoniosService, Testimonio } from '../services/testimoniosService';
+import { cobrosService } from '../services/cobrosService';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -32,7 +33,7 @@ const UsuarioDashboard: React.FC = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(
     (location.state as any)?.abrirFormulario || false
   );
-  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio'>(
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio' | 'convenio'>(
     (location.state as any)?.pestañaInicial || 'activas'
   );
   const [ultimoEvento, setUltimoEvento] = useState('');
@@ -41,6 +42,12 @@ const UsuarioDashboard: React.FC = () => {
   // Estados para testimonios
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [editandoTestimonio, setEditandoTestimonio] = useState<Testimonio | null>(null);
+
+
+  // Estados para canje de cupón de bolsa
+  const [codigoConvenio, setCodigoConvenio] = useState('');
+  const [canjeando, setCanjeando] = useState(false);
+  const [mensajeConvenio, setMensajeConvenio] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
     
   // ============================================
   // Estado para modal de cancelación
@@ -588,16 +595,38 @@ const eliminarTestimonio = async (id: number) => {
 };
 
 
-  const cargarReprogramaciones = async () => {
-    try {
-      setLoadingRepro(true);
-      const data = await reprogramacionService.getMisReprogramaciones();
-      setReprogramaciones(data);
+const cargarReprogramaciones = async () => {
+  try {
+    setLoadingRepro(true);
+  const data = await reprogramacionService.getMisReprogramaciones();
+    setReprogramaciones(data);
     } catch (err) {
       setError('Error al cargar reprogramaciones');
       console.error(err);
     } finally {
       setLoadingRepro(false);
+   }
+  };
+
+  const handleCanjearCupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codigoConvenio.trim()) {
+      setMensajeConvenio({ tipo: 'error', texto: 'Ingresa un código' });
+      return;
+    }
+    setCanjeando(true);
+    setMensajeConvenio(null);
+    try {
+      const res = await cobrosService.canjearCuponBolsa(codigoConvenio.trim());
+      setMensajeConvenio({ tipo: 'ok', texto: res.message });
+      setCodigoConvenio('');
+      const perfil = await usuarioService.getMiPerfil();
+      setPerfilUsuario(perfil);
+    } catch (err: any) {
+      const mensaje = err?.response?.data?.error || 'Error al canjear el cupón';
+      setMensajeConvenio({ tipo: 'error', texto: mensaje });
+    } finally {
+      setCanjeando(false);
     }
   };
 
@@ -861,6 +890,7 @@ const eliminarTestimonio = async (id: number) => {
         {pestañaActiva === 'cancelados' && '✗ Cancelados'}
         {pestañaActiva === 'historial' && '📚 Historial'}
         {pestañaActiva === 'testimonio' && '💬 Mi testimonio'}
+        {pestañaActiva === 'convenio' && '🎟️ Mi convenio'}
       </span>
       <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
     </button>
@@ -998,6 +1028,28 @@ const eliminarTestimonio = async (id: number) => {
         <span className="text-lg">💬</span>
         <span>Mi testimonio</span>
       </button>
+
+      <button
+        onClick={() => setPestañaActiva('convenio')}
+        className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+          pestañaActiva === 'convenio'
+            ? 'bg-white text-primario shadow-md' 
+            : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+        }`}
+      >
+        <span className="text-lg">🎟️</span>
+        <span>Mi convenio</span>
+      </button>
+
+      <button
+          onClick={() => { setPestañaActiva('convenio'); setMenuAbierto(false); }}
+          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+            pestañaActiva === 'convenio' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+          }`}
+        >
+          <span>🎟️</span>
+          <span>Mi convenio</span>
+       </button>
 
       <button
         onClick={() => setPestañaActiva('historial')}
@@ -1201,6 +1253,69 @@ const eliminarTestimonio = async (id: number) => {
               />
             </div>
           </div>
+        </div>
+      )}
+
+
+      {pestañaActiva === 'convenio' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-primario mb-4">Mi convenio</h2>
+
+          {perfilUsuario?.entidad_id ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Convenio activo</p>
+                <p className="text-lg font-semibold text-green-800">
+                  {perfilUsuario.entidad_nombre}
+                </p>
+                {perfilUsuario.entidad_modalidad === 'bolsa' && (
+                  <p className="text-sm text-gray-700 mt-2">
+                    Bolsa de horas disponible:{' '}
+                    <span className="font-semibold">
+                      {perfilUsuario.entidad_bolsa_restantes} / {perfilUsuario.entidad_bolsa_inicial} h
+                    </span>
+                  </p>
+                )}
+              </div>
+              <p className="text-sm text-gray-500">
+                Tus próximas sesiones se agendarán automáticamente con este convenio. Si necesitas cambiarlo, contacta al administrador.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Si tu empresa, colegio o universidad tiene un convenio con la fundación, ingresa aquí el código que te entregaron.
+              </p>
+
+              <form onSubmit={handleCanjearCupon} className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  placeholder="Ej: BIOZYNEX2026"
+                  className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario uppercase"
+                  value={codigoConvenio}
+                  onChange={(e) => setCodigoConvenio(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                  disabled={canjeando}
+                />
+                <button
+                  type="submit"
+                  disabled={canjeando || !codigoConvenio.trim()}
+                  className="flex-shrink-0 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {canjeando ? 'Canjeando...' : 'Canjear código'}
+                </button>
+              </form>
+
+              {mensajeConvenio && (
+                <div className={`px-4 py-3 rounded-lg text-sm ${
+                  mensajeConvenio.tipo === 'ok'
+                    ? 'bg-green-100 border border-green-400 text-green-800'
+                    : 'bg-red-100 border border-red-400 text-red-800'
+                }`}>
+                  {mensajeConvenio.texto}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
