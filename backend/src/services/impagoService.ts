@@ -121,6 +121,31 @@ export class ImpagoService {
       console.log(`🚫 Cobro de sesión del turno ${turno.id} marcado como 'cancelado'`);
     }
 
+        // Liberar multas vinculadas al cobro de la sesión cancelada
+    const cobroSesionQuery = await pool.query(
+      `SELECT id FROM cobros 
+       WHERE turno_id = $1 AND tipo = 'sesion' 
+       ORDER BY created_at DESC LIMIT 1`,
+      [turno.id]
+    );
+
+    if (cobroSesionQuery.rows.length > 0) {
+      const cobroSesionId = cobroSesionQuery.rows[0].id;
+      const liberarMultasResult = await pool.query(
+        `UPDATE cobros
+         SET incluida_en_cobro_id = NULL,
+             updated_at = NOW()
+         WHERE incluida_en_cobro_id = $1
+           AND tipo = 'multa'
+           AND estado = 'pendiente'`,
+        [cobroSesionId]
+      );
+
+      if (liberarMultasResult.rowCount && liberarMultasResult.rowCount > 0) {
+        console.log(`🔓 ${liberarMultasResult.rowCount} multa(s) liberada(s) del cobro cancelado por impago`);
+      }
+    }
+
     // ============================================
     // 2. OBTENER CONFIGURACIÓN Y CALCULAR MULTA
     // ============================================

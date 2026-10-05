@@ -74,6 +74,21 @@ class ImpagoService {
         if (cancelarCobroResult.rowCount && cancelarCobroResult.rowCount > 0) {
             console.log(`🚫 Cobro de sesión del turno ${turno.id} marcado como 'cancelado'`);
         }
+        const cobroSesionQuery = await connection_1.pool.query(`SELECT id FROM cobros 
+       WHERE turno_id = $1 AND tipo = 'sesion' 
+       ORDER BY created_at DESC LIMIT 1`, [turno.id]);
+        if (cobroSesionQuery.rows.length > 0) {
+            const cobroSesionId = cobroSesionQuery.rows[0].id;
+            const liberarMultasResult = await connection_1.pool.query(`UPDATE cobros
+         SET incluida_en_cobro_id = NULL,
+             updated_at = NOW()
+         WHERE incluida_en_cobro_id = $1
+           AND tipo = 'multa'
+           AND estado = 'pendiente'`, [cobroSesionId]);
+            if (liberarMultasResult.rowCount && liberarMultasResult.rowCount > 0) {
+                console.log(`🔓 ${liberarMultasResult.rowCount} multa(s) liberada(s) del cobro cancelado por impago`);
+            }
+        }
         const configPrecio = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'precio_sesion'`);
         const precioSesion = parseFloat(configPrecio.rows[0]?.valor || '100000');
         const configMulta = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'multa_cancelacion_porcentaje'`);
