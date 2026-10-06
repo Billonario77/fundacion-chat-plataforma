@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
+exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuariosMasivo = exports.asignarUsuarioAEntidadPorEmail = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
@@ -633,6 +633,111 @@ const asignarUsuarioAEntidad = async (req, res) => {
     }
 };
 exports.asignarUsuarioAEntidad = asignarUsuarioAEntidad;
+const asignarUsuarioAEntidadPorEmail = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden asignar usuarios' });
+        }
+        const { entidadId } = req.params;
+        const { email } = req.body;
+        if (!entidadId) {
+            return res.status(400).json({ error: 'Entidad ID es requerido' });
+        }
+        if (!email || String(email).trim() === '') {
+            return res.status(400).json({ error: 'El email es requerido' });
+        }
+        const entidad = await entidadService.obtenerEntidad(entidadId);
+        if (!entidad) {
+            return res.status(404).json({ error: 'Entidad no encontrada' });
+        }
+        const resultado = await entidadService.asignarUsuarioPorEmail(String(email), entidadId);
+        if (!resultado.ok) {
+            const statusPorMotivo = {
+                no_existe: 404,
+                ya_vinculado: 409,
+                otro_convenio: 409
+            };
+            const status = statusPorMotivo[resultado.motivo] || 400;
+            return res.status(status).json({ error: resultado.mensaje, motivo: resultado.motivo });
+        }
+        res.json({
+            success: true,
+            message: `${resultado.usuario.email} vinculado al convenio`,
+            data: resultado.usuario
+        });
+    }
+    catch (error) {
+        console.error('Error al asignar usuario por email:', error);
+        res.status(500).json({ error: error.message || 'Error al asignar usuario' });
+    }
+};
+exports.asignarUsuarioAEntidadPorEmail = asignarUsuarioAEntidadPorEmail;
+const asignarUsuariosMasivo = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden asignar usuarios' });
+        }
+        const { entidadId } = req.params;
+        const { emails } = req.body;
+        if (!entidadId) {
+            return res.status(400).json({ error: 'Entidad ID es requerido' });
+        }
+        if (!Array.isArray(emails) || emails.length === 0) {
+            return res.status(400).json({ error: 'Debes enviar una lista de emails' });
+        }
+        if (emails.length > 500) {
+            return res.status(400).json({ error: 'Máximo 500 emails por carga' });
+        }
+        const entidad = await entidadService.obtenerEntidad(entidadId);
+        if (!entidad) {
+            return res.status(404).json({ error: 'Entidad no encontrada' });
+        }
+        const emailsUnicos = [];
+        const vistos = new Set();
+        for (const raw of emails) {
+            const e = String(raw || '').trim().toLowerCase();
+            if (!e || vistos.has(e))
+                continue;
+            vistos.add(e);
+            emailsUnicos.push(e);
+        }
+        const resultados = [];
+        let exitosos = 0;
+        let fallidos = 0;
+        for (const email of emailsUnicos) {
+            try {
+                const r = await entidadService.asignarUsuarioPorEmail(email, entidadId);
+                if (r.ok) {
+                    exitosos++;
+                    resultados.push({ email, ok: true });
+                }
+                else {
+                    fallidos++;
+                    resultados.push({ email, ok: false, motivo: r.motivo, mensaje: r.mensaje });
+                }
+            }
+            catch (err) {
+                fallidos++;
+                resultados.push({ email, ok: false, motivo: 'error', mensaje: err.message || 'Error' });
+            }
+        }
+        res.json({
+            success: true,
+            message: `Asignación masiva completada: ${exitosos} vinculados, ${fallidos} con problemas`,
+            data: {
+                total: emailsUnicos.length,
+                exitosos,
+                fallidos,
+                resultados
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error en asignación masiva:', error);
+        res.status(500).json({ error: error.message || 'Error en asignación masiva' });
+    }
+};
+exports.asignarUsuariosMasivo = asignarUsuariosMasivo;
 const marcarUsuarioExento = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {

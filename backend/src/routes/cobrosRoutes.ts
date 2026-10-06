@@ -19,6 +19,8 @@ import {
   agregarHorasBolsa,
   obtenerConsumoPeriodo,
   asignarUsuarioAEntidad,
+  asignarUsuarioAEntidadPorEmail,
+  asignarUsuariosMasivo,
   marcarUsuarioExento,
   obtenerCupones,
   generarFirmaPagoSesion,
@@ -83,6 +85,12 @@ router.get('/entidades/:entidadId/cupones', authenticateToken, isAdmin, obtenerC
 
 // Generar cupón de descuento para una entidad (solo admin)
 router.post('/entidades/:entidadId/generar-cupon', authenticateToken, isAdmin, generarCuponParaEntidad);
+
+// Asignar usuario a una entidad por email (solo admin)
+router.post('/entidades/:entidadId/asignar-usuario', authenticateToken, isAdmin, asignarUsuarioAEntidadPorEmail);
+
+// Asignación masiva de usuarios a una entidad (solo admin)
+router.post('/entidades/:entidadId/asignar-usuarios-masivo', authenticateToken, isAdmin, asignarUsuariosMasivo);
 
 // Asignar usuario a entidad (solo admin)
 router.post('/usuarios/asignar-entidad', authenticateToken, isAdmin, asignarUsuarioAEntidad);

@@ -99,6 +99,25 @@ class EntidadService {
     async asignarUsuarioAEntidad(usuarioId, entidadId) {
         await this.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [entidadId, usuarioId]);
     }
+    async asignarUsuarioPorEmail(email, entidadId) {
+        const emailNorm = String(email).trim().toLowerCase();
+        const usuarioQuery = await this.pool.query(`SELECT id, nombre, email, entidad_id FROM usuarios WHERE LOWER(email) = $1`, [emailNorm]);
+        if (usuarioQuery.rows.length === 0) {
+            return { ok: false, motivo: 'no_existe', mensaje: `No existe un usuario con el email ${emailNorm}` };
+        }
+        const usuario = usuarioQuery.rows[0];
+        if (usuario.entidad_id === entidadId) {
+            return { ok: false, motivo: 'ya_vinculado', mensaje: `${emailNorm} ya está vinculado a este convenio` };
+        }
+        if (usuario.entidad_id && usuario.entidad_id !== entidadId) {
+            return { ok: false, motivo: 'otro_convenio', mensaje: `${emailNorm} ya pertenece a otro convenio` };
+        }
+        await this.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [entidadId, usuario.id]);
+        return {
+            ok: true,
+            usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
+        };
+    }
     async marcarUsuarioExento(usuarioId, motivo) {
         await this.pool.query(`UPDATE usuarios SET es_exento = true, motivo_exencion = $1 WHERE id = $2`, [motivo, usuarioId]);
     }

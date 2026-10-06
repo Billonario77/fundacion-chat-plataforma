@@ -851,6 +851,142 @@ export const asignarUsuarioAEntidad = async (req: AuthRequest, res: Response) =>
 };
 
 // ============================================
+// ASIGNAR USUARIO A ENTIDAD POR EMAIL (Admin)
+// ============================================
+export const asignarUsuarioAEntidadPorEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden asignar usuarios' });
+    }
+
+    const { entidadId } = req.params;
+    const { email } = req.body;
+
+    if (!entidadId) {
+      return res.status(400).json({ error: 'Entidad ID es requerido' });
+    }
+
+    if (!email || String(email).trim() === '') {
+      return res.status(400).json({ error: 'El email es requerido' });
+    }
+
+    // Validar entidad
+    const entidad = await entidadService.obtenerEntidad(entidadId);
+    if (!entidad) {
+      return res.status(404).json({ error: 'Entidad no encontrada' });
+    }
+
+    const resultado = await entidadService.asignarUsuarioPorEmail(String(email), entidadId);
+
+    if (!resultado.ok) {
+      const statusPorMotivo: Record<string, number> = {
+        no_existe: 404,
+        ya_vinculado: 409,
+        otro_convenio: 409
+      };
+      const status = statusPorMotivo[resultado.motivo] || 400;
+      return res.status(status).json({ error: resultado.mensaje, motivo: resultado.motivo });
+    }
+
+    res.json({
+      success: true,
+      message: `${resultado.usuario.email} vinculado al convenio`,
+      data: resultado.usuario
+    });
+
+  } catch (error: any) {
+    console.error('Error al asignar usuario por email:', error);
+    res.status(500).json({ error: error.message || 'Error al asignar usuario' });
+  }
+};
+
+
+
+// ============================================
+// ASIGNACIÓN MASIVA DE USUARIOS A ENTIDAD (Admin)
+// ============================================
+export const asignarUsuariosMasivo = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden asignar usuarios' });
+    }
+
+    const { entidadId } = req.params;
+    const { emails } = req.body;
+
+    if (!entidadId) {
+      return res.status(400).json({ error: 'Entidad ID es requerido' });
+    }
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ error: 'Debes enviar una lista de emails' });
+    }
+
+    if (emails.length > 500) {
+      return res.status(400).json({ error: 'Máximo 500 emails por carga' });
+    }
+
+    const entidad = await entidadService.obtenerEntidad(entidadId);
+    if (!entidad) {
+      return res.status(404).json({ error: 'Entidad no encontrada' });
+    }
+
+    // Normalizar y quitar duplicados manteniendo el orden
+    
+    const emailsUnicos: string[] = [];
+    const vistos = new Set<string>();
+    for (const raw of emails) {
+      const e = String(raw || '').trim().toLowerCase();
+      if (!e || vistos.has(e)) continue;
+      vistos.add(e);
+      emailsUnicos.push(e);
+    }
+
+    const resultados: {
+      email: string;
+      ok: boolean;
+      motivo?: string;
+      mensaje?: string;
+    }[] = [];
+
+    let exitosos = 0;
+    let fallidos = 0;
+
+    for (const email of emailsUnicos) {
+      try {
+        const r = await entidadService.asignarUsuarioPorEmail(email, entidadId);
+        if (r.ok) {
+          exitosos++;
+          resultados.push({ email, ok: true });
+        } else {
+          fallidos++;
+          resultados.push({ email, ok: false, motivo: r.motivo, mensaje: r.mensaje });
+        }
+      } catch (err: any) {
+        fallidos++;
+        resultados.push({ email, ok: false, motivo: 'error', mensaje: err.message || 'Error' });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Asignación masiva completada: ${exitosos} vinculados, ${fallidos} con problemas`,
+      data: {
+        total: emailsUnicos.length,
+        exitosos,
+        fallidos,
+        resultados
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error en asignación masiva:', error);
+    res.status(500).json({ error: error.message || 'Error en asignación masiva' });
+  }
+};
+
+
+// ============================================
 // MARCAR USUARIO COMO EXENTO (Admin)
 // ============================================
 export const marcarUsuarioExento = async (req: AuthRequest, res: Response) => {
