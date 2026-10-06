@@ -144,12 +144,13 @@ export const cobrosService = {
     return response.data.data;
   },
 
-  // Asignar usuario a entidad (admin)
-  asignarUsuarioAEntidad: async (usuarioId: string, entidadId: string) => {
-    const response = await axios.post(`${API_URL}/cobros/usuarios/asignar-entidad`, {
-      usuarioId,
-      entidadId
-    }, headers());
+    // Asignar usuario a entidad (admin). Pasar entidadId=null para desvincular.
+  asignarUsuarioAEntidad: async (usuarioId: string, entidadId: string | null) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/usuarios/asignar-entidad`,
+      { usuarioId, entidadId },
+      headers()
+    );
     return response.data;
   },
 

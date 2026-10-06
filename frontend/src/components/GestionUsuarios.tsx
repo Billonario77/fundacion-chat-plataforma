@@ -131,21 +131,21 @@ const GestionUsuarios: React.FC = () => {
 
   const handleAsignarConvenio = async () => {
     if (!modalConvenio.usuario) return;
-    if (!modalConvenio.entidadId) {
-      toast.error('Selecciona un convenio');
-      return;
-    }
 
     try {
       await cobrosService.asignarUsuarioAEntidad(
         modalConvenio.usuario.id,
-        modalConvenio.entidadId
+        modalConvenio.entidadId || null
       );
-      toast.success('Usuario asignado al convenio');
+      toast.success(
+        modalConvenio.entidadId
+          ? 'Usuario asignado al convenio'
+          : 'Usuario desvinculado del convenio'
+      );
       setModalConvenio({ abierto: false, usuario: null, entidadId: '' });
       cargarUsuarios(pagina, busqueda);
     } catch (err) {
-      toast.error('Error al asignar convenio');
+      toast.error('Error al actualizar convenio');
       console.error(err);
     }
   };
@@ -386,11 +386,11 @@ const GestionUsuarios: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleAsignarConvenio}
-                disabled={!modalConvenio.entidadId}
-                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1"
               >
                 Guardar
               </button>
+              
               <button
                 type="button"
                 onClick={() => setModalConvenio({ abierto: false, usuario: null, entidadId: '' })}

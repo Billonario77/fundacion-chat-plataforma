@@ -97,7 +97,7 @@ class EntidadService {
         };
     }
     async asignarUsuarioAEntidad(usuarioId, entidadId) {
-        await this.pool.query(`UPDATE usuarios SET entidad_id = $1 WHERE id = $2`, [entidadId, usuarioId]);
+        await this.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [entidadId, usuarioId]);
     }
     async marcarUsuarioExento(usuarioId, motivo) {
         await this.pool.query(`UPDATE usuarios SET es_exento = true, motivo_exencion = $1 WHERE id = $2`, [motivo, usuarioId]);

@@ -830,11 +830,14 @@ export const asignarUsuarioAEntidad = async (req: AuthRequest, res: Response) =>
 
     const { usuarioId, entidadId } = req.body;
 
-    if (!usuarioId || !entidadId) {
-      return res.status(400).json({ error: 'Usuario ID y Entidad ID son requeridos' });
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'Usuario ID es requerido' });
     }
 
-    await entidadService.asignarUsuarioAEntidad(usuarioId, entidadId);
+    // entidadId puede ser null o string vacío para desvincular al usuario
+    const entidadIdFinal = entidadId && String(entidadId).trim() !== '' ? String(entidadId) : null;
+
+    await entidadService.asignarUsuarioAEntidad(usuarioId, entidadIdFinal);
 
     res.json({
       success: true,

@@ -151,11 +151,11 @@ export class EntidadService {
   }
 
   /**
-   * Asignar usuario a entidad
+   * Asignar usuario a entidad (o desvincular si entidadId es null)
    */
-  async asignarUsuarioAEntidad(usuarioId: string, entidadId: string): Promise<void> {
+  async asignarUsuarioAEntidad(usuarioId: string, entidadId: string | null): Promise<void> {
     await this.pool.query(
-      `UPDATE usuarios SET entidad_id = $1 WHERE id = $2`,
+      `UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`,
       [entidadId, usuarioId]
     );
   }

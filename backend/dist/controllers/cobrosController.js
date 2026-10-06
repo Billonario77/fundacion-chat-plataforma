@@ -617,10 +617,11 @@ const asignarUsuarioAEntidad = async (req, res) => {
             return res.status(403).json({ error: 'Solo administradores pueden asignar usuarios' });
         }
         const { usuarioId, entidadId } = req.body;
-        if (!usuarioId || !entidadId) {
-            return res.status(400).json({ error: 'Usuario ID y Entidad ID son requeridos' });
+        if (!usuarioId) {
+            return res.status(400).json({ error: 'Usuario ID es requerido' });
         }
-        await entidadService.asignarUsuarioAEntidad(usuarioId, entidadId);
+        const entidadIdFinal = entidadId && String(entidadId).trim() !== '' ? String(entidadId) : null;
+        await entidadService.asignarUsuarioAEntidad(usuarioId, entidadIdFinal);
         res.json({
             success: true,
             message: 'Usuario asignado a entidad exitosamente'
