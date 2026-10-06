@@ -29,14 +29,12 @@ const GestionEntidades: React.FC = () => {
     dominioCorporativo: ''
   });
 
-  // Modal agregar horas
   const [modalHoras, setModalHoras] = useState<{
     abierto: boolean;
     entidad: Entidad | null;
     horas: number;
   }>({ abierto: false, entidad: null, horas: 0 });
 
-  // Modal detalle / reporte mensual
   const [modalDetalle, setModalDetalle] = useState<{
     abierto: boolean;
     entidad: Entidad | null;
@@ -46,6 +44,8 @@ const GestionEntidades: React.FC = () => {
     reporte: ReporteConsumo | null;
     cupones: Cupon[];
     cargandoCupones: boolean;
+    usuarios: any[];
+    cargandoUsuarios: boolean;
   }>({
     abierto: false,
     entidad: null,
@@ -54,10 +54,11 @@ const GestionEntidades: React.FC = () => {
     cargando: false,
     reporte: null,
     cupones: [],
-    cargandoCupones: false
+    cargandoCupones: false,
+    usuarios: [],
+    cargandoUsuarios: false
   });
 
-  // Modal generar cupón
   const [modalCupon, setModalCupon] = useState<{
     abierto: boolean;
     entidad: Entidad | null;
@@ -73,6 +74,20 @@ const GestionEntidades: React.FC = () => {
     usosMaximos: '',
     fechaExpiracion: ''
   });
+
+  const [modalAsignar, setModalAsignar] = useState<{
+    abierto: boolean;
+    entidad: Entidad | null;
+    email: string;
+  }>({ abierto: false, entidad: null, email: '' });
+
+  const [modalMasivo, setModalMasivo] = useState<{
+    abierto: boolean;
+    entidad: Entidad | null;
+    texto: string;
+    procesando: boolean;
+    resultados: any[] | null;
+  }>({ abierto: false, entidad: null, texto: '', procesando: false, resultados: null });
 
   useEffect(() => {
     cargarEntidades();
@@ -144,9 +159,6 @@ const GestionEntidades: React.FC = () => {
     );
   }, [entidades, busqueda]);
 
-  // ============================================
-  // AGREGAR HORAS
-  // ============================================
   const abrirModalHoras = (entidad: Entidad, e: React.MouseEvent) => {
     e.stopPropagation();
     setModalHoras({ abierto: true, entidad, horas: 0 });
@@ -169,9 +181,6 @@ const GestionEntidades: React.FC = () => {
     }
   };
 
-  // ============================================
-  // DETALLE / REPORTE
-  // ============================================
   const formatFecha = (d: Date) => d.toISOString().slice(0, 10);
 
   const abrirDetalle = (entidad: Entidad) => {
@@ -187,7 +196,9 @@ const GestionEntidades: React.FC = () => {
       cargando: false,
       reporte: null,
       cupones: [],
-      cargandoCupones: false
+      cargandoCupones: false,
+      usuarios: [],
+      cargandoUsuarios: false
     });
 
     if (entidad.modalidad === 'bolsa') {
@@ -195,6 +206,7 @@ const GestionEntidades: React.FC = () => {
     } else {
       cargarCupones(entidad.id);
     }
+    cargarUsuariosVinculados(entidad.id);
   };
 
   const cargarReporte = async (entidadId: string, desde: string, hasta: string) => {
@@ -221,6 +233,17 @@ const GestionEntidades: React.FC = () => {
     }
   };
 
+  const cargarUsuariosVinculados = async (entidadId: string) => {
+    try {
+      setModalDetalle((m) => ({ ...m, cargandoUsuarios: true, usuarios: [] }));
+      const data = await cobrosService.obtenerResumenEntidad(entidadId);
+      setModalDetalle((m) => ({ ...m, cargandoUsuarios: false, usuarios: data.usuarios || [] }));
+    } catch (err) {
+      console.error('Error al cargar usuarios vinculados:', err);
+      setModalDetalle((m) => ({ ...m, cargandoUsuarios: false }));
+    }
+  };
+
   const handleGenerarReporte = () => {
     if (!modalDetalle.entidad) return;
     if (!modalDetalle.desde || !modalDetalle.hasta) {
@@ -230,10 +253,7 @@ const GestionEntidades: React.FC = () => {
     cargarReporte(modalDetalle.entidad.id, modalDetalle.desde, modalDetalle.hasta);
   };
 
-  // ============================================
-  // GENERAR CUPÓN
-  // ============================================
-    const abrirModalCupon = () => {
+  const abrirModalCupon = () => {
     if (!modalDetalle.entidad) return;
     setModalCupon({
       abierto: true,
@@ -272,6 +292,97 @@ const GestionEntidades: React.FC = () => {
       toast.error(err?.response?.data?.error || 'Error al generar cupón');
       console.error(err);
     }
+  };
+
+  // ============================================
+  // ASIGNAR USUARIOS
+  // ============================================
+  const abrirModalAsignar = () => {
+    if (!modalDetalle.entidad) return;
+    setModalAsignar({ abierto: true, entidad: modalDetalle.entidad, email: '' });
+  };
+
+  const handleAsignarUsuario = async () => {
+    if (!modalAsignar.entidad) return;
+    if (!modalAsignar.email.trim()) {
+      toast.error('Ingresa un email');
+      return;
+    }
+    try {
+      await cobrosService.asignarUsuarioAEntidadPorEmail(
+        modalAsignar.entidad.id,
+        modalAsignar.email.trim()
+      );
+      toast.success('Usuario vinculado al convenio');
+      setModalAsignar({ abierto: false, entidad: null, email: '' });
+      if (modalDetalle.entidad) {
+        cargarUsuariosVinculados(modalDetalle.entidad.id);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Error al vincular usuario', { duration: 6000 });
+    }
+  };
+
+  const abrirModalMasivo = () => {
+    if (!modalDetalle.entidad) return;
+    setModalMasivo({
+      abierto: true,
+      entidad: modalDetalle.entidad,
+      texto: '',
+      procesando: false,
+      resultados: null
+    });
+  };
+
+  const handleCargaMasiva = async () => {
+    if (!modalMasivo.entidad) return;
+    const texto = modalMasivo.texto.trim();
+    if (!texto) {
+      toast.error('Pega o carga los emails');
+      return;
+    }
+
+    // Separar por saltos de línea, comas, punto y coma, espacios
+    const emails = texto
+      .split(/[\n,;\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+
+    if (emails.length === 0) {
+      toast.error('No se encontraron emails válidos');
+      return;
+    }
+
+    setModalMasivo((m) => ({ ...m, procesando: true, resultados: null }));
+    try {
+      const res = await cobrosService.asignarUsuariosMasivo(modalMasivo.entidad.id, emails);
+      setModalMasivo((m) => ({
+        ...m,
+        procesando: false,
+        resultados: res.data.resultados || []
+      }));
+      toast.success(res.message, { duration: 6000 });
+      if (modalDetalle.entidad) {
+        cargarUsuariosVinculados(modalDetalle.entidad.id);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Error en la carga masiva');
+      setModalMasivo((m) => ({ ...m, procesando: false }));
+    }
+  };
+
+  const handleArchivoCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const contenido = String(event.target?.result || '');
+      setModalMasivo((m) => ({ ...m, texto: contenido }));
+    };
+    reader.onerror = () => toast.error('Error al leer el archivo');
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const agruparPorUsuario = (consumos: ConsumoItem[]) => {
@@ -668,7 +779,7 @@ const GestionEntidades: React.FC = () => {
               <button
                 onClick={() => setModalDetalle({
                   abierto: false, entidad: null, desde: '', hasta: '', cargando: false,
-                  reporte: null, cupones: [], cargandoCupones: false
+                  reporte: null, cupones: [], cargandoCupones: false, usuarios: [], cargandoUsuarios: false
                 })}
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none flex-shrink-0"
                 aria-label="Cerrar"
@@ -814,7 +925,6 @@ const GestionEntidades: React.FC = () => {
                 )}
               </>
             ) : (
-              // Modalidad DESCUENTO: lista de cupones + botón generar
               <>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
                   <p className="text-sm text-gray-600">
@@ -886,6 +996,64 @@ const GestionEntidades: React.FC = () => {
                 )}
               </>
             )}
+
+            {/* === USUARIOS VINCULADOS === */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                <h4 className="font-semibold text-gray-800">
+                  Usuarios vinculados ({modalDetalle.usuarios.length})
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={abrirModalAsignar}
+                    className="bg-primario text-white px-3 py-1.5 rounded-lg hover:bg-primario-dark text-sm whitespace-nowrap"
+                  >
+                    + Asignar usuario
+                  </button>
+                  <button
+                    onClick={abrirModalMasivo}
+                    className="bg-[#3D405B] text-white px-3 py-1.5 rounded-lg hover:bg-[#2D2F44] text-sm whitespace-nowrap"
+                  >
+                    📄 Carga masiva
+                  </button>
+                </div>
+              </div>
+
+              {modalDetalle.cargandoUsuarios && (
+                <p className="text-center text-gray-500 py-4">Cargando usuarios...</p>
+              )}
+
+              {!modalDetalle.cargandoUsuarios && modalDetalle.usuarios.length === 0 && (
+                <p className="text-center text-gray-500 py-4 bg-gray-50 rounded-lg">
+                  Aún no hay usuarios vinculados a este convenio.
+                </p>
+              )}
+
+              {!modalDetalle.cargandoUsuarios && modalDetalle.usuarios.length > 0 && (
+                <div className="overflow-x-auto max-h-64 overflow-y-auto border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Nombre</th>
+                        <th className="px-3 py-2 text-left">Correo</th>
+                        <th className="px-3 py-2 text-center">Exento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {modalDetalle.usuarios.map((u: any) => (
+                        <tr key={u.id}>
+                          <td className="px-3 py-2">{u.nombre || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{u.email}</td>
+                          <td className="px-3 py-2 text-center">
+                            {u.es_exento ? '✅' : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -993,6 +1161,130 @@ const GestionEntidades: React.FC = () => {
                 className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal asignar usuario individual */}
+      {modalAsignar.abierto && modalAsignar.entidad && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-2 text-primario">Asignar usuario</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Convenio: <span className="font-medium">{modalAsignar.entidad.nombre}</span>
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email del usuario <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              placeholder="Ej: usuario@empresa.com"
+              className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario mb-4"
+              value={modalAsignar.email}
+              onChange={(e) => setModalAsignar({ ...modalAsignar, email: e.target.value })}
+              autoFocus
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleAsignarUsuario}
+                disabled={!modalAsignar.email.trim()}
+                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Vincular
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalAsignar({ abierto: false, entidad: null, email: '' })}
+                className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal carga masiva */}
+      {modalMasivo.abierto && modalMasivo.entidad && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-2 text-primario">Carga masiva de usuarios</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Convenio: <span className="font-medium">{modalMasivo.entidad.nombre}</span>
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subir archivo CSV o TXT
+            </label>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              className="w-full text-sm mb-4 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primario file:text-white file:cursor-pointer hover:file:bg-primario-dark"
+              onChange={handleArchivoCSV}
+            />
+            <p className="text-xs text-gray-500 -mt-3 mb-4">
+              El archivo debe tener un email por línea (o separados por comas). Ignora encabezados.
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              O pega los emails aquí (uno por línea)
+            </label>
+            <textarea
+              className="w-full p-2 border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primario mb-4 font-mono text-sm"
+              rows={8}
+              placeholder={'usuario1@empresa.com\nusuario2@empresa.com\nusuario3@empresa.com'}
+              value={modalMasivo.texto}
+              onChange={(e) => setModalMasivo({ ...modalMasivo, texto: e.target.value })}
+              disabled={modalMasivo.procesando}
+            />
+
+            {modalMasivo.resultados && (
+              <div className="mb-4 max-h-48 overflow-y-auto border rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Email</th>
+                      <th className="px-2 py-1 text-center">Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {modalMasivo.resultados.map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 font-mono">{r.email}</td>
+                        <td className="px-2 py-1 text-center">
+                          {r.ok ? (
+                            <span className="text-green-700">✅ Vinculado</span>
+                          ) : (
+                            <span className="text-red-700" title={r.mensaje}>
+                              ❌ {r.mensaje || r.motivo}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleCargaMasiva}
+                disabled={modalMasivo.procesando || !modalMasivo.texto.trim()}
+                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-dark flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {modalMasivo.procesando ? 'Procesando...' : 'Vincular usuarios'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalMasivo({ abierto: false, entidad: null, texto: '', procesando: false, resultados: null })}
+                className="bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 flex-1"
+              >
+                Cerrar
               </button>
             </div>
           </div>

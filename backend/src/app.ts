@@ -171,7 +171,8 @@ const io = new SocketServer(server, {
       
       const originSinSlash = origin.replace(/\/$/, '');
       const permitido = allowedOrigins.includes(origin) || 
-                        allowedOrigins.includes(originSinSlash);
+                        allowedOrigins.includes(originSinSlash) ||
+                        esDominioNetlifyDelProyecto(origin);
 
       if (permitido || process.env.NODE_ENV === 'development') {
         console.log(`✅ Socket.IO CORS permitido para: ${origin}`);

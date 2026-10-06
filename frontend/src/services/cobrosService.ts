@@ -220,6 +220,27 @@ export const cobrosService = {
   },
 
 
+  // Asignar usuario a entidad por email (admin)
+  asignarUsuarioAEntidadPorEmail: async (entidadId: string, email: string) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/entidades/${entidadId}/asignar-usuario`,
+      { email },
+      headers()
+    );
+    return response.data;
+  },
+
+  // Asignación masiva de usuarios a entidad (admin)
+  asignarUsuariosMasivo: async (entidadId: string, emails: string[]) => {
+    const response = await axios.post(
+      `${API_URL}/cobros/entidades/${entidadId}/asignar-usuarios-masivo`,
+      { emails },
+      headers()
+    );
+    return response.data;
+  },
+
+
   // ============================================
   // CUPONES
   // ============================================
