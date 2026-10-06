@@ -334,6 +334,7 @@ const GestionEntidades: React.FC = () => {
     });
   };
 
+  
   const handleCargaMasiva = async () => {
     if (!modalMasivo.entidad) return;
     const texto = modalMasivo.texto.trim();
@@ -342,7 +343,6 @@ const GestionEntidades: React.FC = () => {
       return;
     }
 
-    // Separar por saltos de línea, comas, punto y coma, espacios
     const emails = texto
       .split(/[\n,;\s]+/)
       .map((e) => e.trim())
@@ -361,7 +361,13 @@ const GestionEntidades: React.FC = () => {
         procesando: false,
         resultados: res.data.resultados || []
       }));
-      toast.success(res.message, { duration: 6000 });
+
+      const stats = res.data;
+      toast.success(
+        `Vinculados: ${stats.vinculados} · Pendientes de registro: ${stats.pendientes} · Con problemas: ${stats.fallidos}`,
+        { duration: 8000 }
+      );
+
       if (modalDetalle.entidad) {
         cargarUsuariosVinculados(modalDetalle.entidad.id);
       }
@@ -1243,7 +1249,7 @@ const GestionEntidades: React.FC = () => {
             />
 
             {modalMasivo.resultados && (
-              <div className="mb-4 max-h-48 overflow-y-auto border rounded-lg">
+              <div className="mb-4 max-h-64 overflow-y-auto border rounded-lg">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
@@ -1256,9 +1262,13 @@ const GestionEntidades: React.FC = () => {
                       <tr key={i}>
                         <td className="px-2 py-1 font-mono">{r.email}</td>
                         <td className="px-2 py-1 text-center">
-                          {r.ok ? (
-                            <span className="text-green-700">✅ Vinculado</span>
-                          ) : (
+                          {r.ok && r.tipo === 'vinculado' && (
+                            <span className="text-green-700">✅ Vinculado (ya existía)</span>
+                          )}
+                          {r.ok && r.tipo === 'pendiente' && (
+                            <span className="text-amber-700">⏳ Pendiente (se vinculará al registrarse)</span>
+                          )}
+                          {!r.ok && (
                             <span className="text-red-700" title={r.mensaje}>
                               ❌ {r.mensaje || r.motivo}
                             </span>

@@ -653,17 +653,27 @@ const asignarUsuarioAEntidadPorEmail = async (req, res) => {
         const resultado = await entidadService.asignarUsuarioPorEmail(String(email), entidadId);
         if (!resultado.ok) {
             const statusPorMotivo = {
-                no_existe: 404,
+                formato_invalido: 400,
                 ya_vinculado: 409,
-                otro_convenio: 409
+                otro_convenio: 409,
+                ya_autorizado: 409,
+                autorizado_otro_convenio: 409
             };
             const status = statusPorMotivo[resultado.motivo] || 400;
             return res.status(status).json({ error: resultado.mensaje, motivo: resultado.motivo });
         }
-        res.json({
+        if (resultado.tipo === 'vinculado') {
+            return res.json({
+                success: true,
+                tipo: 'vinculado',
+                message: `${resultado.usuario.email} vinculado al convenio`,
+                data: resultado.usuario
+            });
+        }
+        return res.json({
             success: true,
-            message: `${resultado.usuario.email} vinculado al convenio`,
-            data: resultado.usuario
+            tipo: 'pendiente',
+            message: `${resultado.email} guardado. Cuando se registre, quedará vinculado automáticamente.`
         });
     }
     catch (error) {
@@ -702,14 +712,21 @@ const asignarUsuariosMasivo = async (req, res) => {
             emailsUnicos.push(e);
         }
         const resultados = [];
-        let exitosos = 0;
+        let vinculados = 0;
+        let pendientes = 0;
         let fallidos = 0;
         for (const email of emailsUnicos) {
             try {
                 const r = await entidadService.asignarUsuarioPorEmail(email, entidadId);
                 if (r.ok) {
-                    exitosos++;
-                    resultados.push({ email, ok: true });
+                    if (r.tipo === 'vinculado') {
+                        vinculados++;
+                        resultados.push({ email, ok: true, tipo: 'vinculado' });
+                    }
+                    else {
+                        pendientes++;
+                        resultados.push({ email, ok: true, tipo: 'pendiente' });
+                    }
                 }
                 else {
                     fallidos++;
@@ -723,10 +740,11 @@ const asignarUsuariosMasivo = async (req, res) => {
         }
         res.json({
             success: true,
-            message: `Asignación masiva completada: ${exitosos} vinculados, ${fallidos} con problemas`,
+            message: `Carga completada: ${vinculados} vinculados, ${pendientes} pendientes de registro, ${fallidos} con problemas`,
             data: {
                 total: emailsUnicos.length,
-                exitosos,
+                vinculados,
+                pendientes,
                 fallidos,
                 resultados
             }

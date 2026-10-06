@@ -93,6 +93,21 @@ const registro = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, false)
             RETURNING id, email, nombre, rol, es_anonimo, nickname`, [email, passwordHash, nombre, telefono, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido]);
         const newUser = result.rows[0];
+        try {
+            const autorizadoQuery = await connection_1.pool.query(`SELECT id, entidad_id FROM correos_autorizados_convenio
+             WHERE email = $1 AND usado = false`, [email.toLowerCase()]);
+            if (autorizadoQuery.rows.length > 0) {
+                const autorizado = autorizadoQuery.rows[0];
+                await connection_1.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [autorizado.entidad_id, newUser.id]);
+                await connection_1.pool.query(`UPDATE correos_autorizados_convenio
+               SET usado = true, used_at = NOW(), usuario_vinculado_id = $1
+               WHERE id = $2`, [newUser.id, autorizado.id]);
+                console.log(`✅ Usuario ${email} vinculado automáticamente al convenio ${autorizado.entidad_id}`);
+            }
+        }
+        catch (errVinculacion) {
+            console.error('⚠️ Error al vincular automáticamente a convenio:', errVinculacion);
+        }
         const token = jsonwebtoken_1.default.sign({
             id: newUser.id,
             email: newUser.email,

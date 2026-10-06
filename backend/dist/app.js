@@ -62,6 +62,17 @@ if (process.env.FRONTEND_URL) {
     }
 }
 console.log('📋 Orígenes permitidos FINALES:', allowedOrigins);
+const esDominioNetlifyDelProyecto = (origin) => {
+    try {
+        const url = new URL(origin);
+        const host = url.hostname;
+        return (host === 'fundacion-chat-frontend-api.netlify.app' ||
+            host.endsWith('--fundacion-chat-frontend-api.netlify.app'));
+    }
+    catch {
+        return false;
+    }
+};
 const corsOptions = {
     origin: function (origin, callback) {
         if (!origin) {
@@ -74,7 +85,8 @@ const corsOptions = {
             allowedOrigins.includes(originSinSlash) ||
             allowedOrigins.includes(originConSlash) ||
             allowedOrigins.includes(originConDobleSlash);
-        if (permitido) {
+        const esNetlify = esDominioNetlifyDelProyecto(origin);
+        if (permitido || esNetlify) {
             console.log(`✅ CORS permitido para: ${origin}`);
             return callback(null, true);
         }
@@ -119,7 +131,8 @@ const io = new socket_io_1.Server(server, {
             }
             const originSinSlash = origin.replace(/\/$/, '');
             const permitido = allowedOrigins.includes(origin) ||
-                allowedOrigins.includes(originSinSlash);
+                allowedOrigins.includes(originSinSlash) ||
+                esDominioNetlifyDelProyecto(origin);
             if (permitido || process.env.NODE_ENV === 'development') {
                 console.log(`✅ Socket.IO CORS permitido para: ${origin}`);
                 return callback(null, true);

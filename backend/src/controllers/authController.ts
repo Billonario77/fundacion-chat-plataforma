@@ -131,6 +131,37 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
 
         const newUser = result.rows[0];
 
+        // 👇 Verificar si el email está autorizado en algún convenio.
+        // Si lo está, vincularlo automáticamente y marcar el correo como usado.
+        try {
+          const autorizadoQuery = await pool.query(
+            `SELECT id, entidad_id FROM correos_autorizados_convenio
+             WHERE email = $1 AND usado = false`,
+            [email.toLowerCase()]
+          );
+
+          if (autorizadoQuery.rows.length > 0) {
+            const autorizado = autorizadoQuery.rows[0];
+
+            await pool.query(
+              `UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`,
+              [autorizado.entidad_id, newUser.id]
+            );
+
+            await pool.query(
+              `UPDATE correos_autorizados_convenio
+               SET usado = true, used_at = NOW(), usuario_vinculado_id = $1
+               WHERE id = $2`,
+              [newUser.id, autorizado.id]
+            );
+
+            console.log(`✅ Usuario ${email} vinculado automáticamente al convenio ${autorizado.entidad_id}`);
+          }
+        } catch (errVinculacion) {
+          console.error('⚠️ Error al vincular automáticamente a convenio:', errVinculacion);
+          // No rompemos el registro si esto falla
+        }
+
         const token = jwt.sign(
             { 
                 id: newUser.id, 

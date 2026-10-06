@@ -853,6 +853,7 @@ export const asignarUsuarioAEntidad = async (req: AuthRequest, res: Response) =>
 // ============================================
 // ASIGNAR USUARIO A ENTIDAD POR EMAIL (Admin)
 // ============================================
+
 export const asignarUsuarioAEntidadPorEmail = async (req: AuthRequest, res: Response) => {
   try {
     if (req.user?.rol !== 'admin') {
@@ -870,7 +871,6 @@ export const asignarUsuarioAEntidadPorEmail = async (req: AuthRequest, res: Resp
       return res.status(400).json({ error: 'El email es requerido' });
     }
 
-    // Validar entidad
     const entidad = await entidadService.obtenerEntidad(entidadId);
     if (!entidad) {
       return res.status(404).json({ error: 'Entidad no encontrada' });
@@ -880,18 +880,30 @@ export const asignarUsuarioAEntidadPorEmail = async (req: AuthRequest, res: Resp
 
     if (!resultado.ok) {
       const statusPorMotivo: Record<string, number> = {
-        no_existe: 404,
+        formato_invalido: 400,
         ya_vinculado: 409,
-        otro_convenio: 409
+        otro_convenio: 409,
+        ya_autorizado: 409,
+        autorizado_otro_convenio: 409
       };
       const status = statusPorMotivo[resultado.motivo] || 400;
       return res.status(status).json({ error: resultado.mensaje, motivo: resultado.motivo });
     }
 
-    res.json({
+    if (resultado.tipo === 'vinculado') {
+      return res.json({
+        success: true,
+        tipo: 'vinculado',
+        message: `${resultado.usuario.email} vinculado al convenio`,
+        data: resultado.usuario
+      });
+    }
+
+    // tipo 'pendiente'
+    return res.json({
       success: true,
-      message: `${resultado.usuario.email} vinculado al convenio`,
-      data: resultado.usuario
+      tipo: 'pendiente',
+      message: `${resultado.email} guardado. Cuando se registre, quedará vinculado automáticamente.`
     });
 
   } catch (error: any) {
@@ -931,8 +943,6 @@ export const asignarUsuariosMasivo = async (req: AuthRequest, res: Response) => 
       return res.status(404).json({ error: 'Entidad no encontrada' });
     }
 
-    // Normalizar y quitar duplicados manteniendo el orden
-    
     const emailsUnicos: string[] = [];
     const vistos = new Set<string>();
     for (const raw of emails) {
@@ -945,19 +955,26 @@ export const asignarUsuariosMasivo = async (req: AuthRequest, res: Response) => 
     const resultados: {
       email: string;
       ok: boolean;
+      tipo?: 'vinculado' | 'pendiente';
       motivo?: string;
       mensaje?: string;
     }[] = [];
 
-    let exitosos = 0;
+    let vinculados = 0;
+    let pendientes = 0;
     let fallidos = 0;
 
     for (const email of emailsUnicos) {
       try {
         const r = await entidadService.asignarUsuarioPorEmail(email, entidadId);
         if (r.ok) {
-          exitosos++;
-          resultados.push({ email, ok: true });
+          if (r.tipo === 'vinculado') {
+            vinculados++;
+            resultados.push({ email, ok: true, tipo: 'vinculado' });
+          } else {
+            pendientes++;
+            resultados.push({ email, ok: true, tipo: 'pendiente' });
+          }
         } else {
           fallidos++;
           resultados.push({ email, ok: false, motivo: r.motivo, mensaje: r.mensaje });
@@ -970,10 +987,11 @@ export const asignarUsuariosMasivo = async (req: AuthRequest, res: Response) => 
 
     res.json({
       success: true,
-      message: `Asignación masiva completada: ${exitosos} vinculados, ${fallidos} con problemas`,
+      message: `Carga completada: ${vinculados} vinculados, ${pendientes} pendientes de registro, ${fallidos} con problemas`,
       data: {
         total: emailsUnicos.length,
-        exitosos,
+        vinculados,
+        pendientes,
         fallidos,
         resultados
       }

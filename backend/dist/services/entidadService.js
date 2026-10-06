@@ -101,22 +101,44 @@ class EntidadService {
     }
     async asignarUsuarioPorEmail(email, entidadId) {
         const emailNorm = String(email).trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+            return { ok: false, motivo: 'formato_invalido', mensaje: `Formato de email inválido: ${emailNorm}` };
+        }
         const usuarioQuery = await this.pool.query(`SELECT id, nombre, email, entidad_id FROM usuarios WHERE LOWER(email) = $1`, [emailNorm]);
-        if (usuarioQuery.rows.length === 0) {
-            return { ok: false, motivo: 'no_existe', mensaje: `No existe un usuario con el email ${emailNorm}` };
+        if (usuarioQuery.rows.length > 0) {
+            const usuario = usuarioQuery.rows[0];
+            if (usuario.entidad_id === entidadId) {
+                return { ok: false, motivo: 'ya_vinculado', mensaje: `${emailNorm} ya está vinculado a este convenio` };
+            }
+            if (usuario.entidad_id && usuario.entidad_id !== entidadId) {
+                return { ok: false, motivo: 'otro_convenio', mensaje: `${emailNorm} ya pertenece a otro convenio` };
+            }
+            await this.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [entidadId, usuario.id]);
+            return {
+                ok: true,
+                tipo: 'vinculado',
+                usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
+            };
         }
-        const usuario = usuarioQuery.rows[0];
-        if (usuario.entidad_id === entidadId) {
-            return { ok: false, motivo: 'ya_vinculado', mensaje: `${emailNorm} ya está vinculado a este convenio` };
+        const existenteQuery = await this.pool.query(`SELECT id, entidad_id, usado FROM correos_autorizados_convenio WHERE email = $1`, [emailNorm]);
+        if (existenteQuery.rows.length > 0) {
+            const existente = existenteQuery.rows[0];
+            if (existente.entidad_id === entidadId) {
+                return {
+                    ok: false,
+                    motivo: 'ya_autorizado',
+                    mensaje: `${emailNorm} ya está en la lista de este convenio (pendiente de registro)`
+                };
+            }
+            return {
+                ok: false,
+                motivo: 'autorizado_otro_convenio',
+                mensaje: `${emailNorm} ya está autorizado en otro convenio`
+            };
         }
-        if (usuario.entidad_id && usuario.entidad_id !== entidadId) {
-            return { ok: false, motivo: 'otro_convenio', mensaje: `${emailNorm} ya pertenece a otro convenio` };
-        }
-        await this.pool.query(`UPDATE usuarios SET entidad_id = $1, updated_at = NOW() WHERE id = $2`, [entidadId, usuario.id]);
-        return {
-            ok: true,
-            usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email }
-        };
+        await this.pool.query(`INSERT INTO correos_autorizados_convenio (entidad_id, email)
+       VALUES ($1, $2)`, [entidadId, emailNorm]);
+        return { ok: true, tipo: 'pendiente', email: emailNorm };
     }
     async marcarUsuarioExento(usuarioId, motivo) {
         await this.pool.query(`UPDATE usuarios SET es_exento = true, motivo_exencion = $1 WHERE id = $2`, [motivo, usuarioId]);
