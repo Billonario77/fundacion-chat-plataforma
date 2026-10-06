@@ -74,6 +74,21 @@ if (process.env.FRONTEND_URL) {
 
 console.log('📋 Orígenes permitidos FINALES:', allowedOrigins);
 
+// Helper: acepta el dominio principal del proyecto y cualquier deploy preview de Netlify
+// (URLs tipo https://<hash>--fundacion-chat-frontend-api.netlify.app)
+const esDominioNetlifyDelProyecto = (origin: string): boolean => {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    return (
+      host === 'fundacion-chat-frontend-api.netlify.app' ||
+      host.endsWith('--fundacion-chat-frontend-api.netlify.app')
+    );
+  } catch {
+    return false;
+  }
+};
+
 // ============================================
 // CONFIGURACIÓN CORS
 // ============================================
@@ -95,7 +110,9 @@ const corsOptions: cors.CorsOptions = {
                       allowedOrigins.includes(originConSlash) ||
                       allowedOrigins.includes(originConDobleSlash);
 
-    if (permitido) {
+    const esNetlify = esDominioNetlifyDelProyecto(origin);
+
+    if (permitido || esNetlify) {
       console.log(`✅ CORS permitido para: ${origin}`);
       return callback(null, true);
     }
