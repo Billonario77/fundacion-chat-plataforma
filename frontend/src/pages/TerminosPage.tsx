@@ -62,9 +62,9 @@ const TerminosPage: React.FC = () => {
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">1. Aceptación de los términos</h2>
               <p className="text-[#5D6078]">
-                Al acceder y utilizar la plataforma de la <strong>Fundación Voces del Alma</strong> (en adelante, "la Fundación",
-                "la Plataforma" o "el Servicio"), aceptas de manera libre, expresa e informada los presentes Términos y
-                Condiciones. Si no estás de acuerdo con alguno de ellos, te pedimos abstenerte de usar la Plataforma.
+                Al acceder y utilizar la plataforma <strong>Voces del Alma</strong> operada por <strong>Biozynex SAS </strong>
+                (en adelante, "Voces del Alma", "la Plataforma" o "el Servicio"), aceptas de manera libre, expresa e informada 
+                los presentes Términos y Condiciones. Si no estás de acuerdo con alguno de ellos, te pedimos abstenerte de usar la Plataforma.
               </p>
             </div>
 
@@ -77,14 +77,14 @@ const TerminosPage: React.FC = () => {
               </p>
               <p className="text-[#5D6078] mt-3">
                 Si estás atravesando una crisis con riesgo para tu vida o la de terceros, por favor acude de inmediato a
-                los servicios de emergencia locales (línea 123 en Colombia) o a un centro hospitalario cercano.
+                los servicios de emergencia locales (<strong>línea 123</strong> en Colombia) o a un centro hospitalario cercano.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">3. Requisitos de uso</h2>
               <ul className="list-disc pl-6 text-[#5D6078] space-y-2">
-                <li>Ser mayor de edad (18 años) para registrarse de forma autónoma.</li>
+                <li>Ser mayor de edad (<strong>18 años</strong>) para registrarse de forma autónoma.</li>
                 <li>Los menores de edad solo podrán acceder con autorización expresa de su representante legal.</li>
                 <li>Registrarte con información veraz y mantener la confidencialidad de tu contraseña.</li>
                 <li>Hacer un uso respetuoso del Servicio, sin afectar a otros usuarios ni a los guías.</li>
@@ -94,31 +94,29 @@ const TerminosPage: React.FC = () => {
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">4. Anonimato</h2>
               <p className="text-[#5D6078]">
-                La Plataforma ofrece la posibilidad de registrarte en <strong>modo anónimo</strong> usando un NickName. En ese
-                caso, tu nombre real no será visible para los guías ni para otros usuarios. Sin embargo, para cumplir con
-                obligaciones legales y de seguridad, la Fundación conserva un registro interno que permite la identificación
-                en casos excepcionales (por ejemplo, ante una orden judicial o una situación de riesgo vital).
+                Sin embargo, para cumplir obligaciones legales, de seguridad y de protección de los usuarios, 
+                <strong> Biozynex SAS</strong>, como operador de la Plataforma <strong>Voces del Alma</strong>,
+                conserva un registro interno que permite la identificación en circunstancias excepcionales, 
+                tales como una orden judicial o una situación de riesgo grave para la vida o integridad de una persona.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">5. Pagos y sesiones</h2>
               <ul className="list-disc pl-6 text-[#5D6078] space-y-2">
-                <li>Las sesiones pueden tener un costo que se informa antes de agendar y pagar.</li>
-                <li>Los pagos se procesan a través de <strong>Wompi</strong> (pasarela de pagos autorizada en Colombia). La Fundación no almacena datos de tarjetas.</li>
+                <li>Las sesiones tendrán un costo que se informa antes de agendar y pagar.</li>
+                <li>Los pagos se procesan a través de <strong>Wompi</strong> (pasarela de pagos de Bancolombia). <strong>Biozynex SAS</strong> no almacena datos 
+                    completos de tarjetas de crédito o débito y se apoya en proveedores de pago certificados para el procesamiento de las transacciones.</li>
                 <li>Podrás cancelar una sesión sin penalización hasta <strong>2 horas antes</strong> de su inicio.</li>
                 <li>Si no realizas el pago <strong>1 hora antes</strong> del inicio (o 5 minutos después del inicio si la sesión fue agendada con menos de 70 minutos de anticipación), la sesión se cancela automáticamente y se genera una multa equivalente al <strong>50% del valor de la sesión</strong>, que se sumará a tu próxima sesión.</li>
-                <li>Las multas son configurables por la Fundación y se informan oportunamente en la Plataforma.</li>
+                <li>Las multas son configurables por <strong>Biozynex SAS</strong> y se informan oportunamente en la Plataforma.</li>
               </ul>
             </div>
 
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">6. Convenios con empresas e instituciones</h2>
               <p className="text-[#5D6078]">
-                La Fundación puede establecer convenios con empresas, colegios, universidades y entidades estatales.
-                Estos convenios pueden ofrecer <strong>descuentos por sesión</strong> (mediante cupones de un solo uso
-                por usuario) o <strong>bolsas de horas</strong> contratadas. Para acceder al beneficio, el usuario deberá
-                estar autorizado por la entidad correspondiente.
+                <strong>Biozynex SAS</strong> a través de la marca <strong>Voces del Alma</strong>, puede establecer convenios con empresas, colegios, universidades, fundaciones, entidades estatales y organizaciones privadas.
               </p>
             </div>
 
@@ -126,25 +124,24 @@ const TerminosPage: React.FC = () => {
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">7. Conducta del usuario</h2>
               <p className="text-[#5D6078]">
                 El usuario se compromete a no usar la Plataforma para enviar contenido ofensivo, discriminatorio,
-                violento, sexual, ilegal o que vulnere derechos de terceros. La Fundación podrá suspender o cancelar
-                cuentas que incumplan estas normas.
+                violento, sexual, ilegal o que vulnere derechos de terceros. <strong>Voces del Alma</strong> podrá suspender temporal o definitivamente las cuentas que incumplan estas normas.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">8. Propiedad intelectual</h2>
               <p className="text-[#5D6078]">
-                Todos los contenidos de la Plataforma (textos, diseño, marcas, logos, código fuente) son propiedad de la
-                Fundación o se usan con autorización. No podrán reproducirse sin permiso previo y por escrito.
+                Todos los contenidos de la Plataforma, incluyendo textos, diseños, logotipos, software, bases de datos, interfaces gráficas, nombres comerciales y demás elementos, 
+                son propiedad de <strong>Biozynex SAS</strong> o se utilizan bajo licencia o autorización de sus respectivos titulares. No podrán reproducirse sin permiso previo y por escrito.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">9. Limitación de responsabilidad</h2>
               <p className="text-[#5D6078]">
-                La Fundación realiza sus mejores esfuerzos para ofrecer un Servicio de calidad, pero no garantiza
+                <strong>Biozynex SAS</strong> realiza sus mejores esfuerzos para ofrecer un Servicio de calidad, pero no garantiza
                 resultados específicos ni se hace responsable por decisiones personales tomadas a partir del
-                acompañamiento recibido. La responsabilidad de la Fundación se limita al valor efectivamente pagado por
+                acompañamiento recibido. La responsabilidad de <strong>Biozynex SAS</strong> se limita al valor efectivamente pagado por
                 el usuario por el Servicio.
               </p>
             </div>
@@ -152,7 +149,7 @@ const TerminosPage: React.FC = () => {
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">10. Modificaciones</h2>
               <p className="text-[#5D6078]">
-                La Fundación podrá modificar estos Términos en cualquier momento. Las modificaciones se publicarán en
+                <strong>Biozynex SAS</strong> podrá modificar estos Términos en cualquier momento. Las modificaciones se publicarán en
                 esta página con la fecha de actualización. El uso continuado del Servicio implica su aceptación.
               </p>
             </div>
@@ -161,7 +158,7 @@ const TerminosPage: React.FC = () => {
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">11. Ley aplicable y jurisdicción</h2>
               <p className="text-[#5D6078]">
                 Estos Términos se rigen por las leyes de la <strong>República de Colombia</strong>. Cualquier
-                controversia se someterá a los jueces competentes del domicilio de la Fundación.
+                controversia se someterá a los jueces competentes del domicilio de <strong>Biozynex SAS</strong>
               </p>
             </div>
 

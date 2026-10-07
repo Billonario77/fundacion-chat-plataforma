@@ -144,7 +144,7 @@ const CookiesPage: React.FC = () => {
             <div>
               <h2 className="text-2xl font-serif text-[#3D405B] mb-3">7. Cambios a esta política</h2>
               <p className="text-[#5D6078]">
-                Podemos actualizar esta Política de Cookies cuando lo consideremos necesario. La fecha de última
+                Podemos actualizar esta <strong>Política de Cookies</strong> cuando lo consideremos necesario. La fecha de última
                 actualización aparece al inicio de esta página.
               </p>
             </div>

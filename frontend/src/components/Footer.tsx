@@ -161,6 +161,17 @@ const Footer: React.FC = () => {
               &nbsp;Todos los derechos reservados.
             </p>
             <p className="text-center md:text-center">
+              Voces del Alma es una marca de: {' '}
+              <a 
+                href="https://www.biozynex.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
+              >
+                BIOZYNEX SAS
+              </a>
+            </p>
+            <p className="text-center md:text-right">
               Pagina creada por:{' '}
               <a 
                 href="https://www.arjosoft.com.co" 
@@ -168,11 +179,17 @@ const Footer: React.FC = () => {
                 rel="noopener noreferrer"
                 className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
               >
-                Arjosoft S.A.
+                Arjosoft{' '}
+               </a>
+                &nbsp;una marca de &nbsp;
+              <a 
+                href="https://www.biozynex.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
+              >
+                BIOZYNEX SAS
               </a>
-            </p>
-            <p className="text-center md:text-right">
-              Tu Voz nos importa, por eso queremos escucharte.💛
             </p>
           </div>
         </div>
