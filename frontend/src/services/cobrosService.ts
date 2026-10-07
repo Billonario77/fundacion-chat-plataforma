@@ -241,6 +241,32 @@ export const cobrosService = {
   },
 
 
+  // Obtener correos autorizados de una entidad (admin)
+  // Por defecto solo los pendientes (usado=false). Pasar soloPendientes=false para todos.
+  obtenerCorreosAutorizados: async (
+    entidadId: string,
+    soloPendientes: boolean = true
+  ): Promise<any[]> => {
+    const response = await axios.get(
+      `${API_URL}/cobros/entidades/${entidadId}/correos-autorizados`,
+      {
+        params: { pendientes: soloPendientes },
+        ...headers()
+      }
+    );
+    return response.data.data;
+  },
+
+  // Eliminar un correo autorizado (admin)
+  eliminarCorreoAutorizado: async (entidadId: string, correoId: string) => {
+    const response = await axios.delete(
+      `${API_URL}/cobros/entidades/${entidadId}/correos-autorizados/${correoId}`,
+      headers()
+    );
+    return response.data;
+  },
+
+
   // ============================================
   // CUPONES
   // ============================================

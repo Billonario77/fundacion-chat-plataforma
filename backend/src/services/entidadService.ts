@@ -243,6 +243,41 @@ export class EntidadService {
   }
 
 
+    /**
+   * Obtener correos autorizados de una entidad.
+   * Por defecto solo devuelve los pendientes (usado = false).
+   */
+  async obtenerCorreosAutorizados(
+    entidadId: string,
+    soloPendientes: boolean = true
+  ): Promise<any[]> {
+    const query = soloPendientes
+      ? `SELECT id, email, usado, usuario_vinculado_id, created_at, used_at
+         FROM correos_autorizados_convenio
+         WHERE entidad_id = $1 AND usado = false
+         ORDER BY created_at DESC`
+      : `SELECT id, email, usado, usuario_vinculado_id, created_at, used_at
+         FROM correos_autorizados_convenio
+         WHERE entidad_id = $1
+         ORDER BY created_at DESC`;
+    const result = await this.pool.query(query, [entidadId]);
+    return result.rows;
+  }
+
+  /**
+   * Eliminar un correo autorizado por su ID.
+   * Verifica que pertenezca a la entidad indicada.
+   */
+  async eliminarCorreoAutorizado(correoId: string, entidadId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `DELETE FROM correos_autorizados_convenio
+       WHERE id = $1 AND entidad_id = $2`,
+      [correoId, entidadId]
+    );
+    return (result.rowCount || 0) > 0;
+  }
+
+
   /**
    * Marcar usuario como exento
    */

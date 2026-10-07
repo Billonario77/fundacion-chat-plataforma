@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.asignarUsuariosMasivo = exports.asignarUsuarioAEntidadPorEmail = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
+exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.eliminarCorreoAutorizado = exports.obtenerCorreosAutorizados = exports.asignarUsuariosMasivo = exports.asignarUsuarioAEntidadPorEmail = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
@@ -756,6 +756,53 @@ const asignarUsuariosMasivo = async (req, res) => {
     }
 };
 exports.asignarUsuariosMasivo = asignarUsuariosMasivo;
+const obtenerCorreosAutorizados = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden ver correos autorizados' });
+        }
+        const { entidadId } = req.params;
+        const { pendientes } = req.query;
+        if (!entidadId) {
+            return res.status(400).json({ error: 'Entidad ID es requerido' });
+        }
+        const soloPendientes = pendientes !== 'false';
+        const correos = await entidadService.obtenerCorreosAutorizados(entidadId, soloPendientes);
+        res.json({
+            success: true,
+            data: correos
+        });
+    }
+    catch (error) {
+        console.error('Error al obtener correos autorizados:', error);
+        res.status(500).json({ error: error.message || 'Error al obtener correos' });
+    }
+};
+exports.obtenerCorreosAutorizados = obtenerCorreosAutorizados;
+const eliminarCorreoAutorizado = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden eliminar correos' });
+        }
+        const { entidadId, correoId } = req.params;
+        if (!entidadId || !correoId) {
+            return res.status(400).json({ error: 'Entidad ID y correo ID son requeridos' });
+        }
+        const eliminado = await entidadService.eliminarCorreoAutorizado(correoId, entidadId);
+        if (!eliminado) {
+            return res.status(404).json({ error: 'Correo no encontrado o no pertenece a este convenio' });
+        }
+        res.json({
+            success: true,
+            message: 'Correo eliminado correctamente'
+        });
+    }
+    catch (error) {
+        console.error('Error al eliminar correo autorizado:', error);
+        res.status(500).json({ error: error.message || 'Error al eliminar correo' });
+    }
+};
+exports.eliminarCorreoAutorizado = eliminarCorreoAutorizado;
 const marcarUsuarioExento = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {

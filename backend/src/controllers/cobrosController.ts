@@ -1005,6 +1005,71 @@ export const asignarUsuariosMasivo = async (req: AuthRequest, res: Response) => 
 
 
 // ============================================
+// OBTENER CORREOS AUTORIZADOS DE UNA ENTIDAD (Admin)
+// ============================================
+export const obtenerCorreosAutorizados = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden ver correos autorizados' });
+    }
+
+    const { entidadId } = req.params;
+    const { pendientes } = req.query;
+
+    if (!entidadId) {
+      return res.status(400).json({ error: 'Entidad ID es requerido' });
+    }
+
+    // Por defecto solo pendientes; ?pendientes=false trae todos
+    const soloPendientes = pendientes !== 'false';
+
+    const correos = await entidadService.obtenerCorreosAutorizados(entidadId, soloPendientes);
+
+    res.json({
+      success: true,
+      data: correos
+    });
+
+  } catch (error: any) {
+    console.error('Error al obtener correos autorizados:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener correos' });
+  }
+};
+
+// ============================================
+// ELIMINAR CORREO AUTORIZADO (Admin)
+// ============================================
+export const eliminarCorreoAutorizado = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden eliminar correos' });
+    }
+
+    const { entidadId, correoId } = req.params;
+
+    if (!entidadId || !correoId) {
+      return res.status(400).json({ error: 'Entidad ID y correo ID son requeridos' });
+    }
+
+    const eliminado = await entidadService.eliminarCorreoAutorizado(correoId, entidadId);
+
+    if (!eliminado) {
+      return res.status(404).json({ error: 'Correo no encontrado o no pertenece a este convenio' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Correo eliminado correctamente'
+    });
+
+  } catch (error: any) {
+    console.error('Error al eliminar correo autorizado:', error);
+    res.status(500).json({ error: error.message || 'Error al eliminar correo' });
+  }
+};
+
+
+// ============================================
 // MARCAR USUARIO COMO EXENTO (Admin)
 // ============================================
 export const marcarUsuarioExento = async (req: AuthRequest, res: Response) => {

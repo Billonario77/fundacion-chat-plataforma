@@ -21,6 +21,8 @@ import {
   asignarUsuarioAEntidad,
   asignarUsuarioAEntidadPorEmail,
   asignarUsuariosMasivo,
+  obtenerCorreosAutorizados,
+  eliminarCorreoAutorizado,
   marcarUsuarioExento,
   obtenerCupones,
   generarFirmaPagoSesion,
@@ -91,6 +93,12 @@ router.post('/entidades/:entidadId/asignar-usuario', authenticateToken, isAdmin,
 
 // Asignación masiva de usuarios a una entidad (solo admin)
 router.post('/entidades/:entidadId/asignar-usuarios-masivo', authenticateToken, isAdmin, asignarUsuariosMasivo);
+
+// Listar correos autorizados de una entidad (solo admin)
+router.get('/entidades/:entidadId/correos-autorizados', authenticateToken, isAdmin, obtenerCorreosAutorizados);
+
+// Eliminar correo autorizado de una entidad (solo admin)
+router.delete('/entidades/:entidadId/correos-autorizados/:correoId', authenticateToken, isAdmin, eliminarCorreoAutorizado);
 
 // Asignar usuario a entidad (solo admin)
 router.post('/usuarios/asignar-entidad', authenticateToken, isAdmin, asignarUsuarioAEntidad);

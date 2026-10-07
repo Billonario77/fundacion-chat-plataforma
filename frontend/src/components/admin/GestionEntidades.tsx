@@ -46,6 +46,8 @@ const GestionEntidades: React.FC = () => {
     cargandoCupones: boolean;
     usuarios: any[];
     cargandoUsuarios: boolean;
+    correosAutorizados: any[];
+    cargandoCorreos: boolean;
   }>({
     abierto: false,
     entidad: null,
@@ -56,7 +58,9 @@ const GestionEntidades: React.FC = () => {
     cupones: [],
     cargandoCupones: false,
     usuarios: [],
-    cargandoUsuarios: false
+    cargandoUsuarios: false,
+    correosAutorizados: [],
+    cargandoCorreos: false
   });
 
   const [modalCupon, setModalCupon] = useState<{
@@ -198,7 +202,9 @@ const GestionEntidades: React.FC = () => {
       cupones: [],
       cargandoCupones: false,
       usuarios: [],
-      cargandoUsuarios: false
+      cargandoUsuarios: false,
+      correosAutorizados: [],
+      cargandoCorreos: false
     });
 
     if (entidad.modalidad === 'bolsa') {
@@ -207,6 +213,7 @@ const GestionEntidades: React.FC = () => {
       cargarCupones(entidad.id);
     }
     cargarUsuariosVinculados(entidad.id);
+    cargarCorreosAutorizados(entidad.id);
   };
 
   const cargarReporte = async (entidadId: string, desde: string, hasta: string) => {
@@ -241,6 +248,29 @@ const GestionEntidades: React.FC = () => {
     } catch (err) {
       console.error('Error al cargar usuarios vinculados:', err);
       setModalDetalle((m) => ({ ...m, cargandoUsuarios: false }));
+    }
+  };
+
+    const cargarCorreosAutorizados = async (entidadId: string) => {
+    try {
+      setModalDetalle((m) => ({ ...m, cargandoCorreos: true, correosAutorizados: [] }));
+      const data = await cobrosService.obtenerCorreosAutorizados(entidadId, true);
+      setModalDetalle((m) => ({ ...m, cargandoCorreos: false, correosAutorizados: data }));
+    } catch (err) {
+      console.error('Error al cargar correos autorizados:', err);
+      setModalDetalle((m) => ({ ...m, cargandoCorreos: false }));
+    }
+  };
+
+  const handleEliminarCorreo = async (correoId: string, email: string) => {
+    if (!modalDetalle.entidad) return;
+    if (!window.confirm(`¿Eliminar el correo autorizado ${email}?`)) return;
+    try {
+      await cobrosService.eliminarCorreoAutorizado(modalDetalle.entidad.id, correoId);
+      toast.success('Correo eliminado');
+      cargarCorreosAutorizados(modalDetalle.entidad.id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Error al eliminar correo');
     }
   };
 
@@ -785,7 +815,9 @@ const GestionEntidades: React.FC = () => {
               <button
                 onClick={() => setModalDetalle({
                   abierto: false, entidad: null, desde: '', hasta: '', cargando: false,
-                  reporte: null, cupones: [], cargandoCupones: false, usuarios: [], cargandoUsuarios: false
+                  reporte: null, cupones: [], cargandoCupones: false,
+                  usuarios: [], cargandoUsuarios: false,
+                  correosAutorizados: [], cargandoCorreos: false
                 })}
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none flex-shrink-0"
                 aria-label="Cerrar"
@@ -1052,6 +1084,62 @@ const GestionEntidades: React.FC = () => {
                           <td className="px-3 py-2 text-gray-600">{u.email}</td>
                           <td className="px-3 py-2 text-center">
                             {u.es_exento ? '✅' : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+                        {/* === CORREOS AUTORIZADOS PENDIENTES === */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                <h4 className="font-semibold text-gray-800">
+                  Correos autorizados pendientes ({modalDetalle.correosAutorizados.length})
+                </h4>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Emails cargados que aún no se han registrado. Al registrarse con su correo, se vincularán automáticamente.
+              </p>
+
+              {modalDetalle.cargandoCorreos && (
+                <p className="text-center text-gray-500 py-4">Cargando correos...</p>
+              )}
+
+              {!modalDetalle.cargandoCorreos && modalDetalle.correosAutorizados.length === 0 && (
+                <p className="text-center text-gray-500 py-4 bg-gray-50 rounded-lg">
+                  No hay correos pendientes. Todos los correos cargados ya se registraron o no hay ninguno.
+                </p>
+              )}
+
+              {!modalDetalle.cargandoCorreos && modalDetalle.correosAutorizados.length > 0 && (
+                <div className="overflow-x-auto max-h-64 overflow-y-auto border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Correo</th>
+                        <th className="px-3 py-2 text-left">Cargado el</th>
+                        <th className="px-3 py-2 text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {modalDetalle.correosAutorizados.map((c: any) => (
+                        <tr key={c.id}>
+                          <td className="px-3 py-2 font-mono text-gray-800">{c.email}</td>
+                          <td className="px-3 py-2 text-gray-600 text-xs">
+                            {new Date(c.created_at).toLocaleDateString('es-CO', {
+                              timeZone: 'America/Bogota'
+                            })}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => handleEliminarCorreo(c.id, c.email)}
+                              className="text-red-600 hover:text-red-800 text-xs"
+                            >
+                              Eliminar
+                            </button>
                           </td>
                         </tr>
                       ))}

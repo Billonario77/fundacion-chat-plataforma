@@ -140,6 +140,24 @@ class EntidadService {
        VALUES ($1, $2)`, [entidadId, emailNorm]);
         return { ok: true, tipo: 'pendiente', email: emailNorm };
     }
+    async obtenerCorreosAutorizados(entidadId, soloPendientes = true) {
+        const query = soloPendientes
+            ? `SELECT id, email, usado, usuario_vinculado_id, created_at, used_at
+         FROM correos_autorizados_convenio
+         WHERE entidad_id = $1 AND usado = false
+         ORDER BY created_at DESC`
+            : `SELECT id, email, usado, usuario_vinculado_id, created_at, used_at
+         FROM correos_autorizados_convenio
+         WHERE entidad_id = $1
+         ORDER BY created_at DESC`;
+        const result = await this.pool.query(query, [entidadId]);
+        return result.rows;
+    }
+    async eliminarCorreoAutorizado(correoId, entidadId) {
+        const result = await this.pool.query(`DELETE FROM correos_autorizados_convenio
+       WHERE id = $1 AND entidad_id = $2`, [correoId, entidadId]);
+        return (result.rowCount || 0) > 0;
+    }
     async marcarUsuarioExento(usuarioId, motivo) {
         await this.pool.query(`UPDATE usuarios SET es_exento = true, motivo_exencion = $1 WHERE id = $2`, [motivo, usuarioId]);
     }
