@@ -17,6 +17,9 @@ import DonarPage from './pages/DonarPage';
 import GraciasPage from './pages/GraciasPage';
 import Inicio from './pages/Inicio';
 import TestimoniosPage from './pages/TestimoniosPage';
+import TerminosPage from './pages/TerminosPage';
+import PrivacidadPage from './pages/PrivacidadPage';
+import CookiesPage from './pages/CookiesPage';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollReset from './components/ScrollReset';
 
@@ -71,6 +74,9 @@ function AppContent() {
       <Route path="/registro" element={<Registro />} />
       <Route path="/donar" element={<DonarPage />} />
       <Route path="/testimonios" element={<TestimoniosPage />} />
+      <Route path="/terminos" element={<TerminosPage />} />
+      <Route path="/privacidad" element={<PrivacidadPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
       <Route path="/gracias" element={<GraciasPage />} />
       
             <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
