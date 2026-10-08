@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -25,27 +25,60 @@ const CargaGuias: React.FC = () => {
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'disponibles' | 'ocupados'>('todos');
 
-  const cargarCargaGuias = async () => {
+  const abortRef = useRef<AbortController | null>(null);
+  const enVueloRef = useRef(false);
+
+  const cargarCargaGuias = async (intento = 1) => {
+    // Evitar peticiones duplicadas
+    if (enVueloRef.current) return;
+    enVueloRef.current = true;
+
+    // Cancelar cualquier petición previa pendiente
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/admin/carga-guias`, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 45000,
+        signal: controller.signal,
       });
       setGuias(response.data.guias);
-    } catch (err) {
+      setError('');
+    } catch (err: any) {
+      if (axios.isCancel(err)) {
+        // Petición cancelada, no hacer nada
+        return;
+      }
+      if (intento === 1) {
+        console.warn('⚠️ Falló carga-guias, reintentando en 3s...');
+        setTimeout(() => {
+          enVueloRef.current = false;
+          cargarCargaGuias(2);
+        }, 3000);
+        return;
+      }
       setError('Error al cargar la carga de guías');
       console.error(err);
       toast.error('Error al cargar datos de guías');
     } finally {
-      setLoading(false);
+      enVueloRef.current = false;
+      if (intento === 2) setLoading(false);
     }
   };
 
   useEffect(() => {
     cargarCargaGuias();
-    const interval = setInterval(() => cargarCargaGuias(), 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => cargarCargaGuias(), 60000);
+
+    return () => {
+      clearInterval(interval);
+      abortRef.current?.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getColorDisponibilidad = (disponible: boolean) =>
@@ -67,7 +100,7 @@ const CargaGuias: React.FC = () => {
   const totalActivos = guias.reduce((sum, g) => sum + g.turnos_activos, 0);
   const guiasDisponibles = guias.filter((g) => g.disponible).length;
 
-  if (loading) {
+  if (loading && guias.length === 0) {
     return (
       <div className="card">
         <h2 className="text-xl md:text-2xl font-bold text-primario mb-6">📊 Carga de Guías</h2>
@@ -92,7 +125,6 @@ const CargaGuias: React.FC = () => {
         </div>
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setFiltro('todos')}
@@ -183,7 +215,7 @@ const CargaGuias: React.FC = () => {
       )}
 
       <div className="mt-4 flex justify-end">
-        <button onClick={cargarCargaGuias} className="text-sm text-primario hover:underline flex items-center gap-1">
+        <button onClick={() => cargarCargaGuias()} className="text-sm text-primario hover:underline flex items-center gap-1">
           🔄 Actualizar
         </button>
       </div>

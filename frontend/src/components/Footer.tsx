@@ -161,14 +161,22 @@ const Footer: React.FC = () => {
               &nbsp;Todos los derechos reservados.
             </p>
             <p className="text-center md:text-center">
-              Voces del Alma es una marca de: {' '}
+              <a
+                href="https://fundacion-chat-frontend-api.netlify.app/"
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
+              >
+                Voces del Alma &nbsp;  
+              </a> 
+              es una marca de: {' '}
               <a 
                 href="https://www.biozynex.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
               >
-                BIOZYNEX SAS
+                Biozynex SAS
               </a>
             </p>
             <p className="text-center md:text-right">
@@ -188,7 +196,7 @@ const Footer: React.FC = () => {
                 rel="noopener noreferrer"
                 className="text-[#F2CC8F] hover:text-white transition-colors font-semibold"
               >
-                BIOZYNEX SAS
+                Biozynex SAS
               </a>
             </p>
           </div>
