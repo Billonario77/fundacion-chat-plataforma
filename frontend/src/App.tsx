@@ -20,6 +20,7 @@ import TestimoniosPage from './pages/TestimoniosPage';
 import TerminosPage from './pages/TerminosPage';
 import PrivacidadPage from './pages/PrivacidadPage';
 import CookiesPage from './pages/CookiesPage';
+import PreguntasFrecuentesPage from './pages/PreguntasFrecuentesPage';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollReset from './components/ScrollReset';
 
@@ -76,6 +77,7 @@ function AppContent() {
       <Route path="/testimonios" element={<TestimoniosPage />} />
       <Route path="/terminos" element={<TerminosPage />} />
       <Route path="/privacidad" element={<PrivacidadPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
       <Route path="/cookies" element={<CookiesPage />} />
       <Route path="/gracias" element={<GraciasPage />} />
       

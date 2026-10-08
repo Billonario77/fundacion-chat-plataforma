@@ -6,6 +6,7 @@ const Footer: React.FC = () => {
 
   // Enlaces legales
   const enlacesLegales = [
+    { label: 'Preguntas frecuentes', to: '/preguntas-frecuentes' },
     { label: 'Términos y condiciones', to: '/terminos' },
     { label: 'Política de privacidad', to: '/privacidad' },
     { label: 'Política de cookies', to: '/cookies' }

@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { donacionesService } from '../services/donacionesService';
 import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
+import Footer from '../components/Footer';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const GraciasPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -64,7 +66,7 @@ const GraciasPage: React.FC = () => {
 
   const compartirEnX = () => {
     const texto = encodeURIComponent(
-      'Acabo de donar a @FundacionApoyo 💛 Un espacio seguro para sanar. Únete: https://fundacion-chat-frontend-api.netlify.app/donar'
+      'Acabo de donar a @vocesdelalma 💛 Un espacio seguro para sanar. Únete: https://fundacion-chat-frontend-api.netlify.app/donar'
     );
     window.open(`https://twitter.com/intent/tweet?text=${texto}`, '_blank');
   };
@@ -295,6 +297,9 @@ const GraciasPage: React.FC = () => {
         </motion.p>
       </motion.div>
       </div>
+
+      <Footer />
+      <WhatsAppButton />
     </div>
   );
 };
