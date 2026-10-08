@@ -419,22 +419,7 @@ useEffect(() => {
   }
 }, [pestañaActiva]);
 
-  // Auto-refresh CADA 5 SEGUNDOS
-  useEffect(() => {
-    if (pestañaActiva !== 'activas') return;
-    
-    console.log('⏱️ Iniciando refresh cada 5 segundos');
-    const interval = setInterval(() => {
-      console.log('🔄 Refrescando lista de turnos...');
-      cargarSolicitudes(true);
-    }, 5000);
-    
-    return () => {
-      console.log('⏱️ Deteniendo refresh');
-      clearInterval(interval);
-    };
-  }, [pestañaActiva]);
-
+  
   // Auto-refresh inteligente (respaldo)
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -447,7 +432,7 @@ useEffect(() => {
         console.log('🔄 Auto-refresh silencioso activo - hay turnos activos');
         interval = setInterval(() => {
           cargarSolicitudes(true);
-        }, 15000);
+        }, 60000);
       } else {
         console.log('⏸️ Auto-refresh pausado - no hay turnos activos');
       }

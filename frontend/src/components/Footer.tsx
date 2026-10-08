@@ -170,7 +170,7 @@ const Footer: React.FC = () => {
               >
                 Voces del Alma &nbsp;  
               </a> 
-              es una marca de: {' '}
+              una marca de: {' '}
               <a 
                 href="https://www.biozynex.com" 
                 target="_blank" 

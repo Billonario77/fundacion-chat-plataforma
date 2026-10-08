@@ -215,7 +215,7 @@ const GuiaDashboard: React.FC = () => {
 
     const interval = setInterval(() => {
       cargarMiCarga();
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
