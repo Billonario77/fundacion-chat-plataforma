@@ -198,6 +198,9 @@ initSocketService(io);
 // Iniciar worker de revisión de turnos impagos (cada 15 min)
 import './workers/impagoWorker';
 
+// Iniciar worker de recordatorios de sesión (cada 15 min)
+import './workers/recordatorioWorker';
+
 // ============================================
 // MIDDLEWARES DE SEGURIDAD Y UTILIDAD
 // ============================================

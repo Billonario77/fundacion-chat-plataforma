@@ -150,6 +150,7 @@ const io = new socket_io_1.Server(server, {
 exports.io = io;
 (0, socketService_1.initSocketService)(io);
 require("./workers/impagoWorker");
+require("./workers/recordatorioWorker");
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: { policy: "unsafe-none" }
