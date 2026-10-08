@@ -233,6 +233,105 @@ export const enviarRecordatorio2h = async (params: {
 
 
 // ============================================
+// TESTIMONIO APROBADO
+// ============================================
+export const enviarTestimonioAprobado = async (params: {
+  email: string;
+  nombre: string;
+  titulo: string;
+}): Promise<boolean> => {
+  const { email, nombre, titulo } = params;
+
+  const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">💬 ¡Tu testimonio fue aprobado!</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Tu historia fue revisada y aprobada. Ya está publicada en nuestra página de testimonios
+      y muy pronto otras personas podrán leerla y sentirse inspiradas por tu valentía.
+    </p>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #81B29A;">
+      <p style="color: #5D6078; margin: 0; font-size: 14px;">Tu testimonio</p>
+      <p style="color: #3D405B; margin: 8px 0 0 0; font-size: 16px; font-style: italic;">"${titulo}"</p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Gracias por compartir tu voz. Tu historia puede ser el primer paso que otra persona necesita dar.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/testimonios"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Ver testimonios
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Tu voz también sana."
+    </p>
+  `;
+
+  return await enviarEmail({
+    to: email,
+    subject: '💬 ¡Tu testimonio fue aprobado!',
+    html: templateBase(contenido)
+  });
+};
+
+// ============================================
+// TESTIMONIO RECHAZADO
+// ============================================
+export const enviarTestimonioRechazado = async (params: {
+  email: string;
+  nombre: string;
+  titulo: string;
+  motivo: string;
+}): Promise<boolean> => {
+  const { email, nombre, titulo, motivo } = params;
+
+  const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">📝 Sobre tu testimonio</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Gracias por tomarte el tiempo de compartir tu historia. Tu testimonio fue revisado por nuestro equipo,
+      y en esta ocasión no pudimos publicarlo.
+    </p>
+
+    <div style="background-color: #F4E8D8; padding: 16px; border-radius: 12px; margin: 24px 0;">
+      <p style="color: #5D6078; margin: 0 0 8px 0; font-size: 14px;">Testimonio:</p>
+      <p style="color: #3D405B; margin: 0; font-size: 15px; font-style: italic;">"${titulo}"</p>
+    </div>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #E07A5F;">
+      <p style="color: #5D6078; margin: 0 0 8px 0; font-size: 14px;"><strong>Motivo del rechazo:</strong></p>
+      <p style="color: #3D405B; margin: 0; font-size: 15px;">${motivo}</p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Si lo deseas, puedes editarlo y enviarlo de nuevo desde tu panel. Estamos aquí para escucharte.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/usuario"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Editar mi testimonio
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Toda historia merece ser contada, a su manera."
+    </p>
+  `;
+
+  return await enviarEmail({
+    to: email,
+    subject: '📝 Sobre tu testimonio enviado',
+    html: templateBase(contenido)
+  });
+};
+
+
+// ============================================
 // AGRADECIMIENTO POR DONACIÓN
 // ============================================
 export const enviarAgradecimientoDonacion = async (params: {

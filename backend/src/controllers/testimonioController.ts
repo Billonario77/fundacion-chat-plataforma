@@ -2,6 +2,7 @@
 
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
+import { enviarTestimonioAprobado, enviarTestimonioRechazado } from '../services/emailService';
 import { pool } from '../database/connection';
 
 /* =========================================================
@@ -337,6 +338,25 @@ export const adminAprobarTestimonio = async (req: AuthRequest, res: Response): P
         if (!rows.length) {
             res.status(404).json({ error: 'Testimonio no encontrado' });
             return;
+        }
+
+        // Notificar por email al autor
+        try {
+            const autorQuery = await pool.query(
+                `SELECT email, nombre, nickname, es_anonimo FROM usuarios WHERE id = $1`,
+                [rows[0].usuario_id]
+            );
+            const autor = autorQuery.rows[0];
+            if (autor?.email) {
+                await enviarTestimonioAprobado({
+                    email: autor.email,
+                    nombre: autor.es_anonimo ? (autor.nickname || 'Anónimo') : (autor.nombre || 'Usuario'),
+                    titulo: rows[0].titulo
+                });
+            }
+        } catch (emailError) {
+            console.error('⚠️ Error enviando email de testimonio aprobado:', emailError);
+            // No rompemos la aprobación si falla el email
         }
 
         res.json({ mensaje: 'Testimonio aprobado', testimonio: rows[0] });
