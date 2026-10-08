@@ -78,10 +78,9 @@ function AppContent() {
       <Route path="/terminos" element={<TerminosPage />} />
       <Route path="/privacidad" element={<PrivacidadPage />} />
       <Route path="/cookies" element={<CookiesPage />} />
-      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentesPage />} />
       <Route path="/gracias" element={<GraciasPage />} />
-      
-            <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
+      <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
       
       <Route
         path="/dashboard"
