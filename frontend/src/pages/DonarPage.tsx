@@ -108,8 +108,8 @@ const DonarPage: React.FC = () => {
       return;
     }
 
-    if (!esAnonima && !email.trim()) {
-      toast.error('Por favor ingresa tu email o marca la opción de donación anónima');
+    if (!email.trim()) {
+      toast.error('Por favor ingresa tu email (necesario para enviarte el comprobante)');
       return;
     }
 
@@ -119,7 +119,7 @@ const DonarPage: React.FC = () => {
       const data = await donacionesService.generarFirma({
         monto,
         nombreDonante: esAnonima ? undefined : nombre,
-        emailDonante: esAnonima ? undefined : email,
+        emailDonante: email.trim(),
         mensaje: mensaje || undefined,
         esAnonima,
       });
@@ -136,12 +136,10 @@ const DonarPage: React.FC = () => {
           integrity: data.firmaIntegridad,
         },
         redirectUrl: `${window.location.origin}/gracias?ref=${data.referencia}`,
-        customerData: esAnonima
-          ? undefined
-          : {
-              email: email,
-              fullName: nombre,
-            },
+        customerData: {
+          email: email.trim(),
+          fullName: esAnonima ? 'Donante anónimo' : nombre,
+        },
       });
 
       checkout.open((result: any) => {
@@ -362,13 +360,8 @@ const DonarPage: React.FC = () => {
             </label>
           </div>
 
-          {!esAnonima && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-4 mb-6"
-            >
+          <div className="space-y-4 mb-6">
+            {!esAnonima && (
               <input
                 type="text"
                 placeholder="Tu nombre completo"
@@ -376,15 +369,15 @@ const DonarPage: React.FC = () => {
                 onChange={(e) => setNombre(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-[#3D405B] bg-white/80"
               />
-              <input
-                type="email"
-                placeholder="Tu correo electrónico (para enviarte el comprobante)"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-[#3D405B] bg-white/80"
-              />
-            </motion.div>
-          )}
+            )}
+            <input
+              type="email"
+              placeholder="Tu correo electrónico (para enviarte el comprobante) *"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border-2 border-[#F2CC8F]/50 focus:border-[#E07A5F] focus:outline-none text-[#3D405B] bg-white/80"
+            />
+          </div>
 
           {/* Mensaje opcional */}
           <div className="mb-8">

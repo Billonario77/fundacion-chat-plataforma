@@ -143,7 +143,7 @@ export const webhookWompi = async (req: Request, res: Response) => {
         if (estadoDonacion === 'completada') {
           const donacion = donacionData.rows[0];
           
-          if (donacion && donacion.email_donante && !donacion.es_anonima) {
+          if (donacion && donacion.email_donante) {
             try {
               await enviarAgradecimientoDonacion({
                 email: donacion.email_donante,
