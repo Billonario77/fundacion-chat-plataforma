@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.enviarEmail = exports.enviarAgradecimientoDonacion = exports.enviarRecordatorio2h = exports.enviarRecordatorio24h = exports.enviarConfirmacionPago = void 0;
+exports.enviarEmail = exports.enviarAgradecimientoDonacion = exports.enviarTestimonioRechazado = exports.enviarTestimonioAprobado = exports.enviarRecordatorio2h = exports.enviarRecordatorio24h = exports.enviarConfirmacionPago = void 0;
 const nodemailer = __importStar(require("nodemailer"));
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -65,13 +65,13 @@ const templateBase = (contenido) => `
   <div style="font-family: 'Georgia', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #FDF6EC;">
     <div style="background: linear-gradient(135deg, #F2CC8F 0%, #E07A5F 100%); padding: 30px; text-align: center; border-radius: 16px 16px 0 0;">
       <h1 style="color: #3D405B; margin: 0; font-size: 24px;">💛 Voces del Alma</h1>
-      <p style="color: #3D405B; margin: 8px 0 0 0; opacity: 0.8;">Un espacio para respirar y sanar</p>
+      <p style="color: #3D405B; margin: 8px 0 0 0; opacity: 0.8;">Un espacio para hablar y sanar</p>
     </div>
     <div style="background-color: #ffffff; padding: 32px; border-radius: 0 0 16px 16px; border: 1px solid #F2CC8F;">
       ${contenido}
     </div>
     <p style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">
-      © 2026 Voces del Alma · BIOZYNEX SAS - Todos los derechos reservados
+      © 2026 Voces del Alma · una marca Biozynex SAS - Todos los derechos reservados
     </p>
   </div>
 `;
@@ -215,6 +215,85 @@ const enviarRecordatorio2h = async (params) => {
     });
 };
 exports.enviarRecordatorio2h = enviarRecordatorio2h;
+const enviarTestimonioAprobado = async (params) => {
+    const { email, nombre, titulo } = params;
+    const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">💬 ¡Tu testimonio fue aprobado!</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Tu historia fue revisada y aprobada. Ya está publicada en nuestra página de testimonios
+      y muy pronto otras personas podrán leerla y sentirse inspiradas por tu valentía.
+    </p>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #81B29A;">
+      <p style="color: #5D6078; margin: 0; font-size: 14px;">Tu testimonio</p>
+      <p style="color: #3D405B; margin: 8px 0 0 0; font-size: 16px; font-style: italic;">"${titulo}"</p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Gracias por compartir tu voz. Tu historia puede ser el primer paso que otra persona necesita dar.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/testimonios"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Ver testimonios
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Tu voz también sana."
+    </p>
+  `;
+    return await enviarEmail({
+        to: email,
+        subject: '💬 ¡Tu testimonio fue aprobado!',
+        html: templateBase(contenido)
+    });
+};
+exports.enviarTestimonioAprobado = enviarTestimonioAprobado;
+const enviarTestimonioRechazado = async (params) => {
+    const { email, nombre, titulo, motivo } = params;
+    const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">📝 Sobre tu testimonio</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Gracias por tomarte el tiempo de compartir tu historia. Tu testimonio fue revisado por nuestro equipo,
+      y en esta ocasión no pudimos publicarlo.
+    </p>
+
+    <div style="background-color: #F4E8D8; padding: 16px; border-radius: 12px; margin: 24px 0;">
+      <p style="color: #5D6078; margin: 0 0 8px 0; font-size: 14px;">Testimonio:</p>
+      <p style="color: #3D405B; margin: 0; font-size: 15px; font-style: italic;">"${titulo}"</p>
+    </div>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #E07A5F;">
+      <p style="color: #5D6078; margin: 0 0 8px 0; font-size: 14px;"><strong>Motivo del rechazo:</strong></p>
+      <p style="color: #3D405B; margin: 0; font-size: 15px;">${motivo}</p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Si lo deseas, puedes editarlo y enviarlo de nuevo desde tu panel. Estamos aquí para escucharte.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/usuario"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Editar mi testimonio
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Toda historia merece ser contada, a su manera."
+    </p>
+  `;
+    return await enviarEmail({
+        to: email,
+        subject: '📝 Sobre tu testimonio enviado',
+        html: templateBase(contenido)
+    });
+};
+exports.enviarTestimonioRechazado = enviarTestimonioRechazado;
 const enviarAgradecimientoDonacion = async (params) => {
     const { email, nombre, monto, mensaje } = params;
     const formatCurrency = (v) => new Intl.NumberFormat('es-CO', {

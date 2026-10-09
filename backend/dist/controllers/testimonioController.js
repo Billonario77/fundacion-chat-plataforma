@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminEliminarTestimonio = exports.adminDestacarTestimonio = exports.adminRechazarTestimonio = exports.adminAprobarTestimonio = exports.adminListarTestimonios = exports.eliminarMiTestimonio = exports.editarTestimonio = exports.getMisTestimonios = exports.crearTestimonio = exports.getTestimoniosPublicos = void 0;
+exports.adminEliminarTestimonio = exports.adminDestacarTestimonio = exports.adminRechazarTestimonio = exports.adminAprobarTestimonio = exports.adminListarTestimonios = exports.contarTestimoniosPendientes = exports.eliminarMiTestimonio = exports.editarTestimonio = exports.getMisTestimonios = exports.crearTestimonio = exports.getTestimoniosPublicos = void 0;
+const emailService_1 = require("../services/emailService");
+const socketService_1 = require("../services/socketService");
 const connection_1 = require("../database/connection");
 const getTestimoniosPublicos = async (req, res) => {
     try {
@@ -90,6 +92,11 @@ const crearTestimonio = async (req, res) => {
         const { rows } = await connection_1.pool.query(`INSERT INTO testimonios (usuario_id, titulo, contenido, calificacion, edad, ciudad, estado)
              VALUES ($1, $2, $3, $4, $5, $6, 'pendiente')
              RETURNING *`, [usuarioId, tituloTexto, texto, cal, edadNum, ciudadTexto]);
+        (0, socketService_1.notificarAAdmins)('nuevo-testimonio-pendiente', {
+            testimonioId: rows[0].id,
+            titulo: rows[0].titulo,
+            usuarioId,
+        });
         res.status(201).json({
             mensaje: '¡Gracias! Tu testimonio será revisado por el equipo.',
             testimonio: rows[0],
@@ -206,6 +213,17 @@ const eliminarMiTestimonio = async (req, res) => {
     }
 };
 exports.eliminarMiTestimonio = eliminarMiTestimonio;
+const contarTestimoniosPendientes = async (req, res) => {
+    try {
+        const { rows } = await connection_1.pool.query(`SELECT COUNT(*)::int AS count FROM testimonios WHERE estado = 'pendiente'`);
+        res.json({ count: rows[0].count });
+    }
+    catch (error) {
+        console.error('Error en contarTestimoniosPendientes:', error);
+        res.status(500).json({ error: 'Error al contar testimonios pendientes' });
+    }
+};
+exports.contarTestimoniosPendientes = contarTestimoniosPendientes;
 const adminListarTestimonios = async (req, res) => {
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
@@ -261,6 +279,20 @@ const adminAprobarTestimonio = async (req, res) => {
         if (!rows.length) {
             res.status(404).json({ error: 'Testimonio no encontrado' });
             return;
+        }
+        try {
+            const autorQuery = await connection_1.pool.query(`SELECT email, nombre, nickname, es_anonimo FROM usuarios WHERE id = $1`, [rows[0].usuario_id]);
+            const autor = autorQuery.rows[0];
+            if (autor?.email) {
+                await (0, emailService_1.enviarTestimonioAprobado)({
+                    email: autor.email,
+                    nombre: autor.es_anonimo ? (autor.nickname || 'Anónimo') : (autor.nombre || 'Usuario'),
+                    titulo: rows[0].titulo
+                });
+            }
+        }
+        catch (emailError) {
+            console.error('⚠️ Error enviando email de testimonio aprobado:', emailError);
         }
         res.json({ mensaje: 'Testimonio aprobado', testimonio: rows[0] });
     }

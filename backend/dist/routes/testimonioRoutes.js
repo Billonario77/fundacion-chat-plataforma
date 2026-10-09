@@ -9,6 +9,7 @@ router.post('/', auth_1.authenticateToken, testimonioController_1.crearTestimoni
 router.get('/mios', auth_1.authenticateToken, testimonioController_1.getMisTestimonios);
 router.put('/:id', auth_1.authenticateToken, testimonioController_1.editarTestimonio);
 router.delete('/:id', auth_1.authenticateToken, testimonioController_1.eliminarMiTestimonio);
+router.get('/admin/pendientes/count', auth_1.authenticateToken, auth_1.requireAdmin, testimonioController_1.contarTestimoniosPendientes);
 router.get('/admin/todos', auth_1.authenticateToken, auth_1.requireAdmin, testimonioController_1.adminListarTestimonios);
 router.patch('/admin/:id/aprobar', auth_1.authenticateToken, auth_1.requireAdmin, testimonioController_1.adminAprobarTestimonio);
 router.patch('/admin/:id/rechazar', auth_1.authenticateToken, auth_1.requireAdmin, testimonioController_1.adminRechazarTestimonio);

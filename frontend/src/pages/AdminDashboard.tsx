@@ -96,6 +96,7 @@ const AdminDashboard: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [hayNuevosUsuarios, setHayNuevosUsuarios] = useState(false);
   const [reprogramacionesPendientes, setReprogramacionesPendientes] = useState(0);
+    const [testimoniosPendientes, setTestimoniosPendientes] = useState(0);
   
   // Estados para filtros de estadísticas
   const [fechaInicio, setFechaInicio] = useState('');
@@ -151,7 +152,7 @@ const AdminDashboard: React.FC = () => {
     navigate('/');
   };
 
-  const cargarConteoReprogramaciones = async () => {
+const cargarConteoReprogramaciones = async () => {
   try {
     const token = localStorage.getItem('token');
     const response = await axios.get(`https://fundacion-chat-plataforma-backend-api.onrender.com/api/admin/reprogramaciones/pendientes/count`, {
@@ -162,6 +163,20 @@ const AdminDashboard: React.FC = () => {
     console.error('Error al cargar conteo de reprogramaciones:', err);
   }
 };
+
+
+  const cargarConteoTestimonios = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `https://fundacion-chat-plataforma-backend-api.onrender.com/api/testimonios/admin/pendientes/count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTestimoniosPendientes(response.data.count);
+    } catch (err) {
+      console.error('Error al cargar conteo de testimonios:', err);
+    }
+  };
 
   const handleExportarEstadisticas = (formato: 'csv' | 'pdf') => {
     if (!estadisticasActuales) return;
@@ -245,6 +260,41 @@ const AdminDashboard: React.FC = () => {
     };
   }, [socket, connected]);
 
+
+
+  useEffect(() => {
+    cargarConteoTestimonios();
+  }, []);
+
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    console.log('👂 Escuchando evento nuevo-testimonio-pendiente');
+
+    socket.on('nuevo-testimonio-pendiente', (data) => {
+      console.log('💬 Nuevo testimonio pendiente recibido:', data);
+
+      toast('💬 Nuevo testimonio por revisar', {
+        duration: 6000,
+        icon: '💬',
+        style: {
+          background: '#E07A5F',
+          color: 'white',
+          padding: '16px',
+          maxWidth: '400px',
+        }
+      });
+
+      cargarConteoTestimonios();
+    });
+
+    return () => {
+      socket.off('nuevo-testimonio-pendiente');
+    };
+  }, [socket, connected]);
+
+
+
   useEffect(() => {
     const cargarMiFoto = async () => {
       try {
@@ -299,6 +349,9 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (pestañaActiva === 'reprogramaciones') {
       setReprogramacionesPendientes(0);
+    }
+    if (pestañaActiva === 'testimonios') {
+      setTestimoniosPendientes(0);
     }
   }, [pestañaActiva]);
 
@@ -362,6 +415,7 @@ const AdminDashboard: React.FC = () => {
               {pestañaActiva === 'estadisticas-cobros' && '💰 Estadísticas Cobros'}
               {pestañaActiva === 'configuracion' && '⚙️ Configuración'}
               {pestañaActiva === 'testimonios' && '💬 Testimonios'}
+              {testimoniosPendientes > 0 && pestañaActiva !== 'testimonios' && ` (${testimoniosPendientes})`}
             </span>
             <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
           </button>
@@ -525,6 +579,11 @@ const AdminDashboard: React.FC = () => {
               >
                 <span>💬</span>
                 <span>Testimonios</span>
+                {testimoniosPendientes > 0 && pestañaActiva !== 'testimonios' && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    {testimoniosPendientes}
+                  </span>
+                )}
               </button>
             </div>
           )}
@@ -720,6 +779,11 @@ const AdminDashboard: React.FC = () => {
           >
             <span className="text-lg">💬</span>
             <span>Testimonios</span>
+            {testimoniosPendientes > 0 && pestañaActiva !== 'testimonios' && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                {testimoniosPendientes}
+              </span>
+            )}
           </button>
 
         </div>

@@ -11,6 +11,7 @@ import {
     adminRechazarTestimonio,
     adminDestacarTestimonio,
     adminEliminarTestimonio,
+    contarTestimoniosPendientes,
 } from '../controllers/testimonioController';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
@@ -26,6 +27,7 @@ router.put('/:id',    authenticateToken, editarTestimonio);
 router.delete('/:id', authenticateToken, eliminarMiTestimonio);
 
 /* ---------- Admin ---------- */
+router.get('/admin/pendientes/count', authenticateToken, requireAdmin, contarTestimoniosPendientes);
 router.get('/admin/todos',           authenticateToken, requireAdmin, adminListarTestimonios);
 router.patch('/admin/:id/aprobar',   authenticateToken, requireAdmin, adminAprobarTestimonio);
 router.patch('/admin/:id/rechazar',  authenticateToken, requireAdmin, adminRechazarTestimonio);

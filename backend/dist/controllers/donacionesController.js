@@ -96,7 +96,7 @@ const webhookWompi = async (req, res) => {
                 console.log(`✅ Donación actualizada: ${referencia} → ${estadoDonacion}`);
                 if (estadoDonacion === 'completada') {
                     const donacion = donacionData.rows[0];
-                    if (donacion && donacion.email_donante && !donacion.es_anonima) {
+                    if (donacion && donacion.email_donante) {
                         try {
                             await (0, emailService_1.enviarAgradecimientoDonacion)({
                                 email: donacion.email_donante,

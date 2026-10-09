@@ -3,6 +3,7 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { enviarTestimonioAprobado, enviarTestimonioRechazado } from '../services/emailService';
+import { notificarAAdmins } from '../services/socketService';
 import { pool } from '../database/connection';
 
 /* =========================================================
@@ -126,6 +127,13 @@ export const crearTestimonio = async (req: AuthRequest, res: Response): Promise<
              RETURNING *`,
             [usuarioId, tituloTexto, texto, cal, edadNum, ciudadTexto]
         );
+
+        // Notificar a admins en tiempo real
+        notificarAAdmins('nuevo-testimonio-pendiente', {
+            testimonioId: rows[0].id,
+            titulo: rows[0].titulo,
+            usuarioId,
+        });
 
         res.status(201).json({
             mensaje: '¡Gracias! Tu testimonio será revisado por el equipo.',
@@ -263,6 +271,20 @@ export const eliminarMiTestimonio = async (req: AuthRequest, res: Response): Pro
         res.status(500).json({ error: 'Error al eliminar testimonio' });
     }
 };
+
+// GET /api/testimonios/admin/pendientes/count
+export const contarTestimoniosPendientes = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT COUNT(*)::int AS count FROM testimonios WHERE estado = 'pendiente'`
+        );
+        res.json({ count: rows[0].count });
+    } catch (error) {
+        console.error('Error en contarTestimoniosPendientes:', error);
+        res.status(500).json({ error: 'Error al contar testimonios pendientes' });
+    }
+};
+
 
 /* =========================================================
    ADMIN
