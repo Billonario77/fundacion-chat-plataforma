@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
+import BotonVolver from '../components/BotonVolver';
 
 const GraciasPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -89,12 +90,7 @@ const GraciasPage: React.FC = () => {
       {/* Navegación */}
       <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
         <Logo />
-        <Link
-          to="/"
-          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2 flex-shrink-0"
-        >
-          ← Volver
-        </Link>
+        <BotonVolver />
       </nav>
 
       {/* Contenido */}

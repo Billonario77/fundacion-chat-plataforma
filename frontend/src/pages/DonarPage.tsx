@@ -7,6 +7,7 @@ import { configuracionService } from '../services/configuracionService';
 import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import Logo from '../components/Logo';
+import BotonVolver from '../components/BotonVolver';
 
 // Montos rápidos basados en el precio de la sesión
 const getMontosRapidos = (precio: number) => [
@@ -170,12 +171,7 @@ const DonarPage: React.FC = () => {
       {/* Navegación */}
       <nav className="container mx-auto px-4 md:px-6 py-5 flex justify-between items-center gap-3">
         <Logo />
-        <Link
-          to="/"
-          className="text-sm text-[#3D405B] hover:text-[#E07A5F] transition-colors flex items-center gap-2 flex-shrink-0"
-        >
-          ← Volver
-        </Link>
+        <BotonVolver />
       </nav>
 
       {/* Contenido */}
