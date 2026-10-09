@@ -49,7 +49,7 @@ const templateBase = (contenido: string) => `
       ${contenido}
     </div>
     <p style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">
-      © 2026 Voces del Alma · BIOZYNEX SAS - Todos los derechos reservados
+      © 2026 Voces del Alma · una marca Biozynex SAS - Todos los derechos reservados
     </p>
   </div>
 `;
