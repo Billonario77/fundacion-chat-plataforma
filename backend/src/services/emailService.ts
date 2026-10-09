@@ -43,7 +43,7 @@ const templateBase = (contenido: string) => `
   <div style="font-family: 'Georgia', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #FDF6EC;">
     <div style="background: linear-gradient(135deg, #F2CC8F 0%, #E07A5F 100%); padding: 30px; text-align: center; border-radius: 16px 16px 0 0;">
       <h1 style="color: #3D405B; margin: 0; font-size: 24px;">💛 Voces del Alma</h1>
-      <p style="color: #3D405B; margin: 8px 0 0 0; opacity: 0.8;">Un espacio para respirar y sanar</p>
+      <p style="color: #3D405B; margin: 8px 0 0 0; opacity: 0.8;">Un espacio para hablar y sanar</p>
     </div>
     <div style="background-color: #ffffff; padding: 32px; border-radius: 0 0 16px 16px; border: 1px solid #F2CC8F;">
       ${contenido}
