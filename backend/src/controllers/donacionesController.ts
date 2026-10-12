@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { WompiService } from '../services/wompiService';
 import { AuthRequest } from '../middleware/auth';
 import { enviarConfirmacionPago, enviarAgradecimientoDonacion } from '../services/emailService';
+import { notificarAAdmins } from '../services/socketService';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -201,6 +202,13 @@ export const webhookWompi = async (req: Request, res: Response) => {
           );
 
           console.log(`✅ Cobro actualizado: ${referencia} → ${estadoCobro}`);
+
+          // Notificar a admins que el cobro cambió
+          try {
+            notificarAAdmins('cobros-actualizados', {});
+          } catch (err) {
+            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+          }
 
           // Si el pago fue aprobado, actualizar el turno a "pendiente" (listo para que el guía acepte)
           if (estadoCobro === 'pagado') {

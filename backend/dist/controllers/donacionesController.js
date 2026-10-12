@@ -4,6 +4,7 @@ exports.obtenerProgresoMeta = exports.obtenerDonacionPorReferencia = exports.obt
 const pg_1 = require("pg");
 const wompiService_1 = require("../services/wompiService");
 const emailService_1 = require("../services/emailService");
+const socketService_1 = require("../services/socketService");
 const pool = new pg_1.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -136,6 +137,12 @@ const webhookWompi = async (req, res) => {
                  updated_at = NOW()
              WHERE id = $4`, [estadoCobro, transaccion.payment_method_type || null, fechaPago, cobro.id]);
                     console.log(`✅ Cobro actualizado: ${referencia} → ${estadoCobro}`);
+                    try {
+                        (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+                    }
+                    catch (err) {
+                        console.error('⚠️ Error al notificar cobros-actualizados:', err);
+                    }
                     if (estadoCobro === 'pagado') {
                         await pool.query(`UPDATE turnos SET estado = 'pendiente' WHERE id = $1`, [cobro.turno_id]);
                         console.log(`✅ Turno ${cobro.turno_id} actualizado a "pendiente" (listo para que el guía acepte)`);

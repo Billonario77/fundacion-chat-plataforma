@@ -306,9 +306,9 @@ const cargarConteoReprogramaciones = async () => {
   useEffect(() => {
     if (!socket || !connected) return;
 
-    console.log('👂 Escuchando evento nuevo-testimonio-pendiente');
+    console.log('👂 Escuchando eventos de testimonios');
 
-    socket.on('nuevo-testimonio-pendiente', (data) => {
+    const handleNuevoTestimonio = (data: any) => {
       console.log('💬 Nuevo testimonio pendiente recibido:', data);
 
       toast('💬 Nuevo testimonio por revisar', {
@@ -323,10 +323,19 @@ const cargarConteoReprogramaciones = async () => {
       });
 
       cargarConteoTestimonios();
-    });
+    };
+
+    const handleTestimoniosActualizados = () => {
+      console.log('💬 Testimonios actualizados, recargando conteo');
+      cargarConteoTestimonios();
+    };
+
+    socket.on('nuevo-testimonio-pendiente', handleNuevoTestimonio);
+    socket.on('testimonios-actualizados', handleTestimoniosActualizados);
 
     return () => {
-      socket.off('nuevo-testimonio-pendiente');
+      socket.off('nuevo-testimonio-pendiente', handleNuevoTestimonio);
+      socket.off('testimonios-actualizados', handleTestimoniosActualizados);
     };
   }, [socket, connected]);
 

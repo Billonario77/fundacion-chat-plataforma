@@ -205,6 +205,12 @@ const eliminarMiTestimonio = async (req, res) => {
             res.status(404).json({ error: 'Testimonio no encontrado' });
             return;
         }
+        try {
+            (0, socketService_1.notificarAAdmins)('testimonios-actualizados', {});
+        }
+        catch (err) {
+            console.error('⚠️ Error al notificar testimonios-actualizados:', err);
+        }
         res.json({ mensaje: 'Testimonio eliminado' });
     }
     catch (error) {
@@ -356,6 +362,12 @@ const adminEliminarTestimonio = async (req, res) => {
         if (!rowCount) {
             res.status(404).json({ error: 'Testimonio no encontrado' });
             return;
+        }
+        try {
+            (0, socketService_1.notificarAAdmins)('testimonios-actualizados', {});
+        }
+        catch (err) {
+            console.error('⚠️ Error al notificar testimonios-actualizados:', err);
         }
         res.json({ mensaje: 'Testimonio eliminado' });
     }

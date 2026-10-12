@@ -265,6 +265,13 @@ export const eliminarMiTestimonio = async (req: AuthRequest, res: Response): Pro
             return;
         }
 
+        // Notificar a admins que se eliminó un testimonio (puede afectar el badge)
+        try {
+            notificarAAdmins('testimonios-actualizados', {});
+        } catch (err) {
+            console.error('⚠️ Error al notificar testimonios-actualizados:', err);
+        }
+
         res.json({ mensaje: 'Testimonio eliminado' });
     } catch (error) {
         console.error('Error en eliminarMiTestimonio:', error);
@@ -456,6 +463,13 @@ export const adminEliminarTestimonio = async (req: AuthRequest, res: Response): 
         if (!rowCount) {
             res.status(404).json({ error: 'Testimonio no encontrado' });
             return;
+        }
+
+        // Notificar a admins que se eliminó un testimonio (puede afectar el badge)
+        try {
+            notificarAAdmins('testimonios-actualizados', {});
+        } catch (err) {
+            console.error('⚠️ Error al notificar testimonios-actualizados:', err);
         }
 
         res.json({ mensaje: 'Testimonio eliminado' });
