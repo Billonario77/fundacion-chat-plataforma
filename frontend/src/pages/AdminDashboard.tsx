@@ -98,6 +98,7 @@ const AdminDashboard: React.FC = () => {
   const [reprogramacionesPendientes, setReprogramacionesPendientes] = useState(0);
   const [testimoniosPendientes, setTestimoniosPendientes] = useState(0);
   const [cobrosPendientes, setCobrosPendientes] = useState(0);
+  const [cancelacionesNuevas, setCancelacionesNuevas] = useState(0);
   
   // Estados para filtros de estadísticas
   const [fechaInicio, setFechaInicio] = useState('');
@@ -194,6 +195,20 @@ const cargarConteoReprogramaciones = async () => {
   };
 
 
+  const cargarConteoCancelaciones = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `https://fundacion-chat-plataforma-backend-api.onrender.com/api/turnos/cancelaciones/no-vistas/count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCancelacionesNuevas(response.data.count);
+    } catch (err) {
+      console.error('Error al cargar conteo de cancelaciones:', err);
+    }
+  };
+
+
   const handleExportarEstadisticas = (formato: 'csv' | 'pdf') => {
     if (!estadisticasActuales) return;
 
@@ -286,19 +301,33 @@ const cargarConteoReprogramaciones = async () => {
     cargarConteoCobros();
   }, []);
 
+  
+  useEffect(() => {
+    cargarConteoCancelaciones();
+  }, []);
+
 
   useEffect(() => {
     if (!socket || !connected) return;
 
-    console.log('👂 Escuchando evento cobros-actualizados');
+    console.log('👂 Escuchando eventos de cobros y cancelaciones');
 
-    socket.on('cobros-actualizados', () => {
+    const handleCobrosActualizados = () => {
       console.log('💵 Cobros actualizados recibido, recargando conteo');
       cargarConteoCobros();
-    });
+    };
+
+    const handleNuevaCancelacion = () => {
+      console.log('✗ Nueva cancelación recibida, recargando conteo');
+      cargarConteoCancelaciones();
+    };
+
+    socket.on('cobros-actualizados', handleCobrosActualizados);
+    socket.on('nuevo-turno-cancelado', handleNuevaCancelacion);
 
     return () => {
-      socket.off('cobros-actualizados');
+      socket.off('cobros-actualizados', handleCobrosActualizados);
+      socket.off('nuevo-turno-cancelado', handleNuevaCancelacion);
     };
   }, [socket, connected]);
 
@@ -310,6 +339,7 @@ const cargarConteoReprogramaciones = async () => {
       cargarConteoReprogramaciones();
       cargarConteoTestimonios();
       cargarConteoCobros();
+      cargarConteoCancelaciones();
     }, 60000);
 
     return () => clearInterval(interval);
@@ -415,6 +445,22 @@ const cargarConteoReprogramaciones = async () => {
     if (pestañaActiva === 'cobros') {
       setCobrosPendientes(0);
     }
+    if (pestañaActiva === 'cancelaciones') {
+      setCancelacionesNuevas(0);
+      // Marcar en backend que el admin ya vio las cancelaciones
+      (async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.post(
+            `https://fundacion-chat-plataforma-backend-api.onrender.com/api/turnos/cancelaciones/marcar-vistas`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (err) {
+          console.error('Error al marcar cancelaciones como vistas:', err);
+        }
+      })();
+    }
   }, [pestañaActiva]);
 
   if (!user || user.rol !== 'admin') {
@@ -467,6 +513,7 @@ const cargarConteoReprogramaciones = async () => {
               {pestañaActiva === 'reprogramaciones' && '🔄 Reprogramar'}
               {pestañaActiva === 'asignaciones-guia' && '➡️ Asignaciones'}
               {pestañaActiva === 'cancelaciones' && '✗ Cancelaciones'}
+              {cancelacionesNuevas > 0 && pestañaActiva !== 'cancelaciones' && ` (${cancelacionesNuevas})`}
               {pestañaActiva === 'historial' && '📋 Historial'}
               {pestañaActiva === 'estadisticas' && '📊 Estadísticas'}
               {pestañaActiva === 'carga-guias' && '📊 Carga Guías'}
@@ -542,6 +589,11 @@ const cargarConteoReprogramaciones = async () => {
               >
                 <span>✗</span>
                 <span>Cancelaciones</span>
+                {cancelacionesNuevas > 0 && pestañaActiva !== 'cancelaciones' && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    {cancelacionesNuevas}
+                  </span>
+                )}
               </button>
 
               <button
@@ -727,6 +779,11 @@ const cargarConteoReprogramaciones = async () => {
           >
             <span className="text-lg">✗</span>
             <span>Cancelaciones</span>
+            {cancelacionesNuevas > 0 && pestañaActiva !== 'cancelaciones' && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                {cancelacionesNuevas}
+              </span>
+            )}
           </button>
 
           <button

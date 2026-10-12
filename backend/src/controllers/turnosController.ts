@@ -1118,6 +1118,21 @@ export const marcarCancelacionesComoVistas = async (req: AuthRequest, res: Respo
           [usuarioId]
         );
       }
+    } else if (rol === 'admin') {
+      let result = await pool.query(
+        `UPDATE ultima_visto_cancelaciones 
+         SET ultima_visualizacion = NOW(), updated_at = NOW()
+         WHERE admin_id = $1`,
+        [usuarioId]
+      );
+      
+      if (result.rowCount === 0) {
+        await pool.query(
+          `INSERT INTO ultima_visto_cancelaciones (admin_id, ultima_visualizacion)
+           VALUES ($1, NOW())`,
+          [usuarioId]
+        );
+      }
     } else {
       res.status(403).json({ error: 'Rol no autorizado' });
       return;
@@ -1169,6 +1184,15 @@ export const contarCancelacionesNoVistas = async (req: AuthRequest, res: Respons
         WHERE t.guia_id = $1 
           AND t.estado = 'cancelado' 
           AND t.cancelado_por = 'guia'
+          AND (uv.ultima_visualizacion IS NULL OR t.created_at >= uv.ultima_visualizacion)
+      `, [usuarioId]);
+      cancelacionesNoVistas = parseInt(result.rows[0].count);
+    } else if (rol === 'admin') {
+      const result = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM turnos t
+        LEFT JOIN ultima_visto_cancelaciones uv ON uv.admin_id = $1
+        WHERE t.estado = 'cancelado'
           AND (uv.ultima_visualizacion IS NULL OR t.created_at >= uv.ultima_visualizacion)
       `, [usuarioId]);
       cancelacionesNoVistas = parseInt(result.rows[0].count);

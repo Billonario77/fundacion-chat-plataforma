@@ -186,6 +186,12 @@ const solicitarApoyo = async (req, res) => {
                     console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
                     requierePago = true;
                     await connection_1.pool.query(`UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`, [turnoId]);
+                    try {
+                        (0, socketService_2.notificarAAdmins)('cobros-actualizados', {});
+                    }
+                    catch (err) {
+                        console.error('⚠️ Error al notificar cobros-actualizados:', err);
+                    }
                 }
             }
             catch (error) {
@@ -846,6 +852,15 @@ const marcarCancelacionesComoVistas = async (req, res) => {
            VALUES ($1, NOW())`, [usuarioId]);
             }
         }
+        else if (rol === 'admin') {
+            let result = await connection_1.pool.query(`UPDATE ultima_visto_cancelaciones 
+         SET ultima_visualizacion = NOW(), updated_at = NOW()
+         WHERE admin_id = $1`, [usuarioId]);
+            if (result.rowCount === 0) {
+                await connection_1.pool.query(`INSERT INTO ultima_visto_cancelaciones (admin_id, ultima_visualizacion)
+           VALUES ($1, NOW())`, [usuarioId]);
+            }
+        }
         else {
             res.status(403).json({ error: 'Rol no autorizado' });
             return;
@@ -890,6 +905,16 @@ const contarCancelacionesNoVistas = async (req, res) => {
         WHERE t.guia_id = $1 
           AND t.estado = 'cancelado' 
           AND t.cancelado_por = 'guia'
+          AND (uv.ultima_visualizacion IS NULL OR t.created_at >= uv.ultima_visualizacion)
+      `, [usuarioId]);
+            cancelacionesNoVistas = parseInt(result.rows[0].count);
+        }
+        else if (rol === 'admin') {
+            const result = await connection_1.pool.query(`
+        SELECT COUNT(*) as count
+        FROM turnos t
+        LEFT JOIN ultima_visto_cancelaciones uv ON uv.admin_id = $1
+        WHERE t.estado = 'cancelado'
           AND (uv.ultima_visualizacion IS NULL OR t.created_at >= uv.ultima_visualizacion)
       `, [usuarioId]);
             cancelacionesNoVistas = parseInt(result.rows[0].count);
