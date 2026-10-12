@@ -303,6 +303,19 @@ const cargarConteoReprogramaciones = async () => {
   }, [socket, connected]);
 
 
+  // Polling de respaldo: recargar contadores de badges cada 60s
+  // (red de seguridad por si algún evento socket se pierde)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      cargarConteoReprogramaciones();
+      cargarConteoTestimonios();
+      cargarConteoCobros();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
   useEffect(() => {
     if (!socket || !connected) return;
 

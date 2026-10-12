@@ -288,6 +288,13 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
             `UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`,
             [turnoId]
           );
+
+          // Notificar a admins que hay un nuevo cobro pendiente
+          try {
+            notificarAAdmins('cobros-actualizados', {});
+          } catch (err) {
+            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+          }
         }
       } catch (error) {
         console.error('❌ Error al calcular costo:', error);
