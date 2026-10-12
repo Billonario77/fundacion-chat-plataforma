@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PagoService = void 0;
+const socketService_1 = require("./socketService");
 class PagoService {
     constructor(pool) {
         this.pool = pool;
@@ -186,6 +187,12 @@ class PagoService {
          WHERE id = ANY($2::uuid[])`, [cobro.id, multasPendientes.map((m) => m.id)]);
             console.log(`🔗 ${multasPendientes.length} multa(s) vinculada(s) al cobro ${cobro.id}`);
         }
+        try {
+            (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+        }
+        catch (err) {
+            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+        }
         return {
             total: totalConMultas,
             descuentoPorcentaje,
@@ -252,6 +259,12 @@ class PagoService {
          WHERE incluida_en_cobro_id = $2 AND tipo = 'multa'`, [metodoPago, cobro.id]);
             await client.query(`UPDATE turnos SET estado = 'aceptado' WHERE id = $1`, [turnoId]);
             await client.query('COMMIT');
+            try {
+                (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+            }
+            catch (err) {
+                console.error('⚠️ Error al notificar cobros-actualizados:', err);
+            }
             const result = await client.query(`SELECT * FROM cobros WHERE id = $1`, [cobro.id]);
             return result.rows[0];
         }
@@ -282,6 +295,12 @@ class PagoService {
          WHERE incluida_en_cobro_id = $4 AND tipo = 'multa'`, [metodoPago, comprobanteUrl || null, adminId, cobro.id]);
             await client.query(`UPDATE turnos SET estado = 'aceptado' WHERE id = $1`, [turnoId]);
             await client.query('COMMIT');
+            try {
+                (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+            }
+            catch (err) {
+                console.error('⚠️ Error al notificar cobros-actualizados:', err);
+            }
             const result = await client.query(`SELECT * FROM cobros WHERE id = $1`, [cobro.id]);
             return result.rows[0];
         }

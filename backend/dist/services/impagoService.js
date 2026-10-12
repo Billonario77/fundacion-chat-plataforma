@@ -154,6 +154,12 @@ class ImpagoService {
                 porcentaje_multa: porcentajeMulta
             })
         ]);
+        try {
+            (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+        }
+        catch (err) {
+            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+        }
         console.log(`✅ Turno ${turno.id} cancelado y multa aplicada`);
     }
 }

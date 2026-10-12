@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { notificarAAdmins } from './socketService';
 
 // ============================================
 // INTERFACES
@@ -332,6 +333,13 @@ export class PagoService {
       console.log(`🔗 ${multasPendientes.length} multa(s) vinculada(s) al cobro ${cobro.id}`);
     }
 
+    // Notificar a admins que hay cambios en cobros pendientes
+    try {
+      notificarAAdmins('cobros-actualizados', {});
+    } catch (err) {
+      console.error('⚠️ Error al notificar cobros-actualizados:', err);
+    }
+
     return {
       total: totalConMultas,
       descuentoPorcentaje,
@@ -446,8 +454,17 @@ export class PagoService {
         `UPDATE turnos SET estado = 'aceptado' WHERE id = $1`,
         [turnoId]
       );
+      
 
       await client.query('COMMIT');
+
+
+      // Notificar a admins del cambio en cobros
+      try {
+        notificarAAdmins('cobros-actualizados', {});
+      } catch (err) {
+        console.error('⚠️ Error al notificar cobros-actualizados:', err);
+      }  
 
 
       const result = await client.query(
@@ -511,6 +528,13 @@ export class PagoService {
       );
 
       await client.query('COMMIT');
+
+      // Notificar a admins del cambio en cobros
+      try {
+        notificarAAdmins('cobros-actualizados', {});
+      } catch (err) {
+        console.error('⚠️ Error al notificar cobros-actualizados:', err);
+      } 
 
 
       const result = await client.query(

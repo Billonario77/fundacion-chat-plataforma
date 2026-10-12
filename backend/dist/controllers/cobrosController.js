@@ -6,6 +6,7 @@ const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
 const connection_1 = require("../database/connection");
 const wompiService_1 = require("../services/wompiService");
+const socketService_1 = require("../services/socketService");
 const pagoService = new pagoService_1.PagoService(connection_1.pool);
 const cuponService = new cuponService_1.CuponService(connection_1.pool);
 const entidadService = new entidadService_1.EntidadService(connection_1.pool);
@@ -988,6 +989,12 @@ const condonarMulta = async (req, res) => {
             ]);
             await client.query('COMMIT');
             console.log(`✅ Multa ${multaId} condonada por admin ${adminId}`);
+            try {
+                (0, socketService_1.notificarAAdmins)('cobros-actualizados', {});
+            }
+            catch (err) {
+                console.error('⚠️ Error al notificar cobros-actualizados:', err);
+            }
             res.json({
                 success: true,
                 message: 'Multa condonada exitosamente',

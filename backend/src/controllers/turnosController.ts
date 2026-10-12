@@ -1040,6 +1040,20 @@ export const cancelarTurno = async (req: AuthRequest, res: Response): Promise<vo
       ]
     );
 
+    // Notificar a admins que hay cambios en cobros pendientes
+    try {
+      notificarAAdmins('cobros-actualizados', {});
+    } catch (err) {
+      console.error('⚠️ Error al notificar cobros-actualizados:', err);
+    }
+
+    res.json({
+      message: 'Turno cancelado exitosamente',
+      turno: result.rows[0],
+      requierePenalizacion: requierePenalizacion,
+      multa: multaCreada
+    });
+
     res.json({
       message: 'Turno cancelado exitosamente',
       turno: result.rows[0],

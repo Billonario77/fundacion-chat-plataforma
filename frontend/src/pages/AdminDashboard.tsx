@@ -290,6 +290,22 @@ const cargarConteoReprogramaciones = async () => {
   useEffect(() => {
     if (!socket || !connected) return;
 
+    console.log('👂 Escuchando evento cobros-actualizados');
+
+    socket.on('cobros-actualizados', () => {
+      console.log('💵 Cobros actualizados recibido, recargando conteo');
+      cargarConteoCobros();
+    });
+
+    return () => {
+      socket.off('cobros-actualizados');
+    };
+  }, [socket, connected]);
+
+
+  useEffect(() => {
+    if (!socket || !connected) return;
+
     console.log('👂 Escuchando evento nuevo-testimonio-pendiente');
 
     socket.on('nuevo-testimonio-pendiente', (data) => {

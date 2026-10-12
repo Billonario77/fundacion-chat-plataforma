@@ -1,7 +1,7 @@
 // backend/src/services/impagoService.ts
 
 import { pool } from '../database/connection';
-import { notificarUsuario } from './socketService';
+import { notificarUsuario, notificarAAdmins } from './socketService';
 
 interface TurnoImpago {
   id: string;
@@ -242,6 +242,13 @@ export class ImpagoService {
         })
       ]
     );
+
+    // Notificar a admins que hay cambios en cobros pendientes
+    try {
+      notificarAAdmins('cobros-actualizados', {});
+    } catch (err) {
+      console.error('⚠️ Error al notificar cobros-actualizados:', err);
+    }
 
     console.log(`✅ Turno ${turno.id} cancelado y multa aplicada`);
   }

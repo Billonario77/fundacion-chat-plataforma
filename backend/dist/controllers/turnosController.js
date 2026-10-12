@@ -795,6 +795,18 @@ const cancelarTurno = async (req, res) => {
                 requiere_penalizacion: requierePenalizacion
             })
         ]);
+        try {
+            (0, socketService_2.notificarAAdmins)('cobros-actualizados', {});
+        }
+        catch (err) {
+            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+        }
+        res.json({
+            message: 'Turno cancelado exitosamente',
+            turno: result.rows[0],
+            requierePenalizacion: requierePenalizacion,
+            multa: multaCreada
+        });
         res.json({
             message: 'Turno cancelado exitosamente',
             turno: result.rows[0],

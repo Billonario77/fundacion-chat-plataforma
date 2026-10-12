@@ -6,6 +6,7 @@ import { CuponService } from '../services/cuponService';
 import { EntidadService } from '../services/entidadService';
 import { pool } from '../database/connection';
 import { WompiService } from '../services/wompiService';
+import { notificarAAdmins } from '../services/socketService';
 
 const pagoService = new PagoService(pool);
 const cuponService = new CuponService(pool);
@@ -1350,6 +1351,13 @@ export const condonarMulta = async (req: AuthRequest, res: Response) => {
       await client.query('COMMIT');
 
       console.log(`✅ Multa ${multaId} condonada por admin ${adminId}`);
+
+      // Notificar a admins que hay cambios en cobros pendientes
+      try {
+        notificarAAdmins('cobros-actualizados', {});
+      } catch (err) {
+        console.error('⚠️ Error al notificar cobros-actualizados:', err);
+      } 
 
       res.json({
         success: true,
