@@ -96,7 +96,8 @@ const AdminDashboard: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [hayNuevosUsuarios, setHayNuevosUsuarios] = useState(false);
   const [reprogramacionesPendientes, setReprogramacionesPendientes] = useState(0);
-    const [testimoniosPendientes, setTestimoniosPendientes] = useState(0);
+  const [testimoniosPendientes, setTestimoniosPendientes] = useState(0);
+  const [cobrosPendientes, setCobrosPendientes] = useState(0);
   
   // Estados para filtros de estadísticas
   const [fechaInicio, setFechaInicio] = useState('');
@@ -177,6 +178,21 @@ const cargarConteoReprogramaciones = async () => {
       console.error('Error al cargar conteo de testimonios:', err);
     }
   };
+
+
+  const cargarConteoCobros = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `https://fundacion-chat-plataforma-backend-api.onrender.com/api/cobros/pendientes/count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCobrosPendientes(response.data.count);
+    } catch (err) {
+      console.error('Error al cargar conteo de cobros:', err);
+    }
+  };
+
 
   const handleExportarEstadisticas = (formato: 'csv' | 'pdf') => {
     if (!estadisticasActuales) return;
@@ -261,10 +277,15 @@ const cargarConteoReprogramaciones = async () => {
   }, [socket, connected]);
 
 
-
   useEffect(() => {
     cargarConteoTestimonios();
   }, []);
+
+
+  useEffect(() => {
+    cargarConteoCobros();
+  }, []);
+
 
   useEffect(() => {
     if (!socket || !connected) return;
@@ -353,6 +374,9 @@ const cargarConteoReprogramaciones = async () => {
     if (pestañaActiva === 'testimonios') {
       setTestimoniosPendientes(0);
     }
+    if (pestañaActiva === 'cobros') {
+      setCobrosPendientes(0);
+    }
   }, [pestañaActiva]);
 
   if (!user || user.rol !== 'admin') {
@@ -412,6 +436,7 @@ const cargarConteoReprogramaciones = async () => {
               {pestañaActiva === 'cupones' && '🎫 Cupones'}              
               {pestañaActiva === 'donaciones' && '💝 Donaciones'}
               {pestañaActiva === 'cobros' && '💵 Cobros de Sesiones'}
+              {cobrosPendientes > 0 && pestañaActiva !== 'cobros' && ` (${cobrosPendientes})`}
               {pestañaActiva === 'estadisticas-cobros' && '💰 Estadísticas Cobros'}
               {pestañaActiva === 'configuracion' && '⚙️ Configuración'}
               {pestañaActiva === 'testimonios' && '💬 Testimonios'}
@@ -559,6 +584,11 @@ const cargarConteoReprogramaciones = async () => {
               >
                 <span>💵</span>
                 <span>Cobros de Sesiones</span>
+                {cobrosPendientes > 0 && pestañaActiva !== 'cobros' && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    {cobrosPendientes}
+                  </span>
+                )}
               </button>
 
               <button
@@ -755,6 +785,11 @@ const cargarConteoReprogramaciones = async () => {
           >
             <span className="text-lg">💵</span>
             <span>Cobros de Sesiones</span>
+            {cobrosPendientes > 0 && pestañaActiva !== 'cobros' && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                {cobrosPendientes}
+              </span>
+            )}
           </button>
 
           <button

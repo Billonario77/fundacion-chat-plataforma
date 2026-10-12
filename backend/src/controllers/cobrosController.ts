@@ -261,6 +261,38 @@ export const obtenerEstadisticasCobros = async (req: AuthRequest, res: Response)
   }
 };
 
+
+// ============================================
+// CONTAR COBROS PENDIENTES (Admin - badge)
+// Cuenta: cobros tipo 'sesion' pendientes + multas pendientes sin condonar
+// ============================================
+export const contarCobrosPendientes = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores' });
+    }
+
+    const { rows } = await pool.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM cobros WHERE tipo = 'sesion' AND estado = 'pendiente') AS sesiones,
+        (SELECT COUNT(*)::int FROM cobros WHERE tipo = 'multa' AND estado = 'pendiente') AS multas
+    `);
+
+    const sesiones = rows[0].sesiones || 0;
+    const multas = rows[0].multas || 0;
+
+    res.json({
+      count: sesiones + multas,
+      sesiones,
+      multas
+    });
+  } catch (error: any) {
+    console.error('Error al contar cobros pendientes:', error);
+    res.status(500).json({ error: error.message || 'Error al contar cobros pendientes' });
+  }
+};
+
+
 // ============================================
 // OBTENER TODOS LOS COBROS (Admin - Historial)
 // ============================================

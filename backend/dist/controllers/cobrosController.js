@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.eliminarCorreoAutorizado = exports.obtenerCorreosAutorizados = exports.asignarUsuariosMasivo = exports.asignarUsuarioAEntidadPorEmail = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
+exports.condonarMulta = exports.generarFirmaPagoSesion = exports.obtenerCupones = exports.marcarUsuarioExento = exports.eliminarCorreoAutorizado = exports.obtenerCorreosAutorizados = exports.asignarUsuariosMasivo = exports.asignarUsuarioAEntidadPorEmail = exports.asignarUsuarioAEntidad = exports.obtenerConsumoPeriodo = exports.agregarHorasBolsa = exports.obtenerResumenEntidad = exports.obtenerEntidades = exports.generarCuponParaEntidad = exports.obtenerCuponesDeEntidad = exports.canjearCuponBolsa = exports.validarCupon = exports.crearCupon = exports.crearEntidad = exports.obtenerCobros = exports.contarCobrosPendientes = exports.obtenerEstadisticasCobros = exports.obtenerCobroPorTurno = exports.registrarPagoManual = exports.confirmarPago = exports.verificarPagoTurno = exports.calcularCostoTurno = void 0;
 const pagoService_1 = require("../services/pagoService");
 const cuponService_1 = require("../services/cuponService");
 const entidadService_1 = require("../services/entidadService");
@@ -196,6 +196,30 @@ const obtenerEstadisticasCobros = async (req, res) => {
     }
 };
 exports.obtenerEstadisticasCobros = obtenerEstadisticasCobros;
+const contarCobrosPendientes = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores' });
+        }
+        const { rows } = await connection_1.pool.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM cobros WHERE tipo = 'sesion' AND estado = 'pendiente') AS sesiones,
+        (SELECT COUNT(*)::int FROM cobros WHERE tipo = 'multa' AND estado = 'pendiente') AS multas
+    `);
+        const sesiones = rows[0].sesiones || 0;
+        const multas = rows[0].multas || 0;
+        res.json({
+            count: sesiones + multas,
+            sesiones,
+            multas
+        });
+    }
+    catch (error) {
+        console.error('Error al contar cobros pendientes:', error);
+        res.status(500).json({ error: error.message || 'Error al contar cobros pendientes' });
+    }
+};
+exports.contarCobrosPendientes = contarCobrosPendientes;
 const obtenerCobros = async (req, res) => {
     try {
         if (req.user?.rol !== 'admin') {

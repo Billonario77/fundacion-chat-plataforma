@@ -27,7 +27,8 @@ import {
   obtenerCupones,
   generarFirmaPagoSesion,
   obtenerCobros,
-  condonarMulta
+  condonarMulta, 
+  contarCobrosPendientes
 } from '../controllers/cobrosController';
 
 const router = Router();
@@ -53,6 +54,9 @@ router.patch('/admin/multas/:multaId/condonar', authenticateToken, isAdmin, cond
 
 // Obtener cobro por turno
 router.get('/turnos/:turnoId/cobro', authenticateToken, obtenerCobroPorTurno);
+
+// Contar cobros pendientes (solo admin - badge)
+router.get('/pendientes/count', authenticateToken, isAdmin, contarCobrosPendientes);
 
 // Obtener todos los cobros (solo admin - historial)
 router.get('/historial', authenticateToken, isAdmin, obtenerCobros);

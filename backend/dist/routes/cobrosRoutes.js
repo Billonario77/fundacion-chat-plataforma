@@ -11,6 +11,7 @@ router.post('/confirmar-pago', auth_1.authenticateToken, cobrosController_1.conf
 router.post('/registrar-pago-manual', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.registrarPagoManual);
 router.patch('/admin/multas/:multaId/condonar', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.condonarMulta);
 router.get('/turnos/:turnoId/cobro', auth_1.authenticateToken, cobrosController_1.obtenerCobroPorTurno);
+router.get('/pendientes/count', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.contarCobrosPendientes);
 router.get('/historial', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerCobros);
 router.get('/estadisticas', auth_1.authenticateToken, isAdmin_1.isAdmin, cobrosController_1.obtenerEstadisticasCobros);
 router.post('/turnos/:turnoId/generar-pago', auth_1.authenticateToken, cobrosController_1.generarFirmaPagoSesion);
