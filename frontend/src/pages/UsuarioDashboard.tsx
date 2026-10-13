@@ -44,7 +44,11 @@ const UsuarioDashboard: React.FC = () => {
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [editandoTestimonio, setEditandoTestimonio] = useState<Testimonio | null>(null);
 
-    // Estados para plan/suscripción
+  // Control para no repetir el aviso urgente cada vez que cambia la hora
+  const avisoUrgenteMostradoRef = React.useRef(false);
+
+
+  // Estados para plan/suscripción
   const [planActivo, setPlanActivo] = useState<PlanActivo | null>(null);
   const [planesDisponibles, setPlanesDisponibles] = useState<PlanDisponible[]>([]);
   const [multasPendientesSuscripcion, setMultasPendientesSuscripcion] = useState(0);
@@ -291,6 +295,17 @@ const [modalCerrado, setModalCerrado] = useState(false);
       }
     };
     cargarMiPerfil();
+
+    // Cargar el plan activo también al inicio, para que el aviso de
+    // "Tarifa por Prioridad" no se muestre si el usuario es suscriptor.
+    (async () => {
+      try {
+        const plan = await suscripcionesService.miPlan();
+        setPlanActivo(plan);
+      } catch (err) {
+        console.error('Error al cargar plan activo al inicio:', err);
+      }
+    })();
   }, []);
 
 
@@ -1240,24 +1255,35 @@ const eliminarTestimonio = async (id: number) => {
                         fecha_preferida: fecha ? fecha.toISOString() : ''
                       });
 
-                      if (fecha) {
-                        const minutos = (fecha.getTime() - Date.now()) / (1000 * 60);
-                        if (minutos <= 120) {
-                          toast(
-                            '⚡ Sesión prioritaria: aplica una Tarifa por Prioridad del 50%. Debe pagarse de inmediato para confirmarla.',
-                            {
-                              duration: 8000,
-                              icon: '⚡',
-                              style: {
-                                background: '#fef3c7',
-                                color: '#92400e',
-                                padding: '16px',
-                                maxWidth: '480px',
-                                whiteSpace: 'normal',
-                              },
-                            }
-                          );
-                        }
+                      // Si se limpia la fecha, permitir que el aviso se pueda volver a mostrar
+                      if (!fecha) {
+                        avisoUrgenteMostradoRef.current = false;
+                        return;
+                      }
+
+                      // No mostrar el aviso a suscriptores (están exentos del recargo)
+                      if (planActivo) return;
+
+                      // Solo mostrar una vez por intento de agendamiento
+                      if (avisoUrgenteMostradoRef.current) return;
+
+                      const minutos = (fecha.getTime() - Date.now()) / (1000 * 60);
+                      if (minutos <= 120) {
+                        avisoUrgenteMostradoRef.current = true;
+                        toast(
+                          '⚡ Sesión prioritaria: aplica una Tarifa por Prioridad del 50%. Debe pagarse de inmediato para confirmarla.',
+                          {
+                            duration: 8000,
+                            icon: '⚡',
+                            style: {
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              padding: '16px',
+                              maxWidth: '480px',
+                              whiteSpace: 'normal',
+                            },
+                          }
+                        );
                       }
                     }}
                   />
