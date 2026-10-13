@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.historial = exports.miPlan = exports.iniciarPago = exports.listarPlanes = void 0;
+exports.confirmarSuscripcionManual = exports.historial = exports.miPlan = exports.iniciarPago = exports.listarPlanes = void 0;
 const connection_1 = require("../database/connection");
 const suscripcionService_1 = require("../services/suscripcionService");
 const wompiService_1 = require("../services/wompiService");
@@ -128,4 +128,26 @@ const historial = async (req, res) => {
     }
 };
 exports.historial = historial;
+const confirmarSuscripcionManual = async (req, res) => {
+    try {
+        if (req.user?.rol !== 'admin') {
+            return res.status(403).json({ error: 'Solo administradores pueden confirmar suscripciones' });
+        }
+        const { referencia } = req.params;
+        if (!referencia) {
+            return res.status(400).json({ error: 'Referencia requerida' });
+        }
+        const subActualizada = await suscripcionService.confirmarPago(referencia);
+        res.json({
+            success: true,
+            message: `Suscripción ${subActualizada.plan} confirmada`,
+            data: subActualizada,
+        });
+    }
+    catch (error) {
+        console.error('Error al confirmar suscripción manual:', error);
+        res.status(500).json({ error: error.message || 'Error al confirmar suscripción' });
+    }
+};
+exports.confirmarSuscripcionManual = confirmarSuscripcionManual;
 //# sourceMappingURL=suscripcionesController.js.map

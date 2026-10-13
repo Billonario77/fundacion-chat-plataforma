@@ -5,7 +5,9 @@ import {
   iniciarPago,
   miPlan,
   historial,
+  confirmarSuscripcionManual,
 } from '../controllers/suscripcionesController';
+import { isAdmin } from '../middleware/isAdmin';
 
 const router = Router();
 
@@ -20,5 +22,8 @@ router.get('/mi-plan', authenticateToken, miPlan);
 
 // Historial de suscripciones del usuario
 router.get('/historial', authenticateToken, historial);
+
+// Confirmar suscripción manualmente (solo admin — respaldo del webhook)
+router.post('/admin/confirmar/:referencia', authenticateToken, isAdmin, confirmarSuscripcionManual);
 
 export default router;

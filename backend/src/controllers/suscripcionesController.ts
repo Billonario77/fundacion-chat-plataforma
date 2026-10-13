@@ -173,3 +173,34 @@ export const historial = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: error.message || 'Error al obtener historial' });
   }
 };
+
+
+
+
+// ============================================
+// CONFIRMAR SUSCRIPCIÓN MANUALMENTE (Admin)
+// ============================================
+export const confirmarSuscripcionManual = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo administradores pueden confirmar suscripciones' });
+    }
+
+    const { referencia } = req.params;
+
+    if (!referencia) {
+      return res.status(400).json({ error: 'Referencia requerida' });
+    }
+
+    const subActualizada = await suscripcionService.confirmarPago(referencia);
+
+    res.json({
+      success: true,
+      message: `Suscripción ${subActualizada.plan} confirmada`,
+      data: subActualizada,
+    });
+  } catch (error: any) {
+    console.error('Error al confirmar suscripción manual:', error);
+    res.status(500).json({ error: error.message || 'Error al confirmar suscripción' });
+  }
+};
