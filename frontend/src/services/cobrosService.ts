@@ -51,6 +51,7 @@ export interface Cobro {
   descuento_aplicado: number;
   total: number;
   monto_multas: number;
+  monto_recargo: number;
   tipo: 'sesion' | 'multa';
   concepto?: string;
   estado: 'pendiente' | 'pagado' | 'fallido' | 'exento' | 'consumido_bolsa';

@@ -440,6 +440,7 @@ const DetalleTurno: React.FC = () => {
                     const costoBase = parseFloat(String(cobro.costo_por_hora)) * (parseFloat(String(cobro.duracion_minutos)) / 60);
                     const descuento = parseFloat(String(cobro.descuento_aplicado || 0));
                     const montoMultas = parseFloat(String(cobro.monto_multas || 0));
+                    const montoRecargo = parseFloat(String(cobro.monto_recargo || 0));
                     const total = parseFloat(String(cobro.total));
 
                     return (
@@ -458,6 +459,15 @@ const DetalleTurno: React.FC = () => {
                             </span>
                             <span className="font-medium text-green-700">
                               −${descuento.toLocaleString('es-CO')}
+                            </span>
+                          </div>
+                        )}
+
+                        {montoRecargo > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-[#E07A5F]">Tarifa por prioridad:</span>
+                            <span className="font-medium text-[#E07A5F]">
+                              ${montoRecargo.toLocaleString('es-CO')}
                             </span>
                           </div>
                         )}

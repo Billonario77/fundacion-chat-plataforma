@@ -7,7 +7,7 @@ import Logo from '../components/Logo';
 import BotonVolver from '../components/BotonVolver';
 
 const TerminosPage: React.FC = () => {
-  const actualizado = '7 de octubre de 2026';
+  const actualizado = '13 de octubre de 2026';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF6EC] via-[#F4E8D8] to-[#FAF0E0]">
@@ -103,9 +103,10 @@ const TerminosPage: React.FC = () => {
                 <li>Las sesiones tendrán un costo que se informa antes de agendar y pagar.</li>
                 <li>Los pagos se procesan a través de <strong>Wompi</strong> (pasarela de pagos de Bancolombia). <strong>Biozynex SAS</strong> no almacena datos 
                     completos de tarjetas de crédito o débito y se apoya en proveedores de pago certificados para el procesamiento de las transacciones.</li>
+                <li><strong>Tarifa por Prioridad:</strong> cuando una sesión se agenda con <strong>menos de 2 horas</strong> de anticipación, se aplica un recargo del <strong>50% sobre el valor base</strong> de la sesión, por tratarse de una reserva prioritaria. Este recargo se informa antes de confirmar el agendamiento y <strong>debe pagarse de inmediato</strong> para garantizar la reserva. El recargo no aplica a usuarios con suscripción mensual activa.</li>
                 <li>Podrás cancelar una sesión sin penalización hasta <strong>2 horas antes</strong> de su inicio.</li>
-                <li>Si no realizas el pago <strong>1 hora antes</strong> del inicio (o 5 minutos después del inicio si la sesión fue agendada con menos de 70 minutos de anticipación), la sesión se cancela automáticamente y se genera una multa equivalente al <strong>50% del valor de la sesión</strong>, que se sumará a tu próxima sesión.</li>
-                <li>Las multas son configurables por <strong>Biozynex SAS</strong> y se informan oportunamente en la Plataforma.</li>
+                <li>Si no realizas el pago <strong>1 hora antes</strong> del inicio, la sesión se cancela automáticamente y se genera una multa equivalente al <strong>50% del valor de la sesión</strong>, que se sumará a tu próxima sesión. En sesiones prioritarias, el pago debe realizarse de inmediato para confirmar la reserva.</li>
+                <li>Las multas y recargos son configurables por <strong>Biozynex SAS</strong> y se informan oportunamente en la Plataforma.</li>
               </ul>
             </div>
 

@@ -637,7 +637,7 @@ const eliminarTestimonio = async (id: number) => {
       // Aviso de pago urgente o normal
       if (respuesta.esUrgente) {
         toast(
-          'Esta sesión es para dentro de menos de 70 minutos. Debes pagarla antes del inicio. Si no la pagas, se cancelará automáticamente y se aplicará una multa del 50%. Puedes cancelarla sin costo si no puedes asistir.',
+          'Sesión prioritaria, se aplica una Tarifa del 50% adicional. Debe pagarse de inmediato para confirmarla. Si no se paga antes del inicio, se cancelará automáticamente y se aplicará una multa del 50%.',
           {
             duration: 12000,
             icon: '⚠️',

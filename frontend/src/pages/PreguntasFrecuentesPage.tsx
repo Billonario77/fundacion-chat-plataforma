@@ -63,6 +63,10 @@ const CATEGORIAS: Categoria[] = [
       {
         q: '¿Puedo usar un cupón de descuento?',
         a: 'Sí. Si tienes un cupón de convenio, ingrésalo al momento de pagar tu sesión y el sistema calculará el nuevo valor. Cada cupón es de un solo uso por persona.'
+      },
+      {
+        q: '¿Qué es la Tarifa por Prioridad?',
+        a: 'Es un recargo del 50% sobre el valor base de la sesión que aplica cuando agendas con menos de 2 horas de anticipación. Al ser una sesión prioritaria, se te asigna un guía de inmediato y debes pagarla en el momento para confirmarla. Si no la pagas antes del inicio, la sesión se cancela automáticamente y se aplica una multa del 50%.'
       }
     ]
   },
@@ -76,7 +80,7 @@ const CATEGORIAS: Categoria[] = [
       },
       {
         q: '¿Qué pasa si no pago la sesión a tiempo?',
-        a: 'Si no realizas el pago 1 hora antes del inicio (o 5 minutos después del inicio, si agendaste con menos de 70 minutos de anticipación), la sesión se cancela automáticamente y se genera una multa del 50% del valor de la sesión, que se suma a tu próxima sesión.'
+        a: 'Si no realizas el pago 1 hora antes del inicio de la sesión, esta se cancela automáticamente y se genera una multa del 50% del valor de la sesión, que se suma a tu próxima sesión. En las sesiones prioritarias (agendadas con menos de 2 horas de anticipación), el pago debe hacerse de inmediato para confirmar la reserva.'
       },
       {
         q: '¿Puedo agendar si tengo una multa pendiente?',
