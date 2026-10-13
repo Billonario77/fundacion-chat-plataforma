@@ -98,6 +98,68 @@ class SuscripcionService {
          AND estado = 'pendiente'`, [usuarioId]);
         return parseFloat(result.rows[0]?.total || '0');
     }
+    async confirmarPago(referencia) {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const subQuery = await client.query(`SELECT * FROM suscripciones WHERE referencia_wompi = $1 FOR UPDATE`, [referencia]);
+            const sub = subQuery.rows[0];
+            if (!sub) {
+                throw new Error(`Suscripción con referencia ${referencia} no encontrada`);
+            }
+            if (sub.estado_pago === 'pagado') {
+                await client.query('COMMIT');
+                return sub;
+            }
+            const updateQuery = `
+        UPDATE suscripciones
+        SET estado_pago = 'pagado',
+            pagado_at = NOW(),
+            fecha_inicio = NOW(),
+            fecha_fin = NOW() + INTERVAL '30 days',
+            sesiones_usadas = 0,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `;
+            const updateResult = await client.query(updateQuery, [sub.id]);
+            const subActualizada = updateResult.rows[0];
+            await client.query(`UPDATE cobros
+         SET estado = 'pagado',
+             pagado_at = NOW(),
+             metodo_pago = 'wompi_suscripcion',
+             updated_at = NOW()
+         WHERE usuario_id = $1
+           AND tipo = 'multa'
+           AND estado = 'pendiente'`, [sub.usuario_id]);
+            await client.query('COMMIT');
+            return subActualizada;
+        }
+        catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        }
+        finally {
+            client.release();
+        }
+    }
+    async consumirSesion(usuarioId) {
+        const sub = await this.obtenerPlanActivo(usuarioId);
+        if (!sub) {
+            return { ok: false, sesionesRestantes: 0 };
+        }
+        if (sub.sesiones_usadas >= sub.sesiones_incluidas) {
+            return { ok: false, sesionesRestantes: 0 };
+        }
+        const updateResult = await this.pool.query(`UPDATE suscripciones
+       SET sesiones_usadas = sesiones_usadas + 1,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING sesiones_incluidas, sesiones_usadas`, [sub.id]);
+        const row = updateResult.rows[0];
+        const restantes = row.sesiones_incluidas - row.sesiones_usadas;
+        return { ok: true, sesionesRestantes: restantes };
+    }
 }
 exports.SuscripcionService = SuscripcionService;
 //# sourceMappingURL=suscripcionService.js.map

@@ -5,6 +5,7 @@ const pg_1 = require("pg");
 const wompiService_1 = require("../services/wompiService");
 const emailService_1 = require("../services/emailService");
 const socketService_1 = require("../services/socketService");
+const suscripcionService_1 = require("../services/suscripcionService");
 const pool = new pg_1.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -13,6 +14,7 @@ const pool = new pg_1.Pool({
     max: 20
 });
 const wompiService = new wompiService_1.WompiService();
+const suscripcionService = new suscripcionService_1.SuscripcionService(pool);
 const generarFirmaDonacion = async (req, res) => {
     try {
         const { monto, nombreDonante, emailDonante, esAnonima, mensaje } = req.body;
@@ -181,7 +183,38 @@ const webhookWompi = async (req, res) => {
                     }
                 }
                 else {
-                    console.warn(`⚠️ No se encontró donación ni cobro con referencia: ${referencia}`);
+                    const suscripcion = await suscripcionService.obtenerPorReferencia(referencia);
+                    if (suscripcion) {
+                        if (estadoWompi === 'APPROVED') {
+                            try {
+                                const subActualizada = await suscripcionService.confirmarPago(referencia);
+                                console.log(`✅ Suscripción confirmada: ${referencia} → plan ${subActualizada.plan}`);
+                                console.log(`   - Sesiones incluidas: ${subActualizada.sesiones_incluidas}`);
+                                console.log(`   - Vigencia: ${subActualizada.fecha_inicio} → ${subActualizada.fecha_fin}`);
+                                try {
+                                    (0, socketService_1.notificarAAdmins)('suscripciones-actualizadas', {
+                                        usuarioId: subActualizada.usuario_id,
+                                        plan: subActualizada.plan,
+                                    });
+                                }
+                                catch (err) {
+                                    console.error('⚠️ Error al notificar suscripciones-actualizadas:', err);
+                                }
+                            }
+                            catch (err) {
+                                console.error('⚠️ Error al confirmar suscripción:', err);
+                            }
+                        }
+                        else if (estadoWompi === 'DECLINED' || estadoWompi === 'VOIDED' || estadoWompi === 'ERROR') {
+                            await pool.query(`UPDATE suscripciones
+                 SET estado_pago = 'fallido', updated_at = NOW()
+                 WHERE referencia_wompi = $1`, [referencia]);
+                            console.log(`⚠️ Suscripción ${referencia} marcada como fallida (Wompi: ${estadoWompi})`);
+                        }
+                    }
+                    else {
+                        console.warn(`⚠️ No se encontró donación, cobro ni suscripción con referencia: ${referencia}`);
+                    }
                 }
             }
         }
