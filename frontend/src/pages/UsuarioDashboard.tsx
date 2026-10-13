@@ -725,10 +725,25 @@ const eliminarTestimonio = async (id: number) => {
       setNuevaSolicitud({ rol: 'apoyo', mensaje: '', fecha_preferida: '' });
       setMostrarFormulario(false);
 
-      // Aviso de pago urgente o normal
-      if (respuesta.esUrgente) {
+      // Aviso según tipo de usuario
+      if (respuesta.consumidoDelPlan) {
+        toast.success(
+          '✅ Sesión agendada con tu plan. No se te cobrará esta sesión.',
+          {
+            duration: 6000,
+            icon: '💎',
+            style: {
+              background: '#ecfdf5',
+              color: '#065f46',
+              padding: '16px',
+              maxWidth: '480px',
+              whiteSpace: 'normal',
+            },
+          }
+        );
+      } else if (respuesta.esUrgente) {
         toast(
-          'Sesión prioritaria, se aplica una Tarifa del 50% adicional. Debe pagarse de inmediato para confirmarla. Si no se paga antes del inicio, se cancelará automáticamente y se aplicará una multa del 50%.',
+          '⚠️ Esta sesión es para dentro de menos de 2 horas, por lo que aplica una Tarifa por Prioridad del 50%. Debes pagarla inmediatamente para confirmarla. Si no la pagas antes del inicio, se cancelará automáticamente y se aplicará una multa del 50%.',
           {
             duration: 12000,
             icon: '⚠️',

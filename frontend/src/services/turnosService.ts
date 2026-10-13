@@ -68,6 +68,15 @@ export interface CancelacionFiltros {
   usuario_id?: string;
 }
 
+export interface SolicitarApoyoResponse {
+  message: string;
+  turnoId: string;
+  requiereAsignacion: boolean;
+  requierePago: boolean;
+  esUrgente: boolean;
+  consumidoDelPlan: boolean;
+}
+
 // ============================================
 // PERFIL SERVICE
 // ============================================
@@ -336,7 +345,7 @@ export const turnosService = {
 // ============================================
 
 export const usuarioService = {
-  solicitarApoyo: async (rol: string, mensaje: string, fechaPreferida?: string) => {
+  solicitarApoyo: async (rol: string, mensaje: string, fechaPreferida?: string): Promise<SolicitarApoyoResponse> => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
