@@ -620,6 +620,20 @@ const eliminarTestimonio = async (id: number) => {
   const handleSolicitarApoyo = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validar que se haya elegido fecha y hora
+    if (!nuevaSolicitud.fecha_preferida) {
+      toast.error('Debes elegir una fecha y hora para tu sesión');
+      return;
+    }
+
+    // Validar mínimo 30 minutos de anticipación
+    const minutosAntelacion = (new Date(nuevaSolicitud.fecha_preferida).getTime() - Date.now()) / (1000 * 60);
+    if (minutosAntelacion < 30) {
+      toast.error('Debes agendar con al menos 30 minutos de anticipación');
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('🔍 fecha_preferida que voy a enviar:', nuevaSolicitud.fecha_preferida);
@@ -1099,7 +1113,9 @@ const eliminarTestimonio = async (id: number) => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-gray-700 mb-2 font-medium">Fecha y hora preferida (opcional)</label>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    Fecha y hora de tu sesión <span className="text-red-500">*</span>
+                  </label>
                   <CalendarioHorarios
                     guiaId={solicitudes.length > 0 && solicitudes[0]?.guia_id ? solicitudes[0].guia_id : ''}
                     fechaSeleccionada={nuevaSolicitud.fecha_preferida ? new Date(nuevaSolicitud.fecha_preferida) : null}
@@ -1108,6 +1124,26 @@ const eliminarTestimonio = async (id: number) => {
                         ...nuevaSolicitud,
                         fecha_preferida: fecha ? fecha.toISOString() : ''
                       });
+
+                      if (fecha) {
+                        const minutos = (fecha.getTime() - Date.now()) / (1000 * 60);
+                        if (minutos <= 120) {
+                          toast(
+                            '⚡ Sesión prioritaria: aplica una Tarifa por Prioridad del 50%. Debe pagarse de inmediato para confirmarla.',
+                            {
+                              duration: 8000,
+                              icon: '⚡',
+                              style: {
+                                background: '#fef3c7',
+                                color: '#92400e',
+                                padding: '16px',
+                                maxWidth: '480px',
+                                whiteSpace: 'normal',
+                              },
+                            }
+                          );
+                        }
+                      }
                     }}
                   />
 
@@ -1117,7 +1153,7 @@ const eliminarTestimonio = async (id: number) => {
                     </p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
-                    Las horas en rojo no están disponibles. Si no seleccionas fecha, se asignará una automáticamente.
+                    Las horas en rojo no están disponibles. Las sesiones requieren al menos 30 minutos de anticipación.
                   </p>
                 </div>
 

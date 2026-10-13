@@ -6,8 +6,10 @@ import { notificarUsuario } from '../services/socketService';
 import { notificarAAdmins } from '../services/socketService';
 import { AsignacionService } from '../services/asignacionService';
 import { PagoService } from '../services/pagoService';
+import { SuscripcionService } from '../services/suscripcionService';
 
 const pagoService = new PagoService(pool);
+const suscripcionService = new SuscripcionService(pool);
 
 export const solicitarApoyo = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -86,40 +88,52 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
     // ============================================
     // VALIDACIONES DE DISPONIBILIDAD DEL USUARIO
     // ============================================
-    let fechaProgramada: Date;
-    if (fechaPreferida) {
-      fechaProgramada = new Date(fechaPreferida);
-      
-      if (fechaProgramada <= new Date()) {
-        res.status(400).json({ error: 'La fecha debe ser posterior a la fecha actual' });
-        return;
-      }
+    // ============================================
+    // VALIDAR FECHA OBLIGATORIA Y ANTICIPACIÓN MÍNIMA
+    // ============================================
+    if (!fechaPreferida) {
+      res.status(400).json({ error: 'Debes elegir una fecha y hora para tu sesión.' });
+      return;
+    }
 
-      const duracion = 60;
-      const fechaInicio = new Date(fechaProgramada);
-      const fechaFin = new Date(fechaProgramada);
-      fechaFin.setMinutes(fechaFin.getMinutes() + duracion);
+    const fechaProgramada = new Date(fechaPreferida);
 
-      const turnosUsuario = await pool.query(
-        `SELECT id FROM turnos 
-         WHERE usuario_id = $1 
-         AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')
-         AND (
-           (fecha_programada < $2 AND (fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute')) > $3)
-           OR
-           (fecha_programada >= $3 AND fecha_programada < $2)
-         )`,
-        [usuarioId, fechaFin, fechaInicio]
-      );
+    if (fechaProgramada <= new Date()) {
+      res.status(400).json({ error: 'La fecha debe ser posterior a la fecha actual.' });
+      return;
+    }
 
-      if (turnosUsuario.rows.length > 0) {
-        res.status(400).json({ 
-          error: `Ya tienes un turno programado en ese horario. Por favor, elige otra fecha u hora.`
-        });
-        return;
-      }
-    } else {
-      fechaProgramada = new Date();
+    // Mínimo 30 minutos de anticipación (aplica a todos los usuarios)
+    const minutosAntelacionPrevia = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
+    if (minutosAntelacionPrevia < 30) {
+      res.status(400).json({
+        error: 'Debes agendar tu sesión con al menos 30 minutos de anticipación para que un guía pueda atenderte.'
+      });
+      return;
+    }
+
+    const duracion = 60;
+    const fechaInicio = new Date(fechaProgramada);
+    const fechaFin = new Date(fechaProgramada);
+    fechaFin.setMinutes(fechaFin.getMinutes() + duracion);
+
+    const turnosUsuario = await pool.query(
+      `SELECT id FROM turnos 
+       WHERE usuario_id = $1 
+       AND estado IN ('pendiente_admin', 'pendiente_pago', 'pendiente', 'aceptado', 'iniciado')
+       AND (
+         (fecha_programada < $2 AND (fecha_programada + (COALESCE(duracion_minutos, 60) * interval '1 minute')) > $3)
+         OR
+         (fecha_programada >= $3 AND fecha_programada < $2)
+       )`,
+      [usuarioId, fechaFin, fechaInicio]
+    );
+
+    if (turnosUsuario.rows.length > 0) {
+      res.status(400).json({ 
+        error: `Ya tienes un turno programado en ese horario. Por favor, elige otra fecha u hora.`
+      });
+      return;
     }
 
     // ============================================
@@ -271,34 +285,72 @@ console.log(`⏱️ Antelación: ${minutosAntelacion.toFixed(2)} min - Urgente (
     // CALCULAR COSTO AUTOMÁTICAMENTE
     // ============================================
     let requierePago = false;
+    let consumidoDelPlan = false;
     if (guiaAsignado) {
       try {
-        const calculo = await pagoService.calcularCosto({
-          usuarioId,
-          guiaId: guiaAsignado,
-          turnoId,
-          duracionMinutos: 60
-        });
+        // 1. Verificar si el usuario tiene plan activo con sesiones disponibles
+        const planActivo = await suscripcionService.obtenerPlanActivo(usuarioId);
 
-        console.log('💰 Resultado cálculo de costo:', calculo);
+        if (planActivo) {
+          const sesionesRestantes = planActivo.sesiones_incluidas - planActivo.sesiones_usadas;
 
-        if (calculo.esExento) {
-          console.log('✅ Usuario EXENTO - no requiere pago');
-        } else if (calculo.usaBolsa) {
-          console.log('✅ Usa BOLSA de horas - no requiere pago');
-        } else {
-          console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
-          requierePago = true;
-          await pool.query(
-            `UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`,
-            [turnoId]
-          );
+          if (sesionesRestantes > 0) {
+            // ✅ Consumir 1 sesión del plan
+            const resultado = await suscripcionService.consumirSesion(usuarioId);
+            if (resultado.ok) {
+              consumidoDelPlan = true;
+              console.log(`🎟️ Sesión consumida del plan ${planActivo.plan}. Restantes: ${resultado.sesionesRestantes}`);
 
-          // Notificar a admins que hay un nuevo cobro pendiente
-          try {
-            notificarAAdmins('cobros-actualizados', {});
-          } catch (err) {
-            console.error('⚠️ Error al notificar cobros-actualizados:', err);
+              // Crear registro de cobro en estado 'consumido_bolsa' (reutilizamos el estado existente)
+              // para que quede registro contable de que esta sesión ya fue cubierta
+              await pagoService.crearCobro({
+                turnoId,
+                usuarioId,
+                guiaId: guiaAsignado,
+                duracionMinutos: 60,
+                costoPorHora: 0,
+                descuentoPorcentaje: 0,
+                descuentoAplicado: 0,
+                total: 0,
+                estado: 'consumido_bolsa',
+              });
+
+              // Turno pasa directo a 'pendiente' (listo para que el guía acepte)
+              // No hay cobro, no hay recargo urgente, ya está cubierto por el plan.
+            }
+          } else {
+            console.log(`⚠️ Suscriptor ${planActivo.plan} sin sesiones disponibles. Se cobra como sesión normal.`);
+          }
+        }
+
+        // 2. Si no consumió del plan, calcular costo normal
+        if (!consumidoDelPlan) {
+          const calculo = await pagoService.calcularCosto({
+            usuarioId,
+            guiaId: guiaAsignado,
+            turnoId,
+            duracionMinutos: 60
+          });
+
+          console.log('💰 Resultado cálculo de costo:', calculo);
+
+          if (calculo.esExento) {
+            console.log('✅ Usuario EXENTO - no requiere pago');
+          } else if (calculo.usaBolsa) {
+            console.log('✅ Usa BOLSA de horas - no requiere pago');
+          } else {
+            console.log('💳 Usuario DEBE PAGAR - cambiando a pendiente_pago');
+            requierePago = true;
+            await pool.query(
+              `UPDATE turnos SET estado = 'pendiente_pago' WHERE id = $1`,
+              [turnoId]
+            );
+
+            try {
+              notificarAAdmins('cobros-actualizados', {});
+            } catch (err) {
+              console.error('⚠️ Error al notificar cobros-actualizados:', err);
+            }
           }
         }
       } catch (error) {
@@ -355,7 +407,8 @@ console.log(`⏱️ Antelación: ${minutosAntelacion.toFixed(2)} min - Urgente (
       turnoId: turnoId,
       requiereAsignacion: esPrimeraVez || !guiaAsignado,
       requierePago,
-      esUrgente
+      esUrgente,
+      consumidoDelPlan
     });
 
   } catch (error) {
