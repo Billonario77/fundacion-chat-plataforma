@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PagoService = void 0;
 const socketService_1 = require("./socketService");
+const suscripcionService_1 = require("./suscripcionService");
 class PagoService {
     constructor(pool) {
         this.pool = pool;
+        this.suscripcionService = new suscripcionService_1.SuscripcionService(pool);
     }
     async calcularCosto(params) {
         const { usuarioId, guiaId, turnoId, duracionMinutos, codigoCupon } = params;
@@ -26,7 +28,7 @@ class PagoService {
         const esUrgente = turnoUrgenteQuery.rows[0]?.es_urgente === true;
         const configRecargoQuery = await this.pool.query(`SELECT valor FROM configuracion WHERE clave = 'recargo_urgente_porcentaje'`);
         const porcentajeRecargo = parseFloat(configRecargoQuery.rows[0]?.valor || '50');
-        const esSuscriptorActivo = false;
+        const esSuscriptorActivo = await this.suscripcionService.tieneSuscripcionActiva(usuarioId);
         console.log(`⏱️ Turno urgente: ${esUrgente} | % recargo: ${porcentajeRecargo} | suscriptor: ${esSuscriptorActivo}`);
         if (usuario.es_exento) {
             const cobro = await this.crearCobro({

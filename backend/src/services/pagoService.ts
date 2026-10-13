@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { notificarAAdmins } from './socketService';
+import { SuscripcionService } from './suscripcionService';
 
 // ============================================
 // INTERFACES
@@ -41,7 +42,11 @@ interface CobroRecord {
 // ============================================
 
 export class PagoService {
-  constructor(private pool: Pool) {}
+  private suscripcionService: SuscripcionService;
+
+  constructor(private pool: Pool) {
+    this.suscripcionService = new SuscripcionService(pool);
+  }
 
   /**
    * Calcular el costo de una sesión
@@ -101,10 +106,8 @@ export class PagoService {
     );
     const porcentajeRecargo = parseFloat(configRecargoQuery.rows[0]?.valor || '50');
 
-    // 1.d Exención por suscripción (PRIORIDAD 2 - placeholder)
-    // TODO: cuando exista tabla suscripciones, reemplazar por:
-    // SELECT 1 FROM suscripciones WHERE usuario_id = $1 AND estado = 'activo' AND fecha_fin > NOW()
-    const esSuscriptorActivo = false;
+    // 1.d Exención por suscripción activa (Prioridad 2)
+    const esSuscriptorActivo = await this.suscripcionService.tieneSuscripcionActiva(usuarioId);
 
     console.log(`⏱️ Turno urgente: ${esUrgente} | % recargo: ${porcentajeRecargo} | suscriptor: ${esSuscriptorActivo}`);
 
