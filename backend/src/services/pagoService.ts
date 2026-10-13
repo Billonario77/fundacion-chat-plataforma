@@ -87,6 +87,28 @@ export class PagoService {
       throw new Error('Usuario no encontrado');
     }
 
+
+    // 1.b Leer si el turno es urgente (decisión tomada al agendar, NO se recalcula)
+    const turnoUrgenteQuery = await this.pool.query(
+      `SELECT es_urgente FROM turnos WHERE id = $1`,
+      [turnoId]
+    );
+    const esUrgente = turnoUrgenteQuery.rows[0]?.es_urgente === true;
+
+    // 1.c Leer % de recargo urgente
+    const configRecargoQuery = await this.pool.query(
+      `SELECT valor FROM configuracion WHERE clave = 'recargo_urgente_porcentaje'`
+    );
+    const porcentajeRecargo = parseFloat(configRecargoQuery.rows[0]?.valor || '50');
+
+    // 1.d Exención por suscripción (PRIORIDAD 2 - placeholder)
+    // TODO: cuando exista tabla suscripciones, reemplazar por:
+    // SELECT 1 FROM suscripciones WHERE usuario_id = $1 AND estado = 'activo' AND fecha_fin > NOW()
+    const esSuscriptorActivo = false;
+
+    console.log(`⏱️ Turno urgente: ${esUrgente} | % recargo: ${porcentajeRecargo} | suscriptor: ${esSuscriptorActivo}`);
+
+
     // 2. Verificar si es exento
     if (usuario.es_exento) {
       const cobro = await this.crearCobro({
@@ -220,16 +242,22 @@ export class PagoService {
       }
     }
 
-    // 4.2 Calcular total
-    let total = costoBase;
+    // 4.2 Calcular recargo por urgencia (sobre costoBase, antes del descuento)
+    let montoRecargo = 0;
+    if (esUrgente && !esSuscriptorActivo) {
+      montoRecargo = Math.round(costoBase * (porcentajeRecargo / 100) * 100) / 100;
+      console.log(`⚡ Recargo urgente (${porcentajeRecargo}%): $${montoRecargo}`);
+    }
+
+    // 4.3 Calcular total: descuento sobre base, luego sumar recargo
     if (descuentoPorcentaje > 0) {
       descuentoAplicado = costoBase * (descuentoPorcentaje / 100);
-      total = costoBase - descuentoAplicado;
     }
-    
-        total = Math.round(total * 100) / 100;
+    let total = costoBase - descuentoAplicado + montoRecargo;
+    total = Math.round(total * 100) / 100;
 
-    // 4.3 Buscar multas: las libres + las ya vinculadas a un cobro existente de este turno
+
+    // 4.4 Buscar multas: las libres + las ya vinculadas a un cobro existente de este turno
     // (si estamos recalculando un cobro que ya existía, sus multas deben seguir sumando)
     const cobroTurnoQuery = await this.pool.query(
       `SELECT id FROM cobros
@@ -262,7 +290,7 @@ export class PagoService {
       console.log(`💰 Total final (sesión + multas): $${totalConMultas}`);
     }
 
-    // 4.4 Crear o actualizar cobro pendiente
+    // 4.5 Crear o actualizar cobro pendiente
     // Si ya existe un cobro tipo 'sesion' en estado 'pendiente' para este turno,
     // lo actualizamos en vez de crear uno nuevo (evita duplicados al recalcular).
     const cobroExistenteQuery = await this.pool.query(
@@ -288,8 +316,9 @@ export class PagoService {
            descuento_aplicado = $7,
            total = $8,
            monto_multas = $9,
+           monto_recargo = $10,
            updated_at = NOW()
-         WHERE id = $10
+         WHERE id = $11
          RETURNING *`,
         [
           usuarioId,
@@ -301,6 +330,7 @@ export class PagoService {
           descuentoAplicado,
           totalConMultas,
           montoMultas,
+          montoRecargo,
           cobroId
         ]
       );
@@ -318,11 +348,12 @@ export class PagoService {
         total: totalConMultas,
         estado: 'pendiente',
         entidadId: usuario.entidad_id,
-        montoMultas
+        montoMultas,
+        montoRecargo
       });
     }
 
-    // 4.5 Vincular las multas al nuevo cobro
+    // 4.6 Vincular las multas al nuevo cobro
     if (multasPendientes.length > 0) {
       await this.pool.query(
         `UPDATE cobros
@@ -366,13 +397,14 @@ export class PagoService {
     estado: string;
     entidadId?: string;
     montoMultas?: number;
+    montoRecargo?: number;
   }): Promise<CobroRecord> {
     const query = `
       INSERT INTO cobros (
         turno_id, usuario_id, guia_id, entidad_id, duracion_minutos,
         costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado,
-        monto_multas
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        monto_multas, monto_recargo
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
     const result = await this.pool.query(query, [
@@ -386,7 +418,8 @@ export class PagoService {
       data.descuentoAplicado,
       data.total,
       data.estado,
-      data.montoMultas ?? 0
+      data.montoMultas ?? 0,
+      data.montoRecargo ?? 0
     ]);
     return result.rows[0];
   }

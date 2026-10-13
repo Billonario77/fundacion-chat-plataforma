@@ -111,9 +111,12 @@ const solicitarApoyo = async (req, res) => {
             guiaAsignado = asignacion.guiaId;
             estado = 'pendiente';
         }
+        const configUmbral = await connection_1.pool.query(`SELECT valor FROM configuracion WHERE clave = 'horas_recargo_urgencia'`);
+        const horasUmbral = parseFloat(configUmbral.rows[0]?.valor || '2');
+        const minutosUmbral = horasUmbral * 60;
         const minutosAntelacion = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
-        const esUrgente = minutosAntelacion < 70;
-        console.log(`⏱️ Minutos de antelación: ${minutosAntelacion.toFixed(2)} - Urgente: ${esUrgente}`);
+        const esUrgente = minutosAntelacion <= minutosUmbral;
+        console.log(`⏱️ Antelación: ${minutosAntelacion.toFixed(2)} min - Urgente (<= ${minutosUmbral} min): ${esUrgente}`);
         if (fechaPreferida && guiaAsignado) {
             console.log('🔍 ENTRANDO A VALIDACIÓN DEL GUÍA');
             const duracion = 60;

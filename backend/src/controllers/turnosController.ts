@@ -182,12 +182,17 @@ export const solicitarApoyo = async (req: Request, res: Response): Promise<void>
       estado = 'pendiente';
     }
 
-    // ============================================
-    // DETERMINAR SI ES URGENTE (<70 min de antelación)
-    // ============================================
-    const minutosAntelacion = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
-    const esUrgente = minutosAntelacion < 70;
-    console.log(`⏱️ Minutos de antelación: ${minutosAntelacion.toFixed(2)} - Urgente: ${esUrgente}`);
+// ============================================
+// DETERMINAR SI ES URGENTE (umbral configurable, default 2h)
+// ============================================
+const configUmbral = await pool.query(
+  `SELECT valor FROM configuracion WHERE clave = 'horas_recargo_urgencia'`
+);
+const horasUmbral = parseFloat(configUmbral.rows[0]?.valor || '2');
+const minutosUmbral = horasUmbral * 60;
+const minutosAntelacion = (fechaProgramada.getTime() - Date.now()) / (1000 * 60);
+const esUrgente = minutosAntelacion <= minutosUmbral;
+console.log(`⏱️ Antelación: ${minutosAntelacion.toFixed(2)} min - Urgente (<= ${minutosUmbral} min): ${esUrgente}`);
 
     // ============================================
     // VALIDAR DISPONIBILIDAD DEL GUÍA

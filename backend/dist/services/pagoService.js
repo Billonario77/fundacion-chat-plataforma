@@ -22,6 +22,12 @@ class PagoService {
         if (!usuario) {
             throw new Error('Usuario no encontrado');
         }
+        const turnoUrgenteQuery = await this.pool.query(`SELECT es_urgente FROM turnos WHERE id = $1`, [turnoId]);
+        const esUrgente = turnoUrgenteQuery.rows[0]?.es_urgente === true;
+        const configRecargoQuery = await this.pool.query(`SELECT valor FROM configuracion WHERE clave = 'recargo_urgente_porcentaje'`);
+        const porcentajeRecargo = parseFloat(configRecargoQuery.rows[0]?.valor || '50');
+        const esSuscriptorActivo = false;
+        console.log(`⏱️ Turno urgente: ${esUrgente} | % recargo: ${porcentajeRecargo} | suscriptor: ${esSuscriptorActivo}`);
         if (usuario.es_exento) {
             const cobro = await this.crearCobro({
                 turnoId,
@@ -109,11 +115,15 @@ class PagoService {
                 }
             }
         }
-        let total = costoBase;
+        let montoRecargo = 0;
+        if (esUrgente && !esSuscriptorActivo) {
+            montoRecargo = Math.round(costoBase * (porcentajeRecargo / 100) * 100) / 100;
+            console.log(`⚡ Recargo urgente (${porcentajeRecargo}%): $${montoRecargo}`);
+        }
         if (descuentoPorcentaje > 0) {
             descuentoAplicado = costoBase * (descuentoPorcentaje / 100);
-            total = costoBase - descuentoAplicado;
         }
+        let total = costoBase - descuentoAplicado + montoRecargo;
         total = Math.round(total * 100) / 100;
         const cobroTurnoQuery = await this.pool.query(`SELECT id FROM cobros
        WHERE turno_id = $1 AND tipo = 'sesion' AND estado = 'pendiente'
@@ -149,8 +159,9 @@ class PagoService {
            descuento_aplicado = $7,
            total = $8,
            monto_multas = $9,
+           monto_recargo = $10,
            updated_at = NOW()
-         WHERE id = $10
+         WHERE id = $11
          RETURNING *`, [
                 usuarioId,
                 guiaId,
@@ -161,6 +172,7 @@ class PagoService {
                 descuentoAplicado,
                 totalConMultas,
                 montoMultas,
+                montoRecargo,
                 cobroId
             ]);
             cobro = updateResult.rows[0];
@@ -178,7 +190,8 @@ class PagoService {
                 total: totalConMultas,
                 estado: 'pendiente',
                 entidadId: usuario.entidad_id,
-                montoMultas
+                montoMultas,
+                montoRecargo
             });
         }
         if (multasPendientes.length > 0) {
@@ -208,8 +221,8 @@ class PagoService {
       INSERT INTO cobros (
         turno_id, usuario_id, guia_id, entidad_id, duracion_minutos,
         costo_por_hora, descuento_porcentaje, descuento_aplicado, total, estado,
-        monto_multas
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        monto_multas, monto_recargo
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
         const result = await this.pool.query(query, [
@@ -223,7 +236,8 @@ class PagoService {
             data.descuentoAplicado,
             data.total,
             data.estado,
-            data.montoMultas ?? 0
+            data.montoMultas ?? 0,
+            data.montoRecargo ?? 0
         ]);
         return result.rows[0];
     }
