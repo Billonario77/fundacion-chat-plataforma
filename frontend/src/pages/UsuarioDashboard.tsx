@@ -16,6 +16,7 @@ import CalendarioHorarios from '../components/CalendarioHorarios';
 import TestimonioForm from '../components/TestimonioForm';
 import MisTestimonios from '../components/MisTestimonios';
 import { testimoniosService, Testimonio } from '../services/testimoniosService';
+import { suscripcionesService, PlanDisponible, PlanActivo } from '../services/suscripcionesService';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -33,7 +34,7 @@ const UsuarioDashboard: React.FC = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(
     (location.state as any)?.abrirFormulario || false
   );
-  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio' | 'convenio'>(
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio' | 'convenio' | 'plan'>(
     (location.state as any)?.pestañaInicial || 'activas'
   );
   const [ultimoEvento, setUltimoEvento] = useState('');
@@ -42,6 +43,14 @@ const UsuarioDashboard: React.FC = () => {
   // Estados para testimonios
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [editandoTestimonio, setEditandoTestimonio] = useState<Testimonio | null>(null);
+
+    // Estados para plan/suscripción
+  const [planActivo, setPlanActivo] = useState<PlanActivo | null>(null);
+  const [planesDisponibles, setPlanesDisponibles] = useState<PlanDisponible[]>([]);
+  const [multasPendientesSuscripcion, setMultasPendientesSuscripcion] = useState(0);
+  const [cargandoPlan, setCargandoPlan] = useState(false);
+  const [adquiriendoPlan, setAdquiriendoPlan] = useState<string | null>(null);
+
 
   // Estados para canje de cupón de bolsa
   const [codigoConvenio, setCodigoConvenio] = useState('');
@@ -416,6 +425,8 @@ useEffect(() => {
     cargarSolicitudes();
   } else if (pestañaActiva === 'testimonio') {
     cargarTestimonios();
+  } else if (pestañaActiva === 'plan') {
+    cargarPlan();
   }
 }, [pestañaActiva]);
 
@@ -578,6 +589,25 @@ const eliminarTestimonio = async (id: number) => {
   }
 };
 
+  const cargarPlan = async () => {
+    setCargandoPlan(true);
+    try {
+      const [planData, planesData] = await Promise.all([
+        suscripcionesService.miPlan(),
+        suscripcionesService.listarPlanes(),
+      ]);
+      setPlanActivo(planData);
+      setPlanesDisponibles(planesData.planes);
+      setMultasPendientesSuscripcion(planesData.multasPendientes);
+    } catch (err) {
+      console.error('Error al cargar plan:', err);
+      toast.error('Error al cargar la información del plan');
+    } finally {
+      setCargandoPlan(false);
+    }
+  };
+
+
 
   const cargarReprogramaciones = async () => {
     try {
@@ -591,6 +621,53 @@ const eliminarTestimonio = async (id: number) => {
       setLoadingRepro(false);
     }
   };
+
+
+  const handleAdquirirPlan = async (planId: 'bienestar' | 'refugio' | 'santuario') => {
+    try {
+      setAdquiriendoPlan(planId);
+      const data = await suscripcionesService.iniciarPago(planId);
+
+      // @ts-ignore - WidgetCheckout viene del script externo de Wompi
+      const checkout = new WidgetCheckout({
+        currency: data.moneda,
+        amountInCents: data.montoEnCentavos,
+        reference: data.referencia,
+        publicKey: data.publicKey,
+        signature: {
+          integrity: data.firmaIntegridad,
+        },
+        redirectUrl: `${window.location.origin}/usuario`,
+        customerData: {
+          email: user?.email || '',
+          fullName: user?.nombre || '',
+        },
+      });
+
+      checkout.open((result: any) => {
+        const { transaction } = result;
+        if (transaction.status === 'APPROVED') {
+          toast.success('¡Suscripción activada! Ya puedes agendar tus sesiones.', {
+            duration: 6000,
+            icon: '🎉',
+          });
+          setTimeout(() => cargarPlan(), 2000);
+        } else if (transaction.status === 'DECLINED') {
+          toast.error('La transacción fue rechazada. Intenta con otro método.');
+        } else if (transaction.status === 'VOIDED') {
+          toast.error('La transacción fue anulada.');
+        } else {
+          toast.error('Estado de transacción: ' + transaction.status);
+        }
+      });
+    } catch (err: any) {
+      const mensaje = err?.response?.data?.error || 'Error al iniciar el pago';
+      toast.error(mensaje, { duration: 6000 });
+    } finally {
+      setAdquiriendoPlan(null);
+    }
+  };
+
 
   // ============================================
   // CANJEAR CÓDIGO DE CONVENIO
@@ -892,6 +969,7 @@ const eliminarTestimonio = async (id: number) => {
         {pestañaActiva === 'historial' && '📚 Historial'}
         {pestañaActiva === 'testimonio' && '💬 Mi testimonio'}
         {pestañaActiva === 'convenio' && '🎟️ Mi convenio'}
+        {pestañaActiva === 'plan' && '💎 Plan Actual'}
       </span>
       <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
     </button>
@@ -960,6 +1038,16 @@ const eliminarTestimonio = async (id: number) => {
         >
           <span>🎟️</span>
           <span>Mi convenio</span>
+        </button>
+
+        <button
+          onClick={() => { setPestañaActiva('plan'); setMenuAbierto(false); }}
+          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+            pestañaActiva === 'plan' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+          }`}
+        >
+          <span>💎</span>
+          <span>Plan Actual</span>
         </button>
 
         <button
@@ -1050,6 +1138,18 @@ const eliminarTestimonio = async (id: number) => {
       >
         <span className="text-lg">🎟️</span>
         <span>Mi convenio</span>
+      </button>
+
+      <button
+        onClick={() => setPestañaActiva('plan')}
+        className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+          pestañaActiva === 'plan'
+            ? 'bg-white text-primario shadow-md' 
+            : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+        }`}
+      >
+        <span className="text-lg">💎</span>
+        <span>Plan Actual</span>
       </button>
 
       <button
@@ -1278,6 +1378,145 @@ const eliminarTestimonio = async (id: number) => {
           </div>
         </div>
       )}
+
+      {pestañaActiva === 'plan' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-primario mb-4">Plan Actual</h2>
+
+          {cargandoPlan ? (
+            <p className="text-gray-500">Cargando información de tu plan…</p>
+          ) : planActivo ? (
+            // ============================================
+            // TIENE PLAN ACTIVO
+            // ============================================
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-[#F2CC8F]/40 to-[#E07A5F]/20 rounded-2xl p-6 border border-[#F2CC8F]/50">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Plan activo</p>
+                    <p className="text-2xl font-serif font-bold text-[#3D405B] capitalize">
+                      💎 {planActivo.plan}
+                    </p>
+                  </div>
+                  <span className="bg-green-100 text-green-800 text-xs font-medium px-3 py-1 rounded-full">
+                    Activo
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/70 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">Sesiones restantes</p>
+                    <p className="text-2xl font-bold text-[#3D405B]">
+                      {planActivo.sesionesRestantes}
+                      <span className="text-sm font-normal text-gray-500">
+                        {' '}/ {planActivo.sesionesIncluidas}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="bg-white/70 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">Días restantes</p>
+                    <p className="text-2xl font-bold text-[#3D405B]">
+                      {planActivo.diasRestantes}
+                      <span className="text-sm font-normal text-gray-500"> días</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 text-xs text-gray-600">
+                  Vigencia: {new Date(planActivo.fechaInicio).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}
+                  {' '}–{' '}
+                  {new Date(planActivo.fechaFin).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-800">
+                <p className="font-medium mb-1">Beneficios de tu plan</p>
+                <ul className="list-disc pl-5 space-y-1 text-blue-700">
+                  <li>{planActivo.sesionesIncluidas} sesiones por período de 30 días</li>
+                  <li>Sin Tarifa por Prioridad aunque agendes con menos de 2 horas</li>
+                  <li>Agenda con solo 30 minutos de anticipación</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600 mb-3">¿Quieres subir de plan o renovar?</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {planesDisponibles.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleAdquirirPlan(p.id)}
+                      disabled={adquiriendoPlan !== null}
+                      className={`rounded-2xl p-4 border-2 transition-all text-left ${
+                        p.id === planActivo.plan
+                          ? 'border-[#E07A5F] bg-[#E07A5F]/5'
+                          : 'border-[#F2CC8F]/50 hover:border-[#E07A5F]/60'
+                      } ${adquiriendoPlan === p.id ? 'opacity-50' : ''}`}
+                    >
+                      <p className="font-semibold text-[#3D405B] capitalize">{p.nombre}</p>
+                      <p className="text-xs text-gray-500 mt-1">{p.sesiones} sesiones / 30 días</p>
+                      <p className="text-lg font-bold text-[#E07A5F] mt-2">
+                        ${p.precio.toLocaleString('es-CO')}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            // ============================================
+            // NO TIENE PLAN ACTIVO
+            // ============================================
+            <div className="space-y-6">
+              <p className="text-gray-600">
+                Adquiere un plan y disfruta de sesiones prepagadas, sin Tarifa por Prioridad,
+                y con mayor flexibilidad para agendar.
+              </p>
+
+              {multasPendientesSuscripcion > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-800">
+                  Tienes <strong>${multasPendientesSuscripcion.toLocaleString('es-CO')}</strong> en multas pendientes.
+                  Se sumarán al precio del plan al momento del pago.
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {planesDisponibles.map((p) => (
+                  <div
+                    key={p.id}
+                    className="rounded-3xl p-5 border-2 border-[#F2CC8F]/50 hover:border-[#E07A5F]/60 transition-all flex flex-col"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      {p.id === 'bienestar' && 'Esencial'}
+                      {p.id === 'refugio' && 'Más elegido'}
+                      {p.id === 'santuario' && 'Premium'}
+                    </p>
+                    <p className="text-xl font-serif font-bold text-[#3D405B] mt-1">
+                      {p.nombre}
+                    </p>
+                    <p className="text-3xl font-bold text-[#E07A5F] mt-3">
+                      ${p.precio.toLocaleString('es-CO')}
+                    </p>
+                    <p className="text-xs text-gray-500 mb-4">por 30 días</p>
+
+                    <p className="text-sm text-gray-700 font-medium mb-4">
+                      {p.sesiones} sesiones incluidas
+                    </p>
+
+                    <button
+                      onClick={() => handleAdquirirPlan(p.id)}
+                      disabled={adquiriendoPlan !== null}
+                      className="mt-auto bg-[#E07A5F] text-white px-4 py-2 rounded-full font-medium hover:bg-[#d16a4f] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {adquiriendoPlan === p.id ? 'Procesando…' : 'Adquirir'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
 
       {pestañaActiva === 'convenio' && (
         <div className="card">
