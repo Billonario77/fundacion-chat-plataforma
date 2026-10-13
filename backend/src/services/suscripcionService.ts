@@ -286,4 +286,38 @@ export class SuscripcionService {
     return { ok: true, sesionesRestantes: restantes };
   }
 
+    /**
+   * Marca como 'vencida' todas las suscripciones cuya fecha_fin ya pasó.
+   * Idempotente: solo toca las que están en estado 'activa' con estado_pago 'pagado'.
+   * Devuelve el número de filas afectadas.
+   */
+  async marcarVencidas(): Promise<number> {
+    const result = await this.pool.query(
+      `UPDATE suscripciones
+       SET estado = 'vencida',
+           updated_at = NOW()
+       WHERE estado = 'activa'
+         AND estado_pago = 'pagado'
+         AND fecha_fin <= NOW()`
+    );
+    return result.rowCount || 0;
+  }
+
+  /**
+   * Devuelve las suscripciones que vencen en los próximos N días.
+   * Usado por el worker para enviar recordatorios de renovación.
+   */
+  async obtenerProximasAVencer(dias: number = 3): Promise<SuscripcionActiva[]> {
+    const result = await this.pool.query(
+      `SELECT * FROM suscripciones
+       WHERE estado = 'activa'
+         AND estado_pago = 'pagado'
+         AND fecha_fin > NOW()
+         AND fecha_fin <= NOW() + ($1 || ' days')::interval
+       ORDER BY fecha_fin ASC`,
+      [dias]
+    );
+    return result.rows;
+  }
+
 }

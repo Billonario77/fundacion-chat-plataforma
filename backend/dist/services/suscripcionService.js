@@ -160,6 +160,24 @@ class SuscripcionService {
         const restantes = row.sesiones_incluidas - row.sesiones_usadas;
         return { ok: true, sesionesRestantes: restantes };
     }
+    async marcarVencidas() {
+        const result = await this.pool.query(`UPDATE suscripciones
+       SET estado = 'vencida',
+           updated_at = NOW()
+       WHERE estado = 'activa'
+         AND estado_pago = 'pagado'
+         AND fecha_fin <= NOW()`);
+        return result.rowCount || 0;
+    }
+    async obtenerProximasAVencer(dias = 3) {
+        const result = await this.pool.query(`SELECT * FROM suscripciones
+       WHERE estado = 'activa'
+         AND estado_pago = 'pagado'
+         AND fecha_fin > NOW()
+         AND fecha_fin <= NOW() + ($1 || ' days')::interval
+       ORDER BY fecha_fin ASC`, [dias]);
+        return result.rows;
+    }
 }
 exports.SuscripcionService = SuscripcionService;
 //# sourceMappingURL=suscripcionService.js.map

@@ -202,6 +202,9 @@ import './workers/impagoWorker';
 // Iniciar worker de recordatorios de sesión (cada 15 min)
 import './workers/recordatorioWorker';
 
+// Iniciar worker de vencimiento de suscripciones (cada 30 min)
+import './workers/suscripcionWorker';
+
 // ============================================
 // MIDDLEWARES DE SEGURIDAD Y UTILIDAD
 // ============================================
