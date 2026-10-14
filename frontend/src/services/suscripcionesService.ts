@@ -87,4 +87,35 @@ export const suscripcionesService = {
     );
     return response.data.data;
   },
+
+
+    // ============================================
+  // ADMIN
+  // ============================================
+
+  listarAdmin: async (filtros: {
+    email?: string;
+    plan?: string;
+    estado?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const params: any = {};
+    if (filtros.email) params.email = filtros.email;
+    if (filtros.plan) params.plan = filtros.plan;
+    if (filtros.estado) params.estado = filtros.estado;
+    params.page = filtros.page ?? 1;
+    params.limit = filtros.limit ?? 20;
+
+    const response = await axios.get(`${API_URL}/suscripciones/admin/listar`, {
+      params,
+      ...headers(),
+    });
+    return response.data;
+  },
+
+  metricasAdmin: async () => {
+    const response = await axios.get(`${API_URL}/suscripciones/admin/metricas`, headers());
+    return response.data.data;
+  },
 };

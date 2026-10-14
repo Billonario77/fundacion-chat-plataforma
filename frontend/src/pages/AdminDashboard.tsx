@@ -25,6 +25,7 @@ import axios from 'axios';
 import Avatar from '../components/Avatar';
 import { perfilService } from '../services/turnosService';
 import GestionTestimonios from '../components/admin/GestionTestimonios';
+import GestionSuscripciones from '../components/admin/GestionSuscripciones';
 
 
 
@@ -87,7 +88,7 @@ const AdminDashboard: React.FC = () => {
   const { socket, connected } = useSocket();
   const navigate = useNavigate();
   const [pestañaActiva, setPestañaActiva] = useState<'asignacion' | 'reprogramaciones' | 'estadisticas' | 'usuarios' | 'asignaciones-guia' | 'cancelaciones' | 'historial' | 'carga-guias' | 
-       'entidades' | 'cupones' | 'estadisticas-cobros' | 'donaciones' | 'cobros' | 'configuracion' | 'testimonios'>('usuarios');
+       'entidades' | 'cupones' | 'estadisticas-cobros' | 'donaciones' | 'cobros' | 'configuracion' | 'testimonios' | 'suscripciones'>('usuarios');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [pestañaAnterior, setPestañaAnterior] = useState(pestañaActiva);
   const [cambiandoPestaña, setCambiandoPestaña] = useState(false);
@@ -526,6 +527,7 @@ const cargarConteoReprogramaciones = async () => {
               {pestañaActiva === 'configuracion' && '⚙️ Configuración'}
               {pestañaActiva === 'testimonios' && '💬 Testimonios'}
               {testimoniosPendientes > 0 && pestañaActiva !== 'testimonios' && ` (${testimoniosPendientes})`}
+              {pestañaActiva === 'suscripciones' && '💎 Suscripciones'}
             </span>
             <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
           </button>
@@ -704,6 +706,16 @@ const cargarConteoReprogramaciones = async () => {
                     {testimoniosPendientes}
                   </span>
                 )}
+              </button>
+
+              <button
+                onClick={() => { cambiarPestaña('suscripciones'); setMenuAbierto(false); }}
+                className={`w-full px-3 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
+                  pestañaActiva === 'suscripciones' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
+                }`}
+              >
+                <span>💎</span>
+                <span>Suscripciones</span>
               </button>
             </div>
           )}
@@ -916,6 +928,18 @@ const cargarConteoReprogramaciones = async () => {
             )}
           </button>
 
+          <button
+            onClick={() => cambiarPestaña('suscripciones')}
+            className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
+              pestañaActiva === 'suscripciones'
+                ? 'bg-white text-primario shadow-md'
+                : 'text-texto-claro hover:bg-white/50 hover:text-primario'
+            }`}
+          >
+            <span className="text-lg">💎</span>
+            <span>Suscripciones</span>
+          </button>
+
         </div>
       </div>
 
@@ -1062,6 +1086,12 @@ const cargarConteoReprogramaciones = async () => {
         {pestañaActiva === 'testimonios' && (
           <div className="animate-fadeIn">
             <GestionTestimonios />
+          </div>
+        )}  
+
+        {pestañaActiva === 'suscripciones' && (
+          <div className="animate-fadeIn">
+            <GestionSuscripciones />
           </div>
         )}  
 
