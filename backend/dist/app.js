@@ -152,6 +152,7 @@ exports.io = io;
 (0, socketService_1.initSocketService)(io);
 require("./workers/impagoWorker");
 require("./workers/recordatorioWorker");
+require("./workers/suscripcionWorker");
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: { policy: "unsafe-none" }

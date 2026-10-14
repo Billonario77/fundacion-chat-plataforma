@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { enviarBienvenidaSuscripcion } from './emailService';
 
 // ============================================
 // INTERFACES
@@ -19,6 +20,8 @@ export interface SuscripcionActiva {
   estado_pago: 'pendiente' | 'pagado' | 'fallido';
   referencia_wompi?: string;
   pagado_at?: Date;
+  recordatorio_vencimiento_enviado: boolean;
+  email_vencimiento_enviado: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -244,6 +247,38 @@ export class SuscripcionService {
       );
 
       await client.query('COMMIT');
+
+      // Enviar email de bienvenida (fuera de la transacción, no bloquea si falla)
+      try {
+        const userQuery = await this.pool.query(
+          `SELECT email, nombre FROM usuarios WHERE id = $1`,
+          [subActualizada.usuario_id]
+        );
+        const user = userQuery.rows[0];
+
+        if (user?.email) {
+          const fechaFinFormateada = new Date(subActualizada.fecha_fin).toLocaleString('es-CO', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'America/Bogota',
+          });
+
+          await enviarBienvenidaSuscripcion({
+            email: user.email,
+            nombre: user.nombre || 'Usuario',
+            plan: subActualizada.plan,
+            sesionesIncluidas: subActualizada.sesiones_incluidas,
+            precioPagado: parseFloat(String(subActualizada.precio_pagado)),
+            fechaFin: fechaFinFormateada,
+          });
+          console.log(`📧 Email de bienvenida enviado a: ${user.email}`);
+        }
+      } catch (emailError) {
+        console.error('⚠️ Error al enviar email de bienvenida:', emailError);
+        // No rompemos la confirmación por un error de email
+      }
+
       return subActualizada;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -291,16 +326,17 @@ export class SuscripcionService {
    * Idempotente: solo toca las que están en estado 'activa' con estado_pago 'pagado'.
    * Devuelve el número de filas afectadas.
    */
-  async marcarVencidas(): Promise<number> {
+  async marcarVencidas(): Promise<SuscripcionActiva[]> {
     const result = await this.pool.query(
       `UPDATE suscripciones
        SET estado = 'vencida',
            updated_at = NOW()
        WHERE estado = 'activa'
          AND estado_pago = 'pagado'
-         AND fecha_fin <= NOW()`
+         AND fecha_fin <= NOW()
+       RETURNING *`
     );
-    return result.rowCount || 0;
+    return result.rows;
   }
 
   /**
@@ -314,10 +350,47 @@ export class SuscripcionService {
          AND estado_pago = 'pagado'
          AND fecha_fin > NOW()
          AND fecha_fin <= NOW() + ($1 || ' days')::interval
+         AND recordatorio_vencimiento_enviado = false
        ORDER BY fecha_fin ASC`,
       [dias]
     );
     return result.rows;
+  }
+
+
+    /**
+   * Marca que ya se envió el recordatorio de vencimiento.
+   */
+  async marcarRecordatorioEnviado(id: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE suscripciones
+       SET recordatorio_vencimiento_enviado = true, updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+  }
+
+  /**
+   * Marca que ya se envió el email de vencimiento.
+   */
+  async marcarEmailVencimientoEnviado(id: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE suscripciones
+       SET email_vencimiento_enviado = true, updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+  }
+
+  /**
+   * Devuelve email y nombre del usuario dueño de una suscripción.
+   */
+  async obtenerUsuarioDeSuscripcion(usuarioId: string): Promise<{ email: string; nombre: string } | null> {
+    const result = await this.pool.query(
+      `SELECT email, nombre FROM usuarios WHERE id = $1`,
+      [usuarioId]
+    );
+    return result.rows[0] || null;
   }
 
 }

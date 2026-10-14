@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuscripcionService = void 0;
+const emailService_1 = require("./emailService");
 class SuscripcionService {
     constructor(pool) {
         this.pool = pool;
@@ -133,6 +134,30 @@ class SuscripcionService {
            AND tipo = 'multa'
            AND estado = 'pendiente'`, [sub.usuario_id]);
             await client.query('COMMIT');
+            try {
+                const userQuery = await this.pool.query(`SELECT email, nombre FROM usuarios WHERE id = $1`, [subActualizada.usuario_id]);
+                const user = userQuery.rows[0];
+                if (user?.email) {
+                    const fechaFinFormateada = new Date(subActualizada.fecha_fin).toLocaleString('es-CO', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'America/Bogota',
+                    });
+                    await (0, emailService_1.enviarBienvenidaSuscripcion)({
+                        email: user.email,
+                        nombre: user.nombre || 'Usuario',
+                        plan: subActualizada.plan,
+                        sesionesIncluidas: subActualizada.sesiones_incluidas,
+                        precioPagado: parseFloat(String(subActualizada.precio_pagado)),
+                        fechaFin: fechaFinFormateada,
+                    });
+                    console.log(`📧 Email de bienvenida enviado a: ${user.email}`);
+                }
+            }
+            catch (emailError) {
+                console.error('⚠️ Error al enviar email de bienvenida:', emailError);
+            }
             return subActualizada;
         }
         catch (error) {
@@ -166,8 +191,9 @@ class SuscripcionService {
            updated_at = NOW()
        WHERE estado = 'activa'
          AND estado_pago = 'pagado'
-         AND fecha_fin <= NOW()`);
-        return result.rowCount || 0;
+         AND fecha_fin <= NOW()
+       RETURNING *`);
+        return result.rows;
     }
     async obtenerProximasAVencer(dias = 3) {
         const result = await this.pool.query(`SELECT * FROM suscripciones
@@ -175,8 +201,23 @@ class SuscripcionService {
          AND estado_pago = 'pagado'
          AND fecha_fin > NOW()
          AND fecha_fin <= NOW() + ($1 || ' days')::interval
+         AND recordatorio_vencimiento_enviado = false
        ORDER BY fecha_fin ASC`, [dias]);
         return result.rows;
+    }
+    async marcarRecordatorioEnviado(id) {
+        await this.pool.query(`UPDATE suscripciones
+       SET recordatorio_vencimiento_enviado = true, updated_at = NOW()
+       WHERE id = $1`, [id]);
+    }
+    async marcarEmailVencimientoEnviado(id) {
+        await this.pool.query(`UPDATE suscripciones
+       SET email_vencimiento_enviado = true, updated_at = NOW()
+       WHERE id = $1`, [id]);
+    }
+    async obtenerUsuarioDeSuscripcion(usuarioId) {
+        const result = await this.pool.query(`SELECT email, nombre FROM usuarios WHERE id = $1`, [usuarioId]);
+        return result.rows[0] || null;
     }
 }
 exports.SuscripcionService = SuscripcionService;

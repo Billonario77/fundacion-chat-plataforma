@@ -384,6 +384,194 @@ export const enviarAgradecimientoDonacion = async (params: {
 };
 
 // ============================================
+// BIENVENIDA A PLAN DE SUSCRIPCIÓN
+// ============================================
+export const enviarBienvenidaSuscripcion = async (params: {
+  email: string;
+  nombre: string;
+  plan: 'bienestar' | 'refugio' | 'santuario';
+  sesionesIncluidas: number;
+  precioPagado: number;
+  fechaFin: string;
+}): Promise<boolean> => {
+  const { email, nombre, plan, sesionesIncluidas, precioPagado, fechaFin } = params;
+
+  const nombresPlan: Record<string, string> = {
+    bienestar: '💎 Bienestar',
+    refugio: '🌟 Refugio',
+    santuario: '👑 Santuario',
+  };
+
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(v);
+
+  const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">🎉 ¡Tu plan está activo!</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Tu plan <strong>${nombresPlan[plan]}</strong> ha sido activado exitosamente.
+      Ahora disfrutas de beneficios exclusivos pensados para tu bienestar.
+    </p>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #E07A5F;">
+      <h3 style="color: #3D405B; margin-top: 0; font-size: 16px;">📋 Detalles de tu plan</h3>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Plan:</strong> ${nombresPlan[plan]}</p>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Sesiones incluidas:</strong> ${sesionesIncluidas}</p>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Vigencia hasta:</strong> ${fechaFin}</p>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Total pagado:</strong> ${formatCurrency(precioPagado)}</p>
+    </div>
+
+    <div style="background-color: #F4E8D8; padding: 16px; border-radius: 12px; margin: 24px 0;">
+      <p style="color: #3D405B; margin: 0 0 8px 0; font-size: 14px;"><strong>✨ Beneficios de tu plan:</strong></p>
+      <ul style="color: #3D405B; margin: 0; padding-left: 20px; font-size: 14px;">
+        <li>${sesionesIncluidas} sesiones por período de 30 días</li>
+        <li>Sin Tarifa por Prioridad, aunque agendes con menos de 2 horas</li>
+        <li>Agenda con solo 30 minutos de anticipación</li>
+      </ul>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Ya puedes agendar tus sesiones desde tu panel. Cuando se agoten, podrás renovar tu plan
+      o pagar sesiones adicionales a tarifa normal.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/usuario"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Ir a mi panel
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Invertir en ti es el mejor regalo que puedes darte."
+    </p>
+  `;
+
+  return await enviarEmail({
+    to: email,
+    subject: '🎉 Tu plan está activo - Voces del Alma',
+    html: templateBase(contenido),
+  });
+};
+
+// ============================================
+// RECORDATORIO DE VENCIMIENTO PRÓXIMO (3 días antes)
+// ============================================
+export const enviarRecordatorioVencimientoSuscripcion = async (params: {
+  email: string;
+  nombre: string;
+  plan: 'bienestar' | 'refugio' | 'santuario';
+  sesionesRestantes: number;
+  fechaFin: string;
+  diasRestantes: number;
+}): Promise<boolean> => {
+  const { email, nombre, plan, sesionesRestantes, fechaFin, diasRestantes } = params;
+
+  const nombresPlan: Record<string, string> = {
+    bienestar: '💎 Bienestar',
+    refugio: '🌟 Refugio',
+    santuario: '👑 Santuario',
+  };
+
+  const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">⏳ Tu plan está por vencer</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Te recordamos que tu plan <strong>${nombresPlan[plan]}</strong> vence en
+      <strong>${diasRestantes} día${diasRestantes === 1 ? '' : 's'}</strong>.
+    </p>
+
+    <div style="background-color: #FDF6EC; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #F59E0B;">
+      <h3 style="color: #3D405B; margin-top: 0; font-size: 16px;">📋 Estado de tu plan</h3>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Plan:</strong> ${nombresPlan[plan]}</p>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Sesiones restantes:</strong> ${sesionesRestantes}</p>
+      <p style="color: #5D6078; margin: 8px 0;"><strong>Fecha de vencimiento:</strong> ${fechaFin}</p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Renueva ahora para seguir disfrutando de tus beneficios: sin Tarifa por Prioridad y
+      con mayor flexibilidad para agendar.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/usuario"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Renovar mi plan
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Cuidarte es un acto de amor propio."
+    </p>
+  `;
+
+  return await enviarEmail({
+    to: email,
+    subject: `⏳ Tu plan vence en ${diasRestantes} día${diasRestantes === 1 ? '' : 's'}`,
+    html: templateBase(contenido),
+  });
+};
+
+// ============================================
+// AVISO DE VENCIMIENTO
+// ============================================
+export const enviarVencimientoSuscripcion = async (params: {
+  email: string;
+  nombre: string;
+  plan: 'bienestar' | 'refugio' | 'santuario';
+}): Promise<boolean> => {
+  const { email, nombre, plan } = params;
+
+  const nombresPlan: Record<string, string> = {
+    bienestar: '💎 Bienestar',
+    refugio: '🌟 Refugio',
+    santuario: '👑 Santuario',
+  };
+
+  const contenido = `
+    <h2 style="color: #3D405B; margin-top: 0;">📅 Tu plan ha vencido</h2>
+    <p style="color: #5D6078; font-size: 16px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="color: #5D6078; font-size: 16px;">
+      Tu plan <strong>${nombresPlan[plan]}</strong> ha llegado a su fecha de vencimiento.
+      Ya no está activo, pero puedes renovarlo cuando quieras.
+    </p>
+
+    <div style="background-color: #F4E8D8; padding: 16px; border-radius: 12px; margin: 24px 0;">
+      <p style="color: #3D405B; margin: 0; font-size: 14px;">
+        💡 <strong>Recuerda:</strong> mientras no tengas un plan activo, agendar con menos de 2 horas
+        de anticipación aplicará la Tarifa por Prioridad del 50%. También el mínimo de anticipación
+        vuelve a ser de 30 minutos.
+      </p>
+    </div>
+
+    <p style="color: #5D6078; font-size: 16px;">
+      Si deseas seguir disfrutando de los beneficios, renueva tu plan desde tu panel.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://fundacion-chat-frontend-api.netlify.app/usuario"
+         style="background-color: #E07A5F; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: bold; display: inline-block;">
+        Ver planes disponibles
+      </a>
+    </div>
+
+    <p style="color: #5D6078; font-size: 14px; text-align: center; font-style: italic; margin-top: 32px;">
+      "Cada proceso tiene su ritmo. Aquí estaremos cuando quieras volver."
+    </p>
+  `;
+
+  return await enviarEmail({
+    to: email,
+    subject: '📅 Tu plan ha vencido - Voces del Alma',
+    html: templateBase(contenido),
+  });
+};
+
+// ============================================
 // EXPORTAR EL TRANSPORTER PARA USO EXTERNO
 // ============================================
 export { enviarEmail };
