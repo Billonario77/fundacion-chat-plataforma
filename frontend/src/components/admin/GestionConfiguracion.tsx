@@ -34,6 +34,38 @@ const NOMBRES_AMIGABLES: Record<string, { titulo: string; icono: string }> = {
     titulo: 'Porcentaje de multa por cancelación tardía',
     icono: '⚠️',
   },
+  horas_recargo_urgencia: {
+    titulo: 'Horas para recargo por urgencia',
+    icono: '⚡',
+  },
+  recargo_urgente_porcentaje: {
+    titulo: 'Porcentaje de recargo urgente',
+    icono: '⚡',
+  },
+  plan_bienestar_sesiones: {
+    titulo: 'Plan Bienestar - Sesiones incluidas',
+    icono: '💎',
+  },
+  plan_bienestar_precio: {
+    titulo: 'Plan Bienestar - Precio mensual',
+    icono: '💎',
+  },
+  plan_refugio_sesiones: {
+    titulo: 'Plan Refugio - Sesiones incluidas',
+    icono: '🌟',
+  },
+  plan_refugio_precio: {
+    titulo: 'Plan Refugio - Precio mensual',
+    icono: '🌟',
+  },
+  plan_santuario_sesiones: {
+    titulo: 'Plan Santuario - Sesiones incluidas',
+    icono: '👑',
+  },
+  plan_santuario_precio: {
+    titulo: 'Plan Santuario - Precio mensual',
+    icono: '👑',
+  },
 };
 
 const GestionConfiguracion: React.FC = () => {
@@ -76,6 +108,14 @@ const GestionConfiguracion: React.FC = () => {
       'horas_limite_cancelacion',
       'horas_limite_pago',
       'multa_cancelacion_porcentaje',
+      'horas_recargo_urgencia',
+      'recargo_urgente_porcentaje',
+      'plan_bienestar_sesiones',
+      'plan_bienestar_precio',
+      'plan_refugio_sesiones',
+      'plan_refugio_precio',
+      'plan_santuario_sesiones',
+      'plan_santuario_precio',
     ];
 
     if (clavesNumericas.includes(clave)) {
@@ -102,7 +142,14 @@ const GestionConfiguracion: React.FC = () => {
   };
 
   const formatValor = (clave: string, valor: string) => {
-    if (['precio_sesion', 'meta_mensual_donaciones'].includes(clave)) {
+    const clavesMoneda = [
+      'precio_sesion',
+      'meta_mensual_donaciones',
+      'plan_bienestar_precio',
+      'plan_refugio_precio',
+      'plan_santuario_precio',
+    ];
+    if (clavesMoneda.includes(clave)) {
       return new Intl.NumberFormat('es-CO', {
         style: 'currency',
         currency: 'COP',

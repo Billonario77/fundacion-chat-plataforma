@@ -6,6 +6,8 @@ import {
   miPlan,
   historial,
   confirmarSuscripcionManual,
+  listarSuscripcionesAdmin,
+  metricasSuscripcionesAdmin,
 } from '../controllers/suscripcionesController';
 import { isAdmin } from '../middleware/isAdmin';
 
@@ -25,5 +27,11 @@ router.get('/historial', authenticateToken, historial);
 
 // Confirmar suscripción manualmente (solo admin — respaldo del webhook)
 router.post('/admin/confirmar/:referencia', authenticateToken, isAdmin, confirmarSuscripcionManual);
+
+// Listar suscripciones (solo admin)
+router.get('/admin/listar', authenticateToken, isAdmin, listarSuscripcionesAdmin);
+
+// Métricas de suscripciones (solo admin)
+router.get('/admin/metricas', authenticateToken, isAdmin, metricasSuscripcionesAdmin);
 
 export default router;

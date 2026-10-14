@@ -10,5 +10,7 @@ router.post('/iniciar-pago', auth_1.authenticateToken, suscripcionesController_1
 router.get('/mi-plan', auth_1.authenticateToken, suscripcionesController_1.miPlan);
 router.get('/historial', auth_1.authenticateToken, suscripcionesController_1.historial);
 router.post('/admin/confirmar/:referencia', auth_1.authenticateToken, isAdmin_1.isAdmin, suscripcionesController_1.confirmarSuscripcionManual);
+router.get('/admin/listar', auth_1.authenticateToken, isAdmin_1.isAdmin, suscripcionesController_1.listarSuscripcionesAdmin);
+router.get('/admin/metricas', auth_1.authenticateToken, isAdmin_1.isAdmin, suscripcionesController_1.metricasSuscripcionesAdmin);
 exports.default = router;
 //# sourceMappingURL=suscripcionesRoutes.js.map
