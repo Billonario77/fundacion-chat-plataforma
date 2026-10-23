@@ -17,7 +17,7 @@ const AlmaWidget: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed bottom-24 right-4 md:bottom-10 md:right-10 z-50 w-[calc(100vw-2rem)] sm:w-96 h-[500px] max-h-[80vh] shadow-2xl rounded-2xl"
+            className="fixed bottom-4 right-4 left-4 md:left-auto md:bottom-10 md:right-10 z-50 sm:w-96 h-[550px] max-h-[85vh] shadow-2xl rounded-2xl bg-white"
           >
             <ChatIA onClose={() => setIsOpen(false)} />
           </motion.div>
@@ -43,16 +43,20 @@ const AlmaWidget: React.FC = () => {
         </div>
       )}
 
-      {/* Pestañita lateral (si está escondida) */}
+            {/* Pestañita lateral (si está escondida) */}
       {isHidden && !isOpen && (
         <button
           onClick={() => setIsHidden(false)}
-          className="fixed bottom-24 right-0 md:bottom-10 z-40 bg-[#E07A5F] text-white py-3 px-2 rounded-l-xl shadow-lg hover:bg-[#d16a4f] transition-all flex flex-col items-center gap-1 group"
+          className="fixed bottom-24 right-0 md:bottom-10 z-40 bg-[#E07A5F] text-white py-4 px-2 rounded-l-xl shadow-lg hover:bg-[#d16a4f] transition-all flex flex-col items-center justify-center gap-2 group"
           title="Llamar a Alma"
         >
-          <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
-          <span className="text-[10px] font-bold writing-mode-vertical-rl rotate-180 tracking-widest">
-            ALMA
+          <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
+          {/* Usamos flex-col para apilar las letras de forma natural y derecha */}
+          <span className="text-[10px] font-bold flex flex-col items-center leading-none tracking-widest gap-1">
+            <span>A</span>
+            <span>L</span>
+            <span>M</span>
+            <span>A</span>
           </span>
         </button>
       )}

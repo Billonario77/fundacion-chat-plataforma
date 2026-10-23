@@ -264,7 +264,7 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
             value={nuevoMensaje}
             onChange={(e) => setNuevoMensaje(e.target.value)}
             placeholder="Escríbele a Alma..."
-            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/50 text-xs text-[#3D405B]"
+            className="flex-1 px-2 py-2 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/50 text-xs text-[#3D405B]"
             disabled={enviando}
             maxLength={2000}
           />
