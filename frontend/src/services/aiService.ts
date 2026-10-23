@@ -32,4 +32,9 @@ export const aiService = {
     const response = await axios.get(`${API_URL}/ai/historial`, headers());
     return response.data.data;
   },
+
+  enviarMensajePublico: async (historial: { rol: string, contenido: string }[]): Promise<string> => {
+    const response = await axios.post(`${API_URL}/ai/publico`, { historial });
+    return response.data.data.respuesta;
+  },
 };

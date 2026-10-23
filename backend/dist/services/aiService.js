@@ -45,7 +45,7 @@ class AIService {
                 content: msg.contenido
             }));
             const response = await anthropic.messages.create({
-                model: 'claude-3-5-haiku-latest',
+                model: 'claude-haiku-4-5',
                 max_tokens: 500,
                 system: SYSTEM_PROMPT,
                 messages: mensajesClaude,
@@ -68,6 +68,33 @@ class AIService {
        WHERE usuario_id = $1
        ORDER BY created_at ASC`, [usuarioId]);
         return result.rows;
+    }
+    async procesarMensajePublico(historial) {
+        try {
+            const systemPublico = `
+Eres "Alma", el Guía de IA de Voces del Alma.
+El usuario con el que hablas NO ha iniciado sesión.
+Tus reglas principales (empatía, no diagnosticar, protocolo de crisis 123/106) siguen aplicando igual.
+Sin embargo, como es un invitado, después de 1 o 2 respuestas empáticas, debes invitarlo a registrarse para poder darle un acompañamiento real y continuo. Dile algo como: "Me encantaría seguir escuchándote y acompañarte, pero para darte un espacio seguro y poder guardar nuestro historial, te invito a crear una cuenta (puedes ser anónimo). ¿Te gustaría hacerlo?".
+
+Historial de conversación:
+${historial.map(m => `${m.rol === 'user' ? 'Usuario' : 'Alma'}: ${m.contenido}`).join('\n')}
+      `;
+            const response = await anthropic.messages.create({
+                model: 'claude-haiku-4-5',
+                max_tokens: 500,
+                system: systemPublico,
+                messages: historial.map(m => ({
+                    role: m.rol === 'user' ? 'user' : 'assistant',
+                    content: m.contenido
+                })),
+            });
+            return response.content[0].type === 'text' ? response.content[0].text : 'Lo siento, no pude procesar eso.';
+        }
+        catch (error) {
+            console.error('❌ Error en AIService (público):', error);
+            throw new Error('Error al comunicarse con el guía de IA');
+        }
     }
 }
 exports.AIService = AIService;

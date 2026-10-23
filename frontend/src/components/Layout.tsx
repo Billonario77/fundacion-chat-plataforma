@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Footer from './Footer';
 import Logo from './Logo';
+import AlmaWidget from './AlmaWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -103,6 +104,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Footer */}
       <Footer />
+
+      {/* Widget de Alma */}
+      <AlmaWidget />
+      
     </div>
   );
 };

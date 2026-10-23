@@ -6,5 +6,6 @@ const aiController_1 = require("../controllers/aiController");
 const router = (0, express_1.Router)();
 router.post('/mensaje', auth_1.authenticateToken, aiController_1.enviarMensaje);
 router.get('/historial', auth_1.authenticateToken, aiController_1.obtenerHistorialChat);
+router.post('/publico', aiController_1.enviarMensajePublico);
 exports.default = router;
 //# sourceMappingURL=aiRoutes.js.map

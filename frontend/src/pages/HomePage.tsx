@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { testimoniosService, TestimonioPublico } from '../services/testimoniosService';
 import Logo from '../components/Logo';
+import AlmaWidget from '../components/AlmaWidget';
 
 const HomePage: React.FC = () => {
   const [testimoniosHome, setTestimoniosHome] = useState<TestimonioPublico[]>([]);
@@ -344,6 +345,7 @@ const HomePage: React.FC = () => {
       {/* ============================================ */}
       <Footer />
       <WhatsAppButton />
+      <AlmaWidget />
     </div>
   );
 };

@@ -17,9 +17,6 @@ import TestimonioForm from '../components/TestimonioForm';
 import MisTestimonios from '../components/MisTestimonios';
 import { testimoniosService, Testimonio } from '../services/testimoniosService';
 import { suscripcionesService, PlanDisponible, PlanActivo } from '../services/suscripcionesService';
-import ChatIA from '../components/ChatIA';
-import BotonAlma from '../components/BotonAlma';
-
 
 const UsuarioDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -36,7 +33,7 @@ const UsuarioDashboard: React.FC = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(
     (location.state as any)?.abrirFormulario || false
   );
-  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio' | 'convenio' | 'plan' | 'alma'>(
+  const [pestañaActiva, setPestañaActiva] = useState<'activas' | 'historial' | 'reprogramaciones' | 'cancelados' | 'testimonio' | 'convenio' | 'plan'>(
     (location.state as any)?.pestañaInicial || 'activas'
   );
   const [ultimoEvento, setUltimoEvento] = useState('');
@@ -1002,7 +999,6 @@ const eliminarTestimonio = async (id: number) => {
         {pestañaActiva === 'testimonio' && '💬 Mi testimonio'}
         {pestañaActiva === 'convenio' && '🎟️ Mi convenio'}
         {pestañaActiva === 'plan' && '💎 Plan Actual'}
-        {pestañaActiva === 'alma' && '✨ Hablar con Alma'}
       </span>
       <span className={`transform transition-transform ${menuAbierto ? 'rotate-180' : ''}`}>▼</span>
     </button>
@@ -1081,17 +1077,6 @@ const eliminarTestimonio = async (id: number) => {
         >
           <span>💎</span>
           <span>Plan Actual</span>
-        </button>
-
-
-        <button
-          onClick={() => { setPestañaActiva('alma'); setMenuAbierto(false); }}
-          className={`w-full px-4 py-2 rounded-xl text-left transition-all duration-300 flex items-center space-x-2 ${
-            pestañaActiva === 'alma' ? 'bg-white text-primario shadow-md' : 'hover:bg-white/50'
-          }`}
-        >
-          <span>✨</span>
-          <span>Hablar con Alma (IA)</span>
         </button>
 
         <button
@@ -1194,19 +1179,6 @@ const eliminarTestimonio = async (id: number) => {
       >
         <span className="text-lg">💎</span>
         <span>Plan Actual</span>
-      </button>
-
-
-      <button
-        onClick={() => setPestañaActiva('alma')}
-        className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 text-sm ${
-          pestañaActiva === 'alma'
-            ? 'bg-white text-primario shadow-md' 
-            : 'text-texto-claro hover:bg-white/50 hover:text-primario'
-        }`}
-      >
-        <span className="text-lg">✨</span>
-        <span>Hablar con Alma</span>
       </button>
 
       <button
@@ -1444,12 +1416,6 @@ const eliminarTestimonio = async (id: number) => {
               />
             </div>
           </div>
-        </div>
-      )}
-
-      {pestañaActiva === 'alma' && (
-        <div className="animate-fadeIn">
-          <ChatIA />
         </div>
       )}
 
@@ -1928,15 +1894,6 @@ const eliminarTestimonio = async (id: number) => {
                 onCerrar={() => handleDatosCompletados(true)}
                 rol={user.rol} 
               />
-            )}
-
-            {/* Botón flotante de Alma (Siri style) */}
-            {/* Solo se muestra si no estamos ya en la pestaña de Alma */}
-            {pestañaActiva !== 'alma' && (
-              <BotonAlma onClick={() => {
-                setPestañaActiva('alma');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }} />
             )}
     </Layout>
   );

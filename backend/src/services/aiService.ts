@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Pool } from 'pg';
 
 // Inicializamos el cliente de Anthropic.
-// Automáticamente toma la variable de entorno ANTHROPIC_API_KEY que configuramos en Render.
+// Toma automáticamente la variable ANTHROPIC_API_KEY de Render.
 const anthropic = new Anthropic();
 
 // ============================================
@@ -34,7 +34,7 @@ export class AIService {
   constructor(private pool: Pool) {}
 
   /**
-   * Procesa un mensaje del usuario, lo guarda, consulta a Claude y guarda la respuesta.
+   * Procesa un mensaje del usuario logueado, lo guarda, consulta a Claude y guarda la respuesta.
    */
   async procesarMensaje(usuarioId: string, mensajeUsuario: string): Promise<string> {
     try {
@@ -54,7 +54,7 @@ export class AIService {
         [usuarioId]
       );
 
-      // Invertimos el array para que quede en orden cronológico (del más viejo al más nuevo)
+      // Invertimos el array para que quede en orden cronológico
       const historial = historialQuery.rows.reverse();
 
       // 3. Formatear el historial para la API de Anthropic
@@ -64,7 +64,6 @@ export class AIService {
       }));
 
       // 4. Llamar a la API de Claude
-      // Usamos claude-3-5-haiku-latest por ser rápido y económico para chats
       const response = await anthropic.messages.create({
         model: 'claude-haiku-4-5',
         max_tokens: 500,
@@ -93,7 +92,7 @@ export class AIService {
   }
 
   /**
-   * Obtiene el historial de chat de un usuario.
+   * Obtiene el historial de chat de un usuario logueado.
    */
   async obtenerHistorial(usuarioId: string) {
     const result = await this.pool.query(
@@ -104,5 +103,38 @@ export class AIService {
       [usuarioId]
     );
     return result.rows;
+  }
+
+  /**
+   * Procesa un mensaje de un usuario NO logueado (público).
+   * Recibe el historial desde el frontend.
+   */
+  async procesarMensajePublico(historial: { rol: string, contenido: string }[]): Promise<string> {
+    try {
+      const systemPublico = `
+Eres "Alma", el Guía de IA de Voces del Alma.
+El usuario con el que hablas NO ha iniciado sesión.
+Tus reglas principales (empatía, no diagnosticar, protocolo de crisis 123/106) siguen aplicando igual.
+Sin embargo, como es un invitado, después de 1 o 2 respuestas empáticas, debes invitarlo a registrarse para poder darle un acompañamiento real y continuo. Dile algo como: "Me encantaría seguir escuchándote y acompañarte, pero para darte un espacio seguro y poder guardar nuestro historial, te invito a crear una cuenta (puedes ser anónimo). ¿Te gustaría hacerlo?".
+
+Historial de conversación:
+${historial.map(m => `${m.rol === 'user' ? 'Usuario' : 'Alma'}: ${m.contenido}`).join('\n')}
+      `;
+
+      const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 500,
+        system: systemPublico,
+        messages: historial.map(m => ({
+          role: m.rol === 'user' ? 'user' : 'assistant',
+          content: m.contenido
+        })) as any,
+      });
+
+      return response.content[0].type === 'text' ? response.content[0].text : 'Lo siento, no pude procesar eso.';
+    } catch (error) {
+      console.error('❌ Error en AIService (público):', error);
+      throw new Error('Error al comunicarse con el guía de IA');
+    }
   }
 }
