@@ -18,6 +18,7 @@ import MisTestimonios from '../components/MisTestimonios';
 import { testimoniosService, Testimonio } from '../services/testimoniosService';
 import { suscripcionesService, PlanDisponible, PlanActivo } from '../services/suscripcionesService';
 import ChatIA from '../components/ChatIA';
+import BotonAlma from '../components/BotonAlma';
 
 
 const UsuarioDashboard: React.FC = () => {
@@ -1927,6 +1928,15 @@ const eliminarTestimonio = async (id: number) => {
                 onCerrar={() => handleDatosCompletados(true)}
                 rol={user.rol} 
               />
+            )}
+
+            {/* Botón flotante de Alma (Siri style) */}
+            {/* Solo se muestra si no estamos ya en la pestaña de Alma */}
+            {pestañaActiva !== 'alma' && (
+              <BotonAlma onClick={() => {
+                setPestañaActiva('alma');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} />
             )}
     </Layout>
   );
