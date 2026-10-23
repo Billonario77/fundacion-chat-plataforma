@@ -66,7 +66,7 @@ export class AIService {
       // 4. Llamar a la API de Claude
       // Usamos claude-3-5-haiku-latest por ser rápido y económico para chats
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-haiku-latest',
+        model: 'claude-haiku-4-5',
         max_tokens: 500,
         system: SYSTEM_PROMPT,
         messages: mensajesClaude as any, 
