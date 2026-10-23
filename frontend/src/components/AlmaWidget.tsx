@@ -5,7 +5,7 @@ import ChatIA from './ChatIA';
 
 const AlmaWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isHidden, setIsHidden] = useState(false); // Nuevo estado para esconder
+  const [isHidden, setIsHidden] = useState(false);
 
   return (
     <>
@@ -24,22 +24,22 @@ const AlmaWidget: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* La Vela Flotante (solo si NO está abierto el chat y NO está escondida) */}
+      {/* Contenedor de la Vela Flotante */}
       {!isOpen && !isHidden && (
-        <div className="relative group">
-          <BotonAlma onClick={() => setIsOpen(true)} />
-          
-          {/* Botoncito pequeño para esconder a Alma */}
+        <div className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-40 group">
+          {/* Botón para esconder (La X) - Ahora sí se verá sobre la vela */}
           <button
             onClick={(e) => {
-              e.stopPropagation(); // Evita que se abra el chat si se hace clic en la "X"
+              e.stopPropagation();
               setIsHidden(true);
             }}
-            className="absolute top-0 right-0 bg-gray-500/50 hover:bg-gray-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] z-50 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-1 -right-1 bg-gray-600 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs z-50 shadow-md transition-all opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
             title="Esconder a Alma"
           >
             ✕
           </button>
+
+          <BotonAlma onClick={() => setIsOpen(true)} />
         </div>
       )}
 

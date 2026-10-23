@@ -9,10 +9,9 @@ const BotonAlma: React.FC<BotonAlmaProps> = ({ onClick }) => {
   return (
     <motion.button
       onClick={onClick}
-      className="fixed bottom-36 right-6 md:bottom-36 md:right-10 z-40 flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full group"
+      className="relative flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full group"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      title="Hablar con Alma"
     >
       {/* 1. Resplandor exterior (Aura) */}
       <motion.div
