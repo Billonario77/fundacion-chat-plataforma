@@ -21,6 +21,48 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
   const mensajesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Configurar el reconocimiento de voz del navegador
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true; // Sigue escuchando aunque hagas pausas
+      recognitionRef.current.interimResults = true; // Muestra resultados mientras hablas
+      recognitionRef.current.lang = 'es-CO'; // Español Colombia
+
+      recognitionRef.current.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setNuevoMensaje(transcript); // Pone el texto en el input
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Error de micrófono:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  // Función para activar/desactivar el micrófono
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setNuevoMensaje(''); // Limpia el input antes de dictar
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
   // Cargar historial inicial (solo si está logueado)
   useEffect(() => {
     if (!isLogged) return;
@@ -226,6 +268,21 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
             disabled={enviando}
             maxLength={2000}
           />
+          
+          {/* Botón de Micrófono */}
+          <button
+            type="button" // Importante: type="button" para que no envíe el formulario
+            onClick={toggleListening}
+            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${
+              isListening 
+                ? 'bg-red-500 text-white animate-pulse' 
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+            title={isListening ? 'Detener grabación' : 'Hablar por micrófono'}
+          >
+            🎤
+          </button>
+
           <button
             type="submit"
             disabled={enviando || !nuevoMensaje.trim()}
