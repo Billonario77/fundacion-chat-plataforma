@@ -123,17 +123,73 @@ El cupón descuenta **solo sobre la base**, no sobre el recargo.
 
 ---
 
-## 5. Suscripciones (PENDIENTE — PRIORIDAD 2)
+## 5. Suscripciones
 
-### 5.1. Estado actual
-- **No implementado.** La tabla `suscripciones` no existe.
-- En `pagoService.ts` hay un placeholder `esSuscriptorActivo = false`.
+### 5.1. Estado
+- **Implementado.** Tabla `suscripciones` con columnas de pago y rastreo de emails.
+- **Planes:** Bienestar, Refugio, Santuario.
+- **Pasarela:** Wompi (con referencia `SUS-*`).
 
-### 5.2. Modelo propuesto
-- Pago fijo mensual.
-- X sesiones incluidas por período.
-- Requiere integración con Wompi para pagos recurrentes.
-- Reglas pendientes de definir: cuántas sesiones, qué pasa al agotarlas, cancelación anticipada.
+### 5.2. Planes
+| Plan | Sesiones | Precio | Costo por sesión |
+|---|---|---|---|
+| 💎 Bienestar | 4 | $300.000 | $75.000 |
+| 🌟 Refugio | 9 | $600.000 | $66.666 |
+| 👑 Santuario | 20 | $1.000.000 | $50.000 |
+
+- Configurables desde admin → Configuración.
+- Claves en BD: `plan_<plan>_precio`, `plan_<plan>_sesiones`.
+
+### 5.3. Beneficios del suscriptor
+- **Exención del recargo urgente** (Tarifa por Prioridad).
+- **Puede agendar con mínimo 30 minutos** de anticipación (aplica a todos, pero el suscriptor no paga recargo).
+- Sesiones prepagadas: al agendar, se consume 1 del cupo.
+- Las multas por cancelación tardía **sí aplican**.
+
+### 5.4. Ciclo de vida
+- **Duración:** 30 días exactos desde el pago (`pagado_at`), no desde la creación.
+- **Vencimiento:** worker `suscripcionWorker` corre cada 30 min y marca `estado='vencida'`.
+- **Renovación manual** con recordatorio por email 3 días antes.
+- **Cambio de plan:** al renovar, el usuario elige el nuevo plan.
+- **Fin de mes:** las sesiones no usadas se pierden (no se acumulan).
+
+### 5.5. Sesiones adicionales
+- Cuando el suscriptor agota sus sesiones, la siguiente sesión se cobra a tarifa plena.
+- **Sigue exento del recargo urgente** mientras el plan esté activo (aunque la sesión sea adicional).
+- Esa sesión adicional NO descuenta del cupo del plan.
+
+### 5.6. Multas y cancelación
+- Las multas del suscriptor se acumulan como deuda.
+- Se cobran **sumadas al precio del siguiente plan** al renovar (Opción B).
+- Si el usuario cancela el plan a mitad de período, mantiene los beneficios hasta el vencimiento.
+- Casos excepcionales: escribir a `contacto@vocesdelalma.com` para condonación.
+
+### 5.7. Convenios vs suscripción
+- Si un usuario con convenio activo compra una suscripción, **prevalece la suscripción**.
+- Una vez agotadas las sesiones del plan, el convenio (si existe) vuelve a aplicar como respaldo.
+
+### 5.8. Configuración de la tabla
+- `estado_pago`: `pendiente` → `pagado` | `fallido`.
+- `estado`: `activa` → `vencida` | `cancelada`.
+- `referencia_wompi` con prefijo `SUS-` para que el webhook la enrute.
+- Flags `recordatorio_vencimiento_enviado` y `email_vencimiento_enviado` para no repetir envíos.
+
+### 5.9. Emails
+- **Bienvenida** (`enviarBienvenidaSuscripcion`) — al confirmar el pago.
+- **Recordatorio 3 días antes** (`enviarRecordatorioVencimientoSuscripcion`).
+- **Vencimiento** (`enviarVencimientoSuscripcion`) — al marcar como vencida.
+
+### 5.10. Endpoints
+- `GET /suscripciones/planes` — planes + multas pendientes del usuario.
+- `POST /suscripciones/iniciar-pago` — crea suscripción pendiente y retorna firma Wompi.
+- `GET /suscripciones/mi-plan` — plan activo del usuario.
+- `GET /suscripciones/historial` — historial del usuario.
+- `POST /suscripciones/admin/confirmar/:referencia` — confirmación manual (respaldo).
+- `GET /suscripciones/admin/listar` — listado con filtros (admin).
+- `GET /suscripciones/admin/metricas` — contadores por plan + facturado del mes.
+
+### 5.11. Workers
+- `suscripcionWorker` cada 30 min: marca vencidas + envía recordatorios + envía email de vencimiento (idempotentes por flags).
 
 ---
 

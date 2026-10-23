@@ -24,6 +24,7 @@ import donacionesRoutes from './routes/donacionesRoutes';
 import configuracionRoutes from './routes/configuracionRoutes';
 import testimonioRoutes from './routes/testimonioRoutes';
 import suscripcionesRoutes from './routes/suscripcionesRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 // ✅ Configurar zona horaria del proceso en UTC.
 // Los Date se serializan a Postgres en UTC (correcto) y el frontend
@@ -257,6 +258,7 @@ app.use('/api/donaciones', donacionesRoutes);
 app.use('/api/configuracion', configuracionRoutes);
 app.use('/api/testimonios', testimonioRoutes);
 app.use('/api/suscripciones', suscripcionesRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ============================================
 // RUTAS PÚBLICAS

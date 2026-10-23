@@ -29,6 +29,7 @@ const donacionesRoutes_1 = __importDefault(require("./routes/donacionesRoutes"))
 const configuracionRoutes_1 = __importDefault(require("./routes/configuracionRoutes"));
 const testimonioRoutes_1 = __importDefault(require("./routes/testimonioRoutes"));
 const suscripcionesRoutes_1 = __importDefault(require("./routes/suscripcionesRoutes"));
+const aiRoutes_1 = __importDefault(require("./routes/aiRoutes"));
 process.env.TZ = 'UTC';
 console.log('🕐 Zona horaria del proceso: UTC');
 console.log('🕐 Hora UTC:', new Date().toISOString());
@@ -190,6 +191,7 @@ app.use('/api/donaciones', donacionesRoutes_1.default);
 app.use('/api/configuracion', configuracionRoutes_1.default);
 app.use('/api/testimonios', testimonioRoutes_1.default);
 app.use('/api/suscripciones', suscripcionesRoutes_1.default);
+app.use('/api/ai', aiRoutes_1.default);
 app.get('/health', (req, res) => {
     const currentAllowedOrigins = allowedOrigins;
     res.status(200).json({

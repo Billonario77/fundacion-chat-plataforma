@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cobrosService } from '../../services/cobrosService';
 import toast from 'react-hot-toast';
 
@@ -45,6 +46,10 @@ const GestionCobros: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<string>('');
   const [pestanaActiva, setPestanaActiva] = useState<'estadisticas' | 'historial'>('estadisticas');
+  
+  // Estados para el modal de condonación
+  const [multaACondonar, setMultaACondonar] = useState<Cobro | null>(null);
+  const [condonando, setCondonando] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -72,22 +77,24 @@ const GestionCobros: React.FC = () => {
     }
   };
 
-  const handleCondonarMulta = async (multaId: string, monto: number) => {
-    if (
-      !window.confirm(
-        `¿Condonar esta multa de ${formatCurrency(monto)}?\n\n` +
-          `Se eliminará la deuda del usuario. Si la multa estaba incluida en una sesión pendiente, el total de esa sesión se ajustará automáticamente.`
-      )
-    )
-      return;
+  const handleCondonarMulta = (cobro: Cobro) => {
+    setMultaACondonar(cobro);
+  };
 
+  const confirmarCondonacion = async () => {
+    if (!multaACondonar) return;
+
+    setCondonando(true);
     try {
-      await cobrosService.condonarMulta(multaId);
+      await cobrosService.condonarMulta(multaACondonar.id);
       toast.success('Multa condonada exitosamente');
+      setMultaACondonar(null);
       cargarDatos();
     } catch (err: any) {
       console.error('Error al condonar multa:', err);
       toast.error(err?.response?.data?.error || 'Error al condonar la multa');
+    } finally {
+      setCondonando(false);
     }
   };
 
@@ -338,9 +345,7 @@ const GestionCobros: React.FC = () => {
                       <td className="px-3 md:px-4 py-3">
                         {cobro.tipo === 'multa' && cobro.estado === 'pendiente' ? (
                           <button
-                            onClick={() =>
-                              handleCondonarMulta(cobro.id, Number(cobro.total))
-                            }
+                            onClick={() => handleCondonarMulta(cobro)}
                             className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap"
                           >
                             Condonar
@@ -367,6 +372,46 @@ const GestionCobros: React.FC = () => {
             🔄 Actualizar
           </button>
         </div>
+      )}
+
+      {/* Modal de Condonación */}
+      {multaACondonar && createPortal(
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl animate-fadeIn mx-auto">
+            <div className="text-center mb-4">
+              <div className="text-3xl mb-2">🕊️</div>
+              <h3 className="text-lg font-serif font-bold text-[#3D405B] mb-1">
+                ¿Condonar multa?
+              </h3>
+              <p className="text-sm text-[#5D6078] leading-snug">
+                Se eliminará la deuda de <strong className="text-[#E07A5F]">{formatCurrency(multaACondonar.total)}</strong> para <strong>{multaACondonar.usuario_nombre}</strong>.
+              </p>
+              <div className="mt-3 bg-[#FDF6EC] p-2.5 rounded-lg border border-[#F2CC8F]/50">
+                <p className="text-[11px] text-[#5D6078] italic leading-tight">
+                  Si estaba incluida en una sesión pendiente, su total se ajustará.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 justify-center mt-5">
+              <button
+                onClick={() => setMultaACondonar(null)}
+                disabled={condonando}
+                className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarCondonacion}
+                disabled={condonando}
+                className="flex-1 px-4 py-2 rounded-full text-sm font-medium text-white bg-[#E07A5F] hover:bg-[#d16a4f] transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {condonando ? '...' : 'Condonar'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
