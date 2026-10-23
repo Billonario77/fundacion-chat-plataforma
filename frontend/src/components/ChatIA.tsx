@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { aiService, MensajeIA } from '../services/aiService';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -167,7 +168,23 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
                       : 'bg-white border border-[#F2CC8F]/30 text-[#3D405B] rounded-bl-none'
                   }`}
                 >
-                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{mensaje.contenido}</p>
+                  <div className="text-xs leading-relaxed">
+                    {esMio ? (
+                      <p className="whitespace-pre-wrap">{mensaje.contenido}</p>
+                    ) : (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ node, ...props }) => <p className="mb-1 last:mb-0" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-1 space-y-0.5" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-1 space-y-0.5" {...props} />,
+                          li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
+                        }}
+                      >
+                        {mensaje.contenido}
+                      </ReactMarkdown>
+                    )}
+                  </div>
                   <div className={`text-[9px] mt-1 flex justify-end ${esMio ? 'text-gray-300' : 'text-gray-400'}`}>
                     {formatHora(mensaje.created_at)}
                   </div>
