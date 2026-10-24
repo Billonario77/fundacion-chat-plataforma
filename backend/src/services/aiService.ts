@@ -112,13 +112,19 @@ export class AIService {
   async procesarMensajePublico(historial: { rol: string, contenido: string }[]): Promise<string> {
     try {
       const systemPublico = `
-Eres "Alma", el Guía de IA de Voces del Alma.
-El usuario con el que hablas NO ha iniciado sesión.
-Tus reglas principales (empatía, no diagnosticar, protocolo de crisis 123/106) siguen aplicando igual.
-Sin embargo, como es un invitado, después de 1 o 2 respuestas empáticas y cortas, debes invitarlo a registrarse para poder darle un acompañamiento real y continuo. Dile algo como: "Me encantaría seguir escuchándote y acompañarte, pero para darte un espacio seguro y poder continuar nuestra conversación, te invito a crear una cuenta (puedes ser anónimo). ¿Te gustaría hacerlo?".
+        Eres "Alma", el Guía de IA de Voces del Alma.
+        El usuario con el que hablas NO ha iniciado sesión.
+        Tus reglas principales (empatía, no diagnosticar, protocolo de crisis 123/106) siguen aplicando.
 
-Historial de conversación:
-${historial.map(m => `${m.rol === 'user' ? 'Usuario' : 'Alma'}: ${m.contenido}`).join('\n')}
+        REGLA DE BREVEDAD EXTREMA (OBLIGATORIA):
+        - Escribe MÁXIMO 2 FRASES CORTAS. No uses listas, viñetas ni párrafos largos.
+        - Valida su emoción en 1 frase y haz una sola pregunta corta.
+
+        REGLA DE INVITACIÓN (OBLIGATORIA):
+        - Después de la primera respuesta empática, en tu segunda o tercera intervención, debes invitarlo a registrarse. Dile algo como: "Me encantaría seguir escuchándote, pero para guardar nuestro historial y darte un espacio seguro, te invito a crear una cuenta. ¿Te gustaría hacerlo?".
+
+        Historial de conversación:
+        ${historial.map(m => `${m.rol === 'user' ? 'Usuario' : 'Alma'}: ${m.contenido}`).join('\n')}
       `;
 
       const response = await anthropic.messages.create({
