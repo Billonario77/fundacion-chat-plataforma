@@ -172,8 +172,20 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
       {/* Header del chat */}
       <div className="flex justify-between items-center px-4 py-3 border-b bg-gradient-to-r from-[#F2CC8F]/40 to-[#E07A5F]/20">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-sm">
-            ✨
+          <div className="w-8 h-8 bg-[#E07A5F] rounded-full flex items-center justify-center shadow-sm">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
+              <defs>
+                <radialGradient id="starChatHeaderGradient" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <stop offset="40%" stopColor="#FFF9E6" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#F2CC8F" stopOpacity="1" />
+                </radialGradient>
+              </defs>
+              <path 
+                d="M50 0 L55 40 L90 20 L60 45 L100 50 L60 55 L90 80 L55 60 L50 100 L45 60 L10 80 L40 55 L0 50 L40 45 L10 20 L45 40 Z" 
+                fill="url(#starChatHeaderGradient)" 
+              />
+            </svg>
           </div>
           <div>
             <h3 className="font-serif font-bold text-[#3D405B] leading-tight">Alma</h3>
