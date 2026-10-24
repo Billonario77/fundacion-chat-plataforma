@@ -256,37 +256,39 @@ const ChatIA: React.FC<ChatIAProps> = ({ onClose }) => {
       </div>
 
       {/* Input de mensaje */}
-      <form onSubmit={handleEnviarMensaje} className="p-3 bg-white">
-        <div className="flex gap-2">
+      <form onSubmit={handleEnviarMensaje} className="p-3 bg-white rounded-b-2xl">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full">
+          
           <input
             ref={inputRef}
             type="text"
             value={nuevoMensaje}
             onChange={(e) => setNuevoMensaje(e.target.value)}
             placeholder="Escríbele a Alma..."
-            className="flex-1 px-2 py-2 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/50 text-xs text-[#3D405B]"
+            className="flex-1 w-full min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/50 text-xs sm:text-sm text-[#3D405B]"
             disabled={enviando}
             maxLength={2000}
           />
           
           {/* Botón de Micrófono */}
           <button
-            type="button" // Importante: type="button" para que no envíe el formulario
+            type="button"
             onClick={toggleListening}
-            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${
+            className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-all ${
               isListening 
                 ? 'bg-red-500 text-white animate-pulse' 
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
             title={isListening ? 'Detener grabación' : 'Hablar por micrófono'}
           >
-            🎤
+            <span className="text-sm sm:text-base">🎤</span>
           </button>
 
+          {/* Botón Enviar */}
           <button
             type="submit"
             disabled={enviando || !nuevoMensaje.trim()}
-            className="bg-[#E07A5F] text-white px-4 py-2 rounded-full hover:bg-[#d16a4f] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-xs shadow-md"
+            className="flex-shrink-0 bg-[#E07A5F] text-white px-3 sm:px-4 py-2 rounded-full hover:bg-[#d16a4f] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-xs shadow-md"
           >
             Enviar
           </button>

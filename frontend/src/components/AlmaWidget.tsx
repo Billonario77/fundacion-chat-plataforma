@@ -43,16 +43,15 @@ const AlmaWidget: React.FC = () => {
         </div>
       )}
 
-            {/* Pestañita lateral (si está escondida) */}
+      {/* Pestañita lateral (si está escondida) */}
       {isHidden && !isOpen && (
         <button
           onClick={() => setIsHidden(false)}
-          className="fixed bottom-24 right-0 md:bottom-10 z-40 bg-[#E07A5F] text-white py-4 px-2 rounded-l-xl shadow-lg hover:bg-[#d16a4f] transition-all flex flex-col items-center justify-center gap-2 group"
+          className="fixed bottom-30 right-0 md:bottom-28 z-40 bg-[#E07A5F] text-white py-2 px-1.5 rounded-l-lg shadow-md hover:bg-[#d16a4f] transition-all flex flex-col items-center justify-center gap-1 group"
           title="Llamar a Alma"
         >
-          <span className="text-xl group-hover:scale-110 transition-transform">✨</span>
-          {/* Usamos flex-col para apilar las letras de forma natural y derecha */}
-          <span className="text-[10px] font-bold flex flex-col items-center leading-none tracking-widest gap-1">
+          <span className="text-sm group-hover:scale-110 transition-transform">✨</span>
+          <span className="text-[9px] font-bold flex flex-col items-center leading-none tracking-widest gap-0.5">
             <span>A</span>
             <span>L</span>
             <span>M</span>
