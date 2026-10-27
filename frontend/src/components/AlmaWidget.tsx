@@ -91,12 +91,12 @@ const AlmaWidget: React.FC = () => {
               />
             </svg>
           </div>
-          <span className="text-[9px] font-bold flex flex-col items-center leading-none tracking-widest gap-0.5">
+          {/* <span className="text-[9px] font-bold flex flex-col items-center leading-none tracking-widest gap-0.5">
             <span>A</span>
             <span>l</span>
             <span>m</span>
             <span>a</span>
-          </span>
+          </span>*/}
         </button>
       )}
     </>
