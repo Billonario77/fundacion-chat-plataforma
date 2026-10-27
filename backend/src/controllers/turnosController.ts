@@ -1335,7 +1335,7 @@ export const getMiPerfil = async (req: AuthRequest, res: Response): Promise<void
       SELECT 
         u.id, u.nombre, u.email, u.foto_perfil, u.rol, u.datos_completados,
         u.guia_asignado_id,
-        g.nombre AS guia_asignado_nombre,
+        COALESCE(g.nombre_publico, g.primer_nombre) AS guia_asignado_nombre,
         u.entidad_id,
         e.nombre AS entidad_nombre,
         e.modalidad AS entidad_modalidad,
