@@ -574,6 +574,10 @@ useEffect(() => {
       if (!silencioso) setLoading(true);
       const data = await usuarioService.getMisSolicitudes();
       setSolicitudes(data.turnos);
+      
+      // Actualizamos también el perfil para mantener los nombres sincronizados
+      const perfil = await usuarioService.getMiPerfil();
+      setPerfilUsuario(perfil);
     } catch (err) {
       if (!silencioso) setError('Error al cargar tus solicitudes');
       console.error(err);

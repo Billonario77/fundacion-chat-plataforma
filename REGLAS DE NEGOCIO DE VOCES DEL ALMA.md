@@ -296,3 +296,18 @@ Si el usuario menciona suicidio, autolesiones o daño a terceros, Alma debe:
 - **Botón:** Orbe flotante (estrella de 8 puntas) anclado a la derecha de la pantalla.
 - **Auto-ocultar:** Si el usuario no interactúa con el orbe en 5 segundos, este se convierte en una pestaña lateral para no entorpecer la lectura.
 - **Dictado por voz:** Implementado con la Web Speech API nativa del navegador (STT). Solo funciona en Chrome y Edge. El botón de micrófono transcribe la voz al input de texto.
+
+
+---
+
+## 12. Privacidad de los Guías
+
+### 12.1. Nombres Públicos
+- **Regla:** Los usuarios NUNCA deben ver el nombre legal completo de un guía.
+- **Implementación:** Se agregó el campo `nombre_publico` a la tabla `usuarios`.
+- **Comportamiento por defecto:** Si el administrador no asigna un `nombre_publico`, el sistema tomará automáticamente el `primer_nombre` del guía para mostrárselo al usuario.
+- **Alcance:** Esta regla aplica en toda la plataforma (dashboard del usuario, chat, asignaciones, historial y notificaciones).
+- **Gestión:** El administrador puede editar este campo desde el panel de "Gestión de Usuarios" (Modal de Edición).
+
+### 12.2. Dinámica del sistema
+- Afecta únicamente la visualización hacia el usuario. La base de datos y los paneles administrativos conservan el nombre completo para fines legales y de auditoría.
