@@ -251,7 +251,7 @@ const solicitarApoyo = async (req, res) => {
             });
         }
         else if (guiaAsignado) {
-            const guiaNombreQuery = await connection_1.pool.query('SELECT nombre FROM usuarios WHERE id = $1 AND rol = $2', [guiaAsignado, 'guia']);
+            const guiaNombreQuery = await connection_1.pool.query('SELECT COALESCE(nombre_publico, primer_nombre) AS nombre FROM usuarios WHERE id = $1 AND rol = $2', [guiaAsignado, 'guia']);
             const guiaNombre = guiaNombreQuery.rows[0]?.nombre || 'tu guía';
             (0, socketService_1.notificarUsuario)(usuarioId, 'nuevo-turno-creado', {
                 turnoId: turnoId,
@@ -480,7 +480,7 @@ const obtenerTurnoPorId = async (req, res) => {
         u.nombre as usuario_nombre,
         u.email as usuario_email,
         g.id as guia_id_actual,
-        g.nombre as guia_nombre
+        COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre
       FROM turnos t
       JOIN usuarios u ON t.usuario_id = u.id
       LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -545,7 +545,7 @@ const misSolicitudes = async (req, res) => {
         t.motivo_cancelacion,
         t.cancelado_por,
         t.guia_id,
-        g.nombre as guia_nombre,
+        COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre,
         g.email as guia_email
       FROM turnos t
       LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -591,7 +591,7 @@ const getHistorialTurnos = async (req, res) => {
           t.cancelado_por,
           t.es_reprogramacion,
           g.id as guia_id,
-          g.nombre as guia_nombre,
+          COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre,
           g.email as guia_email
         FROM turnos t
         LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -982,9 +982,9 @@ const getMiGuiaActual = async (req, res) => {
             return;
         }
         const query = `
-      SELECT 
+      SELECT  
         g.id,
-        g.nombre,
+        COALESCE(g.nombre_publico, g.primer_nombre) AS nombre,
         g.email,
         g.telefono
       FROM turnos t

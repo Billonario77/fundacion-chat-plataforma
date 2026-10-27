@@ -62,15 +62,6 @@ const HomePage: React.FC = () => {
 
         <div className="flex flex-col lg:flex-row items-center gap-12 relative">
           <div className="flex-1 text-center lg:text-left w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-block px-4 py-2 bg-[#F2CC8F]/30 rounded-full text-sm text-[#3D405B] font-medium mb-6"
-            >
-              🌅 Un espacio para respirar y sanar
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}

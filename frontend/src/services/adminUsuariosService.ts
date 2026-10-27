@@ -4,6 +4,7 @@ const API_URL = 'https://fundacion-chat-plataforma-backend-api.onrender.com/api'
 
 export interface Usuario {
   id: string;
+  nombre_publico?: string;
   email: string;
   nombre: string;
   telefono: string;

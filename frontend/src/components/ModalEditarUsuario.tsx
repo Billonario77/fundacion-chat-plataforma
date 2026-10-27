@@ -18,6 +18,7 @@ const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [formData, setFormData] = useState<Partial<Usuario>>({
     nombre: '',
+    nombre_publico: '',
     email: '',
     telefono: '',
     primer_nombre: '',
@@ -37,6 +38,7 @@ const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
         setUsuario(data);
         setFormData({
           nombre: data.nombre || '',
+          nombre_publico: data.nombre_publico || '',
           email: data.email || '',
           telefono: data.telefono || '',
           primer_nombre: data.primer_nombre || '',
@@ -414,7 +416,24 @@ const ModalEditarUsuario: React.FC<ModalEditarUsuarioProps> = ({
             </div>
 
             {/* Rol y estado */}
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre Público (Solo para Guías)
+                </label>
+                <input
+                  type="text"
+                  name="nombre_publico"
+                  value={formData.nombre_publico || ''}
+                  onChange={handleChange}
+                  placeholder="Ej: Marcela, Guía Marcela, Luna..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primario"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Este es el nombre que verán los usuarios. Si se deja vacío, se usará el primer nombre real.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Rol

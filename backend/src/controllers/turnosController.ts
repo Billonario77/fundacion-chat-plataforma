@@ -375,7 +375,7 @@ console.log(`⏱️ Antelación: ${minutosAntelacion.toFixed(2)} min - Urgente (
         mensaje: 'Nuevo usuario requiere asignación de guía'
       });
     } else if (guiaAsignado) {
-      const guiaNombreQuery = await pool.query('SELECT nombre FROM usuarios WHERE id = $1 AND rol = $2', [guiaAsignado, 'guia']);
+      const guiaNombreQuery = await pool.query('SELECT COALESCE(nombre_publico, primer_nombre) AS nombre FROM usuarios WHERE id = $1 AND rol = $2', [guiaAsignado, 'guia']);
       const guiaNombre = guiaNombreQuery.rows[0]?.nombre || 'tu guía';
       
       notificarUsuario(usuarioId, 'nuevo-turno-creado', {
@@ -659,7 +659,7 @@ export const obtenerTurnoPorId = async (req: AuthRequest, res: Response): Promis
         u.nombre as usuario_nombre,
         u.email as usuario_email,
         g.id as guia_id_actual,
-        g.nombre as guia_nombre
+        COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre
       FROM turnos t
       JOIN usuarios u ON t.usuario_id = u.id
       LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -732,7 +732,7 @@ export const misSolicitudes = async (req: AuthRequest, res: Response): Promise<v
         t.motivo_cancelacion,
         t.cancelado_por,
         t.guia_id,
-        g.nombre as guia_nombre,
+        COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre,
         g.email as guia_email
       FROM turnos t
       LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -783,7 +783,7 @@ export const getHistorialTurnos = async (req: AuthRequest, res: Response): Promi
           t.cancelado_por,
           t.es_reprogramacion,
           g.id as guia_id,
-          g.nombre as guia_nombre,
+          COALESCE(g.nombre_publico, g.primer_nombre) as guia_nombre,
           g.email as guia_email
         FROM turnos t
         LEFT JOIN usuarios g ON t.guia_id = g.id AND g.rol = 'guia'
@@ -1286,9 +1286,9 @@ export const getMiGuiaActual = async (req: AuthRequest, res: Response): Promise<
     }
 
     const query = `
-      SELECT 
+      SELECT  
         g.id,
-        g.nombre,
+        COALESCE(g.nombre_publico, g.primer_nombre) AS nombre,
         g.email,
         g.telefono
       FROM turnos t

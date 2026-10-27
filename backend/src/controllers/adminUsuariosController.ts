@@ -276,7 +276,8 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
       segundo_nombre,
       primer_apellido,
       segundo_apellido,
-      disponible
+      disponible,
+      nombre_publico
     } = req.body;
 
     const usuarioExistente = await pool.query(
@@ -324,6 +325,10 @@ export const actualizarUsuario = async (req: AuthRequest, res: Response): Promis
     if (disponible !== undefined) {
       updates.push(`disponible = $${paramIndex++}`);
       values.push(disponible);
+    }
+    if (nombre_publico !== undefined) {
+      updates.push(`nombre_publico = $${paramIndex++}`);
+      values.push(nombre_publico);
     }
 
     if (updates.length === 0) {
