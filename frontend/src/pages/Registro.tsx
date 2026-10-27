@@ -12,7 +12,8 @@ const Registro: React.FC = () => {
   const [nombre, setNombre] = useState('');
   const [nickname, setNickname] = useState('');
   const [esAnonimo, setEsAnonimo] = useState(false);
-  const [aceptaHabeasData, setAceptaHabeasData] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
   const [error, setError] = useState('');
   const { register, loading } = useAuth();
   const navigate = useNavigate();
@@ -32,20 +33,25 @@ const Registro: React.FC = () => {
       return;
     }
 
-    if (esAnonimo) {
-      if (!nickname.trim()) {
-        setError('Debes ingresar un NickName si eliges el modo anónimo');
-        return;
-      }
-      if (!aceptaHabeasData) {
-        setError('Debes aceptar el aviso de tratamiento de datos');
-        return;
-      }
-    } else {
-      if (!nombre.trim()) {
-        setError('El nombre es obligatorio');
-        return;
-      }
+    if (esAnonimo && !nickname.trim()) {
+      setError('Debes ingresar un NickName si eliges el modo anónimo');
+      return;
+    }
+
+    if (!esAnonimo && !nombre.trim()) {
+      setError('El nombre es obligatorio');
+      return;
+    }
+
+    // Validación de Términos y Privacidad (Obligatorio para todos)
+    if (!aceptaTerminos) {
+      setError('Debes aceptar los Términos y Condiciones');
+      return;
+    }
+
+    if (!aceptaPrivacidad) {
+      setError('Debes aceptar la Política de Privacidad y Tratamiento de Datos');
+      return;
     }
 
     try {
@@ -211,49 +217,41 @@ const Registro: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Aviso de Habeas Data (solo para anónimos) */}
-                {esAnonimo && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-[#81B29A]/10 rounded-2xl p-4 border border-[#81B29A]/30"
-                  >
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={aceptaHabeasData}
-                        onChange={(e) => setAceptaHabeasData(e.target.checked)}
-                        className="w-5 h-5 mt-0.5 accent-[#E07A5F] cursor-pointer flex-shrink-0"
-                        required={esAnonimo}
-                      />
-                      <div>
-                        <span className="font-medium text-[#3D405B] text-sm">
-                          Acepto el tratamiento de datos personales
-                        </span>
-                        <p className="text-xs text-[#5D6078] mt-1 leading-relaxed">
-                          Entiendo que si realizo un pago o donación, mis datos personales (nombre y email) serán tratados por la pasarela de pagos <strong>Wompi</strong> bajo la <strong>Ley 1581 de Habeas Data</strong>. Los pagos requieren información real por temas legales y de seguridad.
-                        </p>
-                      </div>
-                    </label>
-                  </motion.div>
-                )}
+                {/* Checkboxes Legales (Obligatorios para todos) */}
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aceptaTerminos}
+                      onChange={(e) => setAceptaTerminos(e.target.checked)}
+                      className="w-5 h-5 mt-0.5 accent-[#E07A5F] cursor-pointer flex-shrink-0"
+                      required
+                    />
+                    <span className="text-sm text-[#5D6078] leading-relaxed">
+                      He leído y acepto los{' '}
+                      <Link to="/terminos" target="_blank" className="text-[#E07A5F] hover:underline font-semibold">
+                        Términos y Condiciones
+                      </Link>
+                    </span>
+                  </label>
 
-                {/* Términos y condiciones (siempre) */}
-                {!esAnonimo && (
-                  <div>
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        required
-                        className="w-5 h-5 mt-0.5 accent-[#E07A5F] cursor-pointer flex-shrink-0"
-                      />
-                      <span className="text-xs text-[#5D6078] leading-relaxed">
-                        Acepto los <Link to="/terminos" className="text-[#E07A5F] hover:underline">términos y condiciones</Link> y la{' '}
-                        <Link to="/privacidad" className="text-[#E07A5F] hover:underline">política de privacidad</Link>
-                      </span>
-                    </label>
-                  </div>
-                )}
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aceptaPrivacidad}
+                      onChange={(e) => setAceptaPrivacidad(e.target.checked)}
+                      className="w-5 h-5 mt-0.5 accent-[#E07A5F] cursor-pointer flex-shrink-0"
+                      required
+                    />
+                    <span className="text-sm text-[#5D6078] leading-relaxed">
+                      Autorizo el tratamiento de mis datos personales conforme a la{' '}
+                      <Link to="/privacidad" target="_blank" className="text-[#E07A5F] hover:underline font-semibold">
+                        Política de Privacidad
+                      </Link>{' '}
+                      (Ley 1581 de 2012).
+                    </span>
+                  </label>
+                </div>
 
                 {/* Botón de registro */}
                 <motion.button

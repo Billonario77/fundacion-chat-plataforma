@@ -75,7 +75,6 @@ const AlmaWidget: React.FC = () => {
         <button
           onClick={handleTabClick}
           className="fixed top-1/2 -translate-y-1/2 right-0 z-50 bg-[#E07A5F] text-white py-2 px-1.5 rounded-l-lg shadow-md hover:bg-[#d16a4f] transition-all flex flex-col items-center justify-center gap-1.5 group"
-          title="Llamar a Alma"
         >
           <div className="w-5 h-5 group-hover:scale-110 transition-transform flex items-center justify-center">
             <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-[0_0_3px_rgba(255,255,255,0.8)]">
@@ -94,9 +93,9 @@ const AlmaWidget: React.FC = () => {
           </div>
           <span className="text-[9px] font-bold flex flex-col items-center leading-none tracking-widest gap-0.5">
             <span>A</span>
-            <span>L</span>
-            <span>M</span>
-            <span>A</span>
+            <span>l</span>
+            <span>m</span>
+            <span>a</span>
           </span>
         </button>
       )}

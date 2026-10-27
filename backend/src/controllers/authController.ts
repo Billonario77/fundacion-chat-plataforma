@@ -52,9 +52,10 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
                 `INSERT INTO usuarios (
                     email, password_hash, nombre, telefono,
                     primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-                    rol, activo, es_anonimo, nickname
+                    rol, activo, es_anonimo, nickname,
+                    terminos_aceptados_at, privacidad_aceptada_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, true, $9)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, true, $9, NOW(), NOW())
                 RETURNING id, email, nombre, rol, es_anonimo, nickname`,
                 [
                     email,
@@ -122,9 +123,10 @@ export const registro = async (req: Request, res: Response): Promise<void> => {
             `INSERT INTO usuarios (
                 email, password_hash, nombre, telefono,
                 primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-                rol, activo, es_anonimo
+                rol, activo, es_anonimo,
+                terminos_aceptados_at, privacidad_aceptada_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, false)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'usuario', true, false, NOW(), NOW())
             RETURNING id, email, nombre, rol, es_anonimo, nickname`,
             [email, passwordHash, nombre, telefono, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido]
         );
